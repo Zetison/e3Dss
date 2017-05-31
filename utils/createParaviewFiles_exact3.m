@@ -87,15 +87,15 @@ disp(['Time spent building mesh ' num2str(toc) ' seconds.'])
 % nodes = nodes(1);
 if plotTimeOscillation
     N = 30;
-    M = 30;
+    N_fine = 30;
     type = 1;
     startIdx = 1;
     options.P_inc = 1;
 elseif plotInTimeDomain
     f_c = options.f_c;
     N = options.N; % 200
-    M = 2*N;
-    T = 60/f_c; %N/M;
+    N_fine = 2*N;
+    T = 2*60/f_c; %N/M;
     B = N/T; % bandwidth
     
     f_R = B/2;
@@ -104,9 +104,9 @@ elseif plotInTimeDomain
     omega = 2*pi*f;
     options.omega = omega(2:end);
     if options.usePlaneWave
-        startIdx = 900;
+        startIdx = 1900; % 900
     elseif options.usePointChargeWave
-        startIdx = 1000;
+        startIdx = 2000;
     end
     type = 1;
     totnpts = npts*N*4
@@ -115,7 +115,7 @@ elseif plotInTimeDomain
 %     keyboard
 else
     N = 1;
-    M = 1;
+    N_fine = 1;
     type = 1;
     startIdx = 1;
     options.P_inc = 1;
@@ -124,45 +124,37 @@ tic
 data = e3Dss(nodes, options);
 disp(['Time spent on computing solution: ' num2str(toc) ' seconds.'])
 m = 1;
+
 for j = 1:length(nodes)
     if ~(SSBC && j == length(nodes))
         tic
         clear VTKdata
         if mod(j,2) == 0 && computeForSolidDomain
-            VTKoptions = struct('name',[vtfFileName 'solid' num2str(m)], 'celltype', 'VTK_HEXAHEDRON', 'plotTimeOscillation', plotTimeOscillation, ...
-                        'plotSphericalRadialDisplacement',0, 'plotDisplacementVectors',0,'plotSphericalStress_rr',1,'plotVonMisesStress',1); 
-%             VTKoptions = struct('name',[vtfFileName 'solid' num2str(m)], 'celltype', 'VTK_TRIANGLE', 'plotTimeOscillation', plotTimeOscillation, 'plotDisplacementVectors', 0, ...
-%                              'plotSphericalRadialDisplacement',0, ...
-%                              'plotSphericalStress_rr',1,...
-%                              'plotSphericalStress_thetatheta',1,...
-%                              'plotSphericalStress_phiphi',1,...
-%                              'plotSphericalStress_thetaphi',1,...
-%                              'plotSphericalStress_rphi',1,...
-%                              'plotSphericalStress_rtheta',1,...
-%                              'plotVonMisesStress',1,...
-%                              'plotStressXX',1,...
-%                              'plotStressYY',1,...
-%                              'plotStressZZ',1,...
-%                              'plotStressYZ',1,...
-%                              'plotStressXZ',1,...
-%                              'plotStressXY',1);
-            if VTKoptions.plotDisplacementVectors 
+            if ESBC && m == M
+                VTKoptions = struct('name',[vtfFileName 'solid' num2str(m)], 'celltype', 'VTK_TRIANGLE', 'plotTimeOscillation', plotTimeOscillation, ...
+                            'plotSphericalRadialDisplacement',0, 'plotDisplacementVectors',0,'plotSphericalStress_rr',0,'plotVonMisesStress',1); 
+            else
+                VTKoptions = struct('name',[vtfFileName 'solid' num2str(m)], 'celltype', 'VTK_HEXAHEDRON', 'plotTimeOscillation', plotTimeOscillation, ...
+                            'plotSphericalRadialDisplacement',0, 'plotDisplacementVectors',0,'plotSphericalStress_rr',1,'plotVonMisesStress',0); 
+            end
+                    
+            if VTKoptions.plotDisplacementVectors
                 displacement = zeros(size(nodes{j},1),3,length(omega));
                 for i = 2:length(omega)
                     displacement(:,:,i) = [data(m).u_x(:,i-1) data(m).u_y(:,i-1) data(m).u_z(:,i-1)];
                 end
             end
-            if VTKoptions.plotSphericalStress_rr 
+            if VTKoptions.plotVonMisesStress || VTKoptions.plotSphericalStress_rr 
                 VTKdata.stress = zeros(size(nodes{j},1),6,length(omega));
                 
                 if plotInTimeDomain
                     for i = 2:length(omega)
                         VTKdata.stress(:,:,i) = [data(m).sigma_xx(:,i-1) data(m).sigma_yy(:,i-1) data(m).sigma_zz(:,i-1) data(m).sigma_yz(:,i-1) data(m).sigma_xz(:,i-1) data(m).sigma_xy(:,i-1)];
                     end
-                    VTKdata.stress = 2/T*real(fft(VTKdata.stress,M,3));
+                    VTKdata.stress = 2/T*real(fft(VTKdata.stress,N_fine,3));
                     temp = VTKdata.stress;
-                    VTKdata.stress(:,:,1:M-startIdx+1) = temp(:,:,startIdx:end);
-                    VTKdata.stress(:,:,M-startIdx+2:end) = temp(:,:,1:startIdx-1);
+                    VTKdata.stress(:,:,1:N_fine-startIdx+1) = temp(:,:,startIdx:end);
+                    VTKdata.stress(:,:,N_fine-startIdx+2:end) = temp(:,:,1:startIdx-1);
                 else
                     VTKdata.stress = [data(m).sigma_xx data(m).sigma_yy data(m).sigma_zz data(m).sigma_yz data(m).sigma_xz data(m).sigma_xy];
                     
@@ -224,10 +216,10 @@ for j = 1:length(nodes)
                 end
             end
             if plotInTimeDomain
-                VTKdata.totField = 2/T*real(fft(VTKdata.totField,M,3));
+                VTKdata.totField = 2/T*real(fft(VTKdata.totField,N_fine,3));
                 temp = VTKdata.totField;
-                VTKdata.totField(:,:,1:M-startIdx+1) = temp(:,:,startIdx:end);
-                VTKdata.totField(:,:,M-startIdx+2:end) = temp(:,:,1:startIdx-1);
+                VTKdata.totField(:,:,1:N_fine-startIdx+1) = temp(:,:,startIdx:end);
+                VTKdata.totField(:,:,N_fine-startIdx+2:end) = temp(:,:,1:startIdx-1);
             elseif plotTimeOscillation
                 temp = VTKdata.totField;
                 VTKdata.totField = zeros([size(VTKdata.totField), N]);
@@ -250,7 +242,7 @@ for j = 1:length(nodes)
         if plotInTimeDomain
             VTKoptions.T = T;
         end
-        VTKoptions.N = M;
+        VTKoptions.N = N_fine;
         disp(['Time spent on assembling data ' num2str(toc) ' seconds.'])
         tic
         if mod(j,2) || computeForSolidDomain

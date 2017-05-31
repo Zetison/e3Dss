@@ -412,8 +412,8 @@ parfor i = 1:Nq
     %% von Mises Stress (scalars)
     if options.plotVonMisesStress
         stress = real(data.stress);
-        sigma_v = sqrt((stress(:,1,i)-stress(:,2,i)).^2 + (stress(:,2,i)-stress(:,3,i)).^2 + (stress(:,1,i)-stress(:,3,i)).^2 ...
-                                    + 6*(stress(:,4,i).^2 + stress(:,5,i).^2 + stress(:,6,i).^2)/2);
+        sigma_v = sqrt(((stress(:,1,i)-stress(:,2,i)).^2 + (stress(:,2,i)-stress(:,3,i)).^2 + (stress(:,1,i)-stress(:,3,i)).^2 ...
+                                    + 6*(stress(:,4,i).^2 + stress(:,5,i).^2 + stress(:,6,i).^2))/2);
         printField(sigma_v(:,1), 'von Mises Stress', fid)
     end
 

@@ -1,48 +1,135 @@
-function data = e3Dss(vv, newOptions)
+function data = e3Dss(X, newOptions)
+
+% The function e3Dss (exact 3D scattering solutions) computes the solution
+% to scattering problems on multilayered spherical shells impinged by a 
+% plane wave or a wave due to a point source.
+%
+% e3Dss(X) computes  the default example evaluated at the nx3 vector X. In
+% particular, the rigid scattering of a unit sphere impinged by a plane
+% wave traveling along the z-axis is simulated at f=1kHz using c_f=1500m/s
+% as the speed of sound.
+%
+% Adding the additional parameter 'options', e3Dss(X,options), enables 
+% changes to the problem to be computed. In particular, options is a struct
+% containing pair-wise options of the form:  
+% options = struct('omega', 1e3, 'R_o', 5);
+% The available parameters are the following:
+% d_vec:	(default: [0;0;1]) is the direction of the plane incident wave.
+% omega:	(default: 2*pi*1e3) is the angular frequency of the problem.
+%          	The function accepts vector input.
+% R_i:      Array of the inner radii of the spherical shells (default: [])
+% R_o:      Array of the outer radii of the spherical shells (default: 1)
+% P_inc:    Amplitude of incident wave at the origin. P_inc
+%           can be given as a function handle P_inc(omega) where omega is the
+%           angular frequency (default: 1) .
+% E:        Array of the Youngs moduli of the spherical shells (default: []) 
+% nu:   	Array of the Poisson ratios of the spherical shells (default: [])
+% rho_s:    Array of mass densities of the spherical shells (default: []) 
+% rho_f:    Array of mass densities of the fluid layers (default: []) 
+% c_f:      Speed of sound in the fluid layers
+% Eps:      Small parameter for series truncation. The summation are
+%           terminated whenever the relative contribution of the given term is
+%           less then Eps. If vector input is given for either X or omega, the
+%           maximal relative contribution of the given term is compared
+%           with Eps
+% N_max:    Upper limit for the number of terms in the series
+% calc_farField: Set true if the far field is to be calculated for outer
+%           fluid domain
+% usePlaneWave: Set true for plane incident waves
+% usePointChargeWave: Set true for point charge incident waves (the
+%           location of the point source is given by d_vec*r_s
+% r_s:      Radius to source location for point charge incident waves
+% calc_p:   Calculate the scattered pressure
+% calc_dpdx: Calculate the derivative of the scattered pressure fields w.r.t. the cartesian coordinate x
+% calc_dpdy: Calculate the derivative of the scattered pressure fields w.r.t. the cartesian coordinate y
+% calc_dpdz: Calculate the derivative of the scattered pressure fields w.r.t. the cartesian coordinate z
+% calc_u_x: Calculate the derivative of the displacement fields w.r.t. the cartesian coordinate x
+% calc_u_y: Calculate the derivative of the displacement fields w.r.t. the cartesian coordinate y
+% calc_u_z: Calculate the derivative of the displacement fields w.r.t. the cartesian coordinate z
+% calc_u_r: Calculate the derivative of the displacement fields w.r.t. the spherical coordinate r
+% calc_u_t: Calculate the derivative of the displacement fields w.r.t. the spherical coordinate theta
+% calc_sigma_xx: Calculate the derivative of the xx component of the stress field (cartesian coordinates)
+% calc_sigma_yy: Calculate the derivative of the yy component of the stress field (cartesian coordinates)
+% calc_sigma_zz: Calculate the derivative of the zz component of the stress field (cartesian coordinates)
+% calc_sigma_yz: Calculate the derivative of the yz component of the stress field (cartesian coordinates)
+% calc_sigma_xz: Calculate the derivative of the xz component of the stress field (cartesian coordinates)
+% calc_sigma_xy: Calculate the derivative of the xy component of the stress field (cartesian coordinates)
+% calc_sigma_rr: Calculate the derivative of the rr component of the stress field (spherical coordinates)
+% calc_sigma_tt: Calculate the derivative of the thetatheta component of the stress field (spherical coordinates)
+% calc_sigma_pp: Calculate the derivative of the phiphi component of the stress field (spherical coordinates)
+% calc_sigma_rt: Calculate the derivative of the rtheta component of the stress field (spherical coordinates)
+% calc_p_laplace: Calculate the Laplace operator of the scattered pressure fields
+% calc_errorsDisplacementCondition: Calculate the errors for the displacement conditions
+% calc_errorsPressureCondition: Calculate the errors for the pressure conditions
+% calc_errorsHelmholtz: Calculate errors for the Helmholtz equation
+% calc_errorsNavier:    Calculate errors for the Navier equation
+% useSymbolicPrecision: Use symbolic precision for calculations. Note that
+%           if true, this option will significantly increase the
+%           computational time. The precision used is given by the built in
+%           function digits (which can be used to alter the precision)
+%
+% Note that only the minimal set of parameters should be given. For
+% example, if numel(E) < numel(R_o) it is assumed that the inner domain is
+% an elastic sphere. Moreover, to exclude the inner (fluid) domain by
+% implementing sound soft boundary conditions on the inner surface, simply
+% reduce numel(rho_f) and numel(c_f) correspondingly. Sound hard boundary
+% conditions may be implemented in a similar fashion on the inner sphere by
+% reducing numel(E), numel(nu) and numel(rho_s) correspondingly.
+%
+% If the solution is needed in domains other then the outer (fluid) domain,
+% then X should be passed as a cell array, where the points in X{1}
+% corresponds to the outer domain X{2} the first solid domain etc.
+%
+% The function handles the case in which both X and omega are vectors.
+% 
+% Author: Jon Vegard Venås
+% E-mail: jon.venas@ntnu.no
+% Release: 1
+% Release date: 1/7/2017
 
 %% Dirichlet and Robin conditions has not been implemented.
-options = struct('d_vec',   [0;0;1], ...
-                 'omega',   2*pi*1e3, ...
-                 'R_i',     [], ...
-                 'R_o',     1, ...
-                 'P_inc',   1, ...
-                 'E',       [], ...
-                 'nu',      [], ...
-                 'rho_s',   [], ...
-                 'rho_f',   [], ...
-                 'c_f',     1500, ...
-                 'Eps',     eps, ...
-                 'usePlaneWave',        1, ...
-                 'usePointChargeWave',  0, ...
-                 'r_s',             NaN, ...
-                 'calc_p',          1, ...
-                 'calc_dpdx',       0, ...
-                 'calc_dpdy',       0, ...
-                 'calc_dpdz',       0, ...
-                 'calc_u_x',        0, ...
-                 'calc_u_y',        0, ...
-                 'calc_u_z',        0, ...
-                 'calc_u_r',        0, ...
-                 'calc_u_t',        0, ...
-                 'calc_sigma_xx',   0, ...
-                 'calc_sigma_yy',   0, ...
-                 'calc_sigma_zz',   0, ...
-                 'calc_sigma_yz',   0, ...
-                 'calc_sigma_xz',   0, ...
-                 'calc_sigma_xy',   0, ...
-                 'calc_sigma_rr',   0, ...
-                 'calc_sigma_tt',   0, ...
-                 'calc_sigma_pp',   0, ...
-                 'calc_sigma_rt',   0, ...
-                 'calc_navier',     0, ...
-                 'calc_p_laplace',  0, ...
-                 'calc_farField',   0, ...
-                 'calc_errorsDisplacementCondition', 0, ...
-                 'calc_errorsPressureCondition', 	 0, ...
-                 'calc_errorsHelmholtz',             0, ...
-                 'calc_errorsNavier',                0, ...
-                 'useSymbolicPrecision',             0, ...
-                 'N_max', inf);
+options = struct('d_vec',   [0;0;1],  ... 	% Direction of the incident wave
+                 'omega',   2*pi*1e3, ...   % Angular frequency
+                 'R_i',     [],   ...     	% Inner radii
+                 'R_o',     1,    ...    	% Outer radii
+                 'P_inc',   1,    ...     	% Amplitude of incident wave
+                 'E',       [],   ...      	% Youngs modulus for solid layers
+                 'nu',      [],   ...    	% Poisson ratio for solid layers
+                 'rho_s',   [],   ...    	% Mass densities of solid layers
+                 'rho_f',   [],   ...       % Mass densities of fluid layers
+                 'c_f',     1500, ...       % Speed of sound in fluid layers
+                 'Eps',     eps,  ...       % Small parameter for series truncation
+                 'N_max',   inf,  ...       % Upper limit for the number of terms in the series
+                 'calc_farField',       false, ...  % Set true if the far field is to be calculated for outer fluid domain
+                 'usePlaneWave',        true,  ...  % Set true for plane incident waves
+                 'usePointChargeWave',  false, ...  % Set true for point charge incident waves
+                 'r_s',                 NaN,   ...	% Radius to source location for point charge incident waves
+                 'calc_p',              true,  ...  % Calculate the scattered pressure
+                 'calc_dpdx',           false, ...  % Calculate the derivative of the scattered pressure fields w.r.t. the cartesian coordinate x
+                 'calc_dpdy',           false, ...  % Calculate the derivative of the scattered pressure fields w.r.t. the cartesian coordinate y
+                 'calc_dpdz',           false, ...  % Calculate the derivative of the scattered pressure fields w.r.t. the cartesian coordinate z
+                 'calc_u_x',            false, ...  % Calculate the derivative of the displacement fields w.r.t. the cartesian coordinate x
+                 'calc_u_y',            false, ...  % Calculate the derivative of the displacement fields w.r.t. the cartesian coordinate y
+                 'calc_u_z',            false, ...  % Calculate the derivative of the displacement fields w.r.t. the cartesian coordinate z
+                 'calc_u_r',            false, ...  % Calculate the derivative of the displacement fields w.r.t. the spherical coordinate r
+                 'calc_u_t',            false, ...  % Calculate the derivative of the displacement fields w.r.t. the spherical coordinate theta
+                 'calc_sigma_xx',       false, ...  % Calculate the derivative of the xx component of the stress field (cartesian coordinates)
+                 'calc_sigma_yy',       false, ...  % Calculate the derivative of the yy component of the stress field (cartesian coordinates)
+                 'calc_sigma_zz',       false, ...  % Calculate the derivative of the zz component of the stress field (cartesian coordinates)
+                 'calc_sigma_yz',       false, ...  % Calculate the derivative of the yz component of the stress field (cartesian coordinates)
+                 'calc_sigma_xz',       false, ...  % Calculate the derivative of the xz component of the stress field (cartesian coordinates)
+                 'calc_sigma_xy',       false, ...  % Calculate the derivative of the xy component of the stress field (cartesian coordinates)
+                 'calc_sigma_rr',       false, ...  % Calculate the derivative of the rr component of the stress field (spherical coordinates)
+                 'calc_sigma_tt',       false, ...  % Calculate the derivative of the thetatheta component of the stress field (spherical coordinates)
+                 'calc_sigma_pp',       false, ...  % Calculate the derivative of the phiphi component of the stress field (spherical coordinates)
+                 'calc_sigma_rt',       false, ...  % Calculate the derivative of the rtheta component of the stress field (spherical coordinates)
+                 'calc_p_laplace',      false, ...  % Calculate the Laplace operator of the scattered pressure fields
+                 'calc_errorsDisplacementCondition', false, ... % Calculate the errors for the displacement conditions
+                 'calc_errorsPressureCondition', 	 false, ... % Calculate the errors for the pressure conditions
+                 'calc_errorsHelmholtz',             false, ... % Calculate errors for the Helmholtz equation
+                 'calc_errorsNavier',                false, ... % Calculate errors for the Navier equation
+                 'useSymbolicPrecision',             false);    % Use symbolic precision for calculations
+                  
 if nargin > 1
     newOptionFields = fieldnames(newOptions);
     for j = 1:numel(newOptionFields)
@@ -50,8 +137,8 @@ if nargin > 1
     end
 end
 
-if ~iscell(vv)
-    vv = {vv};
+if ~iscell(X)
+    X = {X};
 end
 useSymbolicPrecision = options.useSymbolicPrecision;
 if useSymbolicPrecision
@@ -66,8 +153,8 @@ if useSymbolicPrecision
     options.rho_f = vpa(options.rho_f);
     options.c_f = vpa(options.c_f);
     options.Eps = vpa(options.Eps);
-    for i = 1:length(vv)
-        vv{i} = vpa(vv{i});
+    for i = 1:length(X)
+        X{i} = vpa(X{i});
     end
 end
 calc_errorsPressureCondition = options.calc_errorsDisplacementCondition;
@@ -76,6 +163,11 @@ calc_errorsHelmholtz = options.calc_errorsHelmholtz;
 calc_errorsNavier = options.calc_errorsNavier;
 omega = options.omega;
 E = options.E;
+nu = options.nu;
+rho_s = options.rho_s;
+if numel(E) ~= numel(nu) || numel(E) ~= numel(rho_s) || numel(nu) ~= numel(rho_s)
+    error('The number of parameters in E, nu and rho_s must all be the same')
+end
 rho_f = options.rho_f;
 R_o = options.R_o;
 R_i = options.R_i;
@@ -100,23 +192,22 @@ calc_sigma_rr = options.calc_sigma_rr;
 calc_sigma_tt = options.calc_sigma_tt;
 calc_sigma_pp = options.calc_sigma_pp;
 calc_sigma_rt = options.calc_sigma_rt;
-calc_navier = options.calc_navier || calc_errorsNavier;
-calc_errors = calc_errorsDisplacementCondition || calc_errorsPressureCondition || calc_errorsHelmholtz ||calc_errorsNavier;
+calc_errors = calc_errorsDisplacementCondition || calc_errorsPressureCondition || calc_errorsHelmholtz || calc_errorsNavier;
 
 options.calc_dpdr = calc_dpdx || calc_dpdy || calc_dpdz || calc_p_laplace;
 options.calc_dpdt = options.calc_dpdr;
 options.calc_d2pdr2 = calc_p_laplace || calc_errorsHelmholtz;
 options.calc_d2pdt2 = calc_p_laplace || calc_errorsHelmholtz;
-options.calc_u_r = calc_u_r || calc_u_x || calc_u_y || calc_u_z || calc_navier;
-options.calc_u_t = calc_u_t || calc_u_x || calc_u_y || calc_u_z || calc_navier;
+options.calc_u_r = calc_u_r || calc_u_x || calc_u_y || calc_u_z || calc_errorsNavier;
+options.calc_u_t = calc_u_t || calc_u_x || calc_u_y || calc_u_z || calc_errorsNavier;
 
 calcStresses =  calc_sigma_xx || calc_sigma_yy || calc_sigma_zz || calc_sigma_yz || calc_sigma_xz ...
-                             || calc_sigma_xy || calc_navier || calc_errorsPressureCondition;
+                             || calc_sigma_xy || calc_errorsNavier || calc_errorsPressureCondition;
 options.calc_sigma_rr = calcStresses;
 options.calc_sigma_tt = calcStresses;
 options.calc_sigma_pp = calcStresses;
 options.calc_sigma_rt = calcStresses;
-options.calc_navier = calc_navier;
+options.calc_errorsNavier = calc_errorsNavier;
 
 if isrow(omega)
     options.omega = omega';
@@ -136,7 +227,7 @@ end
 if ~(options.usePointChargeWave || options.usePlaneWave)
     error('Only plane waves and point charge waves are implemented for the incident wave.')
 end
-if length(E) < length(R_o)
+if numel(E) < numel(R_o)
     SHBC = true;
     ESBC = false;
     SSBC = false;  
@@ -159,19 +250,19 @@ options.SHBC = SHBC;
 options.SSBC = SSBC;
 
 if omega(1) == 0 && options.usePointChargeWave
-    error('This case has a non unique solution')
+    error('This case has no unique solution')
 end
     
 
 %% Coordinate transformation
 % Due to symmetry, we can do a coordinate transformation such that we only
 % need to compute the solution for the special case k_vec = k*[0, 0, 1].
-r = cell(size(vv));
-theta = cell(size(vv));
-phi = cell(size(vv));
-for j = 1:length(vv)
-    if ~isempty(vv{j})
-        [r{j}, theta{j}, phi{j}, A] = coordTransform(vv{j}, d_vec);
+r = cell(size(X));
+theta = cell(size(X));
+phi = cell(size(X));
+for j = 1:length(X)
+    if ~isempty(X{j})
+        [r{j}, theta{j}, phi{j}, A] = coordTransform(X{j}, d_vec);
         r{j} = r{j}.';
         theta{j} = theta{j}.';
         phi{j} = phi{j}.';    
@@ -193,54 +284,54 @@ else
     data(M+1).p = [];
 end
 m = 1;
-for j = 1:length(vv)
+for j = 1:length(X)
     if ~isempty(r{j})
         if mod(j,2)
             if calc_p
-                data(m).p = zeros(size(vv{j},1),nFreqs);
+                data(m).p = zeros(size(X{j},1),nFreqs);
                 if useSymbolicPrecision
                     data(m).p = vpa(data(m).p);
                 end
             end
             if calc_dpdx
-                data(m).dpdx = zeros(size(vv{j},1),nFreqs);
+                data(m).dpdx = zeros(size(X{j},1),nFreqs);
                 if useSymbolicPrecision
                     data(m).dpdx = vpa(data(m).dpdx);
                 end
             end
             if calc_dpdy
-                data(m).dpdy = zeros(size(vv{j},1),nFreqs);
+                data(m).dpdy = zeros(size(X{j},1),nFreqs);
                 if useSymbolicPrecision
                     data(m).dpdy = vpa(data(m).dpdy);
                 end
             end
             if calc_dpdz
-                data(m).dpdz = zeros(size(vv{j},1),nFreqs);
+                data(m).dpdz = zeros(size(X{j},1),nFreqs);
                 if useSymbolicPrecision
                     data(m).dpdz = vpa(data(m).dpdz);
                 end
             end
             if calc_p_laplace
-                data(m).p_laplace = zeros(size(vv{j},1),nFreqs);
+                data(m).p_laplace = zeros(size(X{j},1),nFreqs);
                 if useSymbolicPrecision
                     data(m).p_laplace = vpa(data(m).p_laplace);
                 end
             end
         else
             if calc_u_x
-                data(m).u_x = zeros(size(vv{j},1),nFreqs);
+                data(m).u_x = zeros(size(X{j},1),nFreqs);
                 if useSymbolicPrecision
                     data(m).u_x = vpa(data(m).u_x);
                 end
             end
             if calc_u_y
-                data(m).u_y = zeros(size(vv{j},1),nFreqs);
+                data(m).u_y = zeros(size(X{j},1),nFreqs);
                 if useSymbolicPrecision
                     data(m).u_y = vpa(data(m).u_x);
                 end
             end
             if calc_u_z
-                data(m).u_z = zeros(size(vv{j},1),nFreqs);
+                data(m).u_z = zeros(size(X{j},1),nFreqs);
                 if useSymbolicPrecision
                     data(m).u_z = vpa(data(m).u_x);
                 end
@@ -253,12 +344,12 @@ for j = 1:length(vv)
 end
 
 m = 1;
-for j = 1:length(vv)
+for j = 1:length(X)
     if calc_errors
         if mod(j,2)
-            data(m).v_fluid = vv{j};
+            data(m).v_fluid = X{j};
         else
-            data(m).v_solid = vv{j};
+            data(m).v_solid = X{j};
         end
     end
     if ~isempty(r{j})
@@ -282,9 +373,9 @@ for j = 1:length(vv)
                 dpdX_m{3}(indices) = dpdr(indices);
 
                 dpdX = cell(3,1);
-                dpdX{1} = zeros(size(vv{j},1),nFreqs);
-                dpdX{2} = zeros(size(vv{j},1),nFreqs);
-                dpdX{3} = zeros(size(vv{j},1),nFreqs);
+                dpdX{1} = zeros(size(X{j},1),nFreqs);
+                dpdX{2} = zeros(size(X{j},1),nFreqs);
+                dpdX{3} = zeros(size(X{j},1),nFreqs);
                 for ii = 1:3
                     for jj = 1:3
                         dpdX{ii} = dpdX{ii} + A(ii,jj)*dpdX_m{jj}.';
@@ -321,8 +412,8 @@ for j = 1:length(vv)
                 sigma_m{1} = data_0(m).sigma_rr;
                 sigma_m{2} = data_0(m).sigma_tt;
                 sigma_m{3} = data_0(m).sigma_pp;
-                sigma_m{4} = zeros(nFreqs,size(vv{j},1));
-                sigma_m{5} = zeros(nFreqs,size(vv{j},1));
+                sigma_m{4} = zeros(nFreqs,size(X{j},1));
+                sigma_m{5} = zeros(nFreqs,size(X{j},1));
                 sigma_m{6} = data_0(m).sigma_rt;
                 if useSymbolicPrecision
                     sigma_m{4} = vpa(sigma_m{4});
@@ -331,7 +422,7 @@ for j = 1:length(vv)
                 D = getStressTransformationMatrix(theta{j},phi{j},2);
                 sigma_X_m = cell(6,1);
                 for ii = 1:6
-                    sigma_X_m{ii} = zeros(nFreqs,size(vv{j},1));
+                    sigma_X_m{ii} = zeros(nFreqs,size(X{j},1));
                     if useSymbolicPrecision
                         sigma_X_m{ii} = vpa(sigma_X_m{ii});
                     end
@@ -374,7 +465,7 @@ for j = 1:length(vv)
                           5 4 3];
                 sigma_X = cell(6,1);
                 for ii = 1:6
-                    sigma_X{ii} = zeros(size(vv{j},1),nFreqs);
+                    sigma_X{ii} = zeros(size(X{j},1),nFreqs);
                     if useSymbolicPrecision
                         sigma_X{ii} = vpa(sigma_X{ii});
                     end
@@ -430,9 +521,9 @@ for j = 1:length(vv)
                     u_X_m{3}(indices) = u_r(indices);
                 end
                 u_X = cell(3,1);
-                u_X{1} = zeros(size(vv{j},1),nFreqs);
-                u_X{2} = zeros(size(vv{j},1),nFreqs);
-                u_X{3} = zeros(size(vv{j},1),nFreqs);
+                u_X{1} = zeros(size(X{j},1),nFreqs);
+                u_X{2} = zeros(size(X{j},1),nFreqs);
+                u_X{3} = zeros(size(X{j},1),nFreqs);
                 if useSymbolicPrecision
                     u_X{1} = vpa(u_X{1});
                     u_X{2} = vpa(u_X{2});
@@ -453,13 +544,13 @@ for j = 1:length(vv)
                     data(m).u_z = u_X{3};
                 end
             end
-            if calc_u_r || calc_navier
+            if calc_u_r || calc_errorsNavier
                 data(m).u_r = data_0(m).u_r.';
             end
-            if calc_u_t || calc_navier
+            if calc_u_t || calc_errorsNavier
                 data(m).u_t = data_0(m).u_t.';
             end
-            if calc_navier
+            if calc_errorsNavier
                 data(m).navier1 = data_0(m).navier1.';
                 data(m).navier2 = data_0(m).navier2.';
             end
@@ -477,18 +568,18 @@ if calc_errors
                     iS = strcmp(investigate{1},'innerSurface');
                     Eps = options.Eps;
                     if SSBC && m == M && strcmp(investigate{1},'innerSurface')
-                        v_f = vv{2*m};
+                        v_f = X{2*m};
                     else
-                        v_f = vv{2*(m+iS)-1};
+                        v_f = X{2*(m+iS)-1};
                         c_f = options.c_f(m+iS);
                     end
                     if m == M && SHBC
-                        indices_f = abs(norm2(vv{2*m-1}) - R_o(m)) < 10*Eps;
+                        indices_f = abs(norm2(X{2*m-1}) - R_o(m)) < 10*Eps;
                     elseif SSBC && m == M && strcmp(investigate{1},'innerSurface')
-                        indices_f = abs(norm2(vv{2*m}) - R_i(m)) < 10*Eps;    
+                        indices_f = abs(norm2(X{2*m}) - R_i(m)) < 10*Eps;    
                         indices_s = indices_f;
                     else
-                        [indices_f, indices_s] = findMatchingPoints(v_f,vv{2*m},Eps);
+                        [indices_f, indices_s] = findMatchingPoints(v_f,X{2*m},Eps);
                     end
                     v_f = v_f(indices_f,:);
                     P_inc = options.P_inc;
@@ -770,7 +861,7 @@ for j = 1:length(r)
                     data(m).sigma_rt = vpa(data(m).sigma_rt);
                 end
             end
-            if options.calc_navier
+            if options.calc_errorsNavier
                 data(m).navier1 = zeros(nFreqs,length(r{j}));
                 data(m).navier2 = zeros(nFreqs,length(r{j}));
                 if useSymbolicPrecision
@@ -836,8 +927,8 @@ if computeForStaticCase
     hasCnvrgd(staticIdx,:) = 1;
 end
 tiny = 1e-200; % To avoid dividing by zero.
-countUpWards = 1;
-if countUpWards
+countUpwards = 1;
+if countUpwards
     n = 0;
 else
     n = round(3*max(r{1})*max(k(:,1)));
@@ -863,7 +954,7 @@ while n >= 0 && n <= N_max
         for j = 1:length(r)    
             hasCnvrgdTmp2 = ones(size(indices)); % temporary hasCnvrgd vector    
             if ~isempty(r{j})
-                if countUpWards
+                if countUpwards
                     [P{j}, dP{j}, d2P{j}] = legendreDerivs(n, cos(theta{j}), P{j}, dP{j}, d2P{j});
                 else
                     P{j}(2,:) = legendre(n, cos(theta{j}));
@@ -972,11 +1063,11 @@ while n >= 0 && n <= N_max
                         data(m).sigma_rt(indices,:) = data(m).sigma_rt(indices,:) + solid.sigma_rt;
                         hasCnvrgdTmp2 = hasCnvrgdTmp2.*prod(abs(solid.sigma_rt)./(abs(data(m).sigma_rt(indices,:))+tiny) < Eps,2);
                     end
-                    if options.calc_navier
+                    if options.calc_errorsNavier
                         data(m).navier1(indices,:) = data(m).navier1(indices,:) + solid.navier1;
                         hasCnvrgdTmp2 = hasCnvrgdTmp2.*prod(abs(solid.navier1)./(abs(data(m).navier1(indices,:))+tiny) < Eps,2);
                     end
-                    if options.calc_navier
+                    if options.calc_errorsNavier
                         data(m).navier2(indices,:) = data(m).navier2(indices,:) + solid.navier2;
                         hasCnvrgdTmp2 = hasCnvrgdTmp2.*prod(abs(solid.navier2)./(abs(data(m).navier2(indices,:))+tiny) < Eps,2);
                     end
@@ -988,7 +1079,7 @@ while n >= 0 && n <= N_max
                 m = m + 1;
             end
         end
-        if countUpWards 
+        if countUpwards 
             hasCnvrgd(indices,:) = [hasCnvrgd(indices,2:end), prod(hasCnvrgdTmp,2)];
             indicesPrev = indices;
             indices = find(~prod(hasCnvrgd,2));
@@ -1268,7 +1359,7 @@ if options.calc_sigma_rt
     end
 	solid.sigma_rt = sigma_rt;
 end
-if options.calc_navier
+if options.calc_errorsNavier
     Q1sr2 = Q1s./r2;
     sigma_rt =   A(:,1)*Q1sr2.*S_(7,1,n,xi,eta,Zxi) ...
                + B(:,1)*Q1sr2.*T_(7,1,n,eta,Zeta);
