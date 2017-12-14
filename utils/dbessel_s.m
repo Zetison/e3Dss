@@ -12,21 +12,39 @@ if scaled
     end
 else
     if iscell(Z)
+        if isa(z,'sym') || isa(z,'mp')
+            tiny = realmin('double');
+        else
+            tiny = eps;
+        end
+        if i == 1
+            indices = logical(abs(z) < tiny);
+            z(indices) = 1; % Avoid symbolic division by zero. These values will be replaced anyways
+        end
         dZ = n./z.*Z{i,1} - Z{i,2};
         if i == 1
             if n == 1
-                dZ(logical(abs(z) < eps)) = 1/3;
+                dZ(indices) = ones(1,class(z))/3;
             else
-                dZ(logical(abs(z) < eps)) = 0;
+                dZ(indices) = 0;
             end
         end
     else
+        if isa(z,'sym') || isa(z,'mp')
+            tiny = realmin('double');
+        else
+            tiny = eps;
+        end
+        if i == 1
+            indices = logical(abs(z) < tiny);
+            z(indices) = 1; % Avoid symbolic division by zero. These values will be replaced anyways
+        end
         dZ = n./z.*bessel_s(n,z,i) - bessel_s(n+1,z,i);
         if i == 1
             if n == 1
-                dZ(logical(abs(z) < eps)) = 1/3;
+                dZ(indices) = ones(1,class(z))/3;
             else
-                dZ(logical(abs(z) < eps)) = 0;
+                dZ(indices) = 0;
             end
         end
     end

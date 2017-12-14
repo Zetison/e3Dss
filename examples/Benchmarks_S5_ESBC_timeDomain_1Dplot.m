@@ -5,6 +5,9 @@ addpath ..
 addpath ../utils
 addpath ../models
 
+pathToResults = '../../plotData/e3Dss/';
+% pathToResults = '../results';
+
 startMatlabPool
 
 if 0
@@ -84,11 +87,20 @@ else
     subplot(312), plot(ft,abs(P_inc))
     subplot(313), plot(ft,atan2(imag(P_inc),real(P_inc)));
     drawnow
-%             printResultsToFile('../results/Pt_inc', tt.', Pt_inc.', [], 0, 1)
-%             printResultsToFile('../results/P_inc', omegat.', abs(P_inc).', [], 0, 1)
+%             printResultsToFile([pathToResults 'Pt_inc'], tt.', Pt_inc.', [], 0, 1)
+%             printResultsToFile([pathToResults 'P_inc'], omegat.', abs(P_inc).', [], 0, 1)
     figure(2)
     plot(omegat,abs(P_inc))
-%             return
+    ylabel('$|P_{\mathrm{inc}}(\omega)|$ [Pa]')
+    xlabel('$\omega$ [$\mathrm{s}^{-1}$]')
+    savefig([pathToResults 'Figure17b'])
+    
+    figure(3)
+    plot(tt,Pt_inc)
+    ylabel('$\breve{P}_{\mathrm{inc}}(t)$ [Pa]')
+    xlabel('$t$ [s]')
+    savefig([pathToResults 'Figure17a'])
+            return
     %%%%%%%%%%%%%%%%%%%%%%%%%%
     % Plot dynamic time domain solution in 1D
 %             setS15Parameters

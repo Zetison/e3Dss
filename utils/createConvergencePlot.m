@@ -12,16 +12,17 @@ switch type
             options.N_max = N;
             data = e3Dss(v, options);
             p_N = data(1).p;
-            Error(count,:) = norm2((p - p_N).', 1)./norm2(p.', 1);
+            Error(count,:) = norm2((p - p_N).')./norm2(p.');
             count = count + 1;
         end
         semilogy(N_arr, Error(:,1), N_arr, Error(:,2))
         set(0,'defaulttextinterpreter','latex')
-        title('Error plots')
+%         title('Error plots')
         xlabel('$$N$$')
-        ylabel('$$\|p-p_N\|_2/\|p\|_2$$')
-        legend({'$$k_1 = 15$$', '$$k_1 = 20$$'},'interpreter','latex')
-        
+        ylabel('$$\frac{\|p_1-p_1^{(N)}\|_2}{\|p_1\|_2}$$')
+        legend({'$$k_1 = 15\mathrm{m}^{-1}$$', '$$k_1 = 20\mathrm{m}^{-1}$$'},'interpreter','latex')
+        yLim = ylim;
+        ylim([yLim(1),1e1])
         for i = 1:size(Error,2)
             printResultsToFile([fileName '_Errors_' num2str(i)], N_arr.', Error(:,i), NaN, 0, 1)
         end
@@ -40,7 +41,7 @@ switch type
             options.N_max = N;
             data = e3Dss(v, options);
             p_N = data(1).p;
-            Error(N+1,:) = norm2((p - p_N).', 1)./norm2(p.', 1);
+            Error(N+1,:) = norm2((p - p_N).')./norm2(p.');
         end
 %         keyboard
         N_max = min(find(max(Error,[],2) == 0));
@@ -67,8 +68,10 @@ switch type
         xlim([0 round(max(k*R_o))])
         ylim([min(N_arr) max(N_arr)])
         view(0,90)
-        colorbar
-
+        
+        h = colorbar('XTickLabel',{'10^{-18}','10^{-16}','10^{-14}','10^{-12}','10^{-10}','10^{-8}','10^{-6}','10^{-4}','10^{-2}','1'}, ...
+               'XTick', -18:2:0);
+        ylabel(h, '$\frac{\left\|p_1-p_1^{(N)}\right\|_2}{\|p_1\|_2}$','interpreter','latex')
         extraAxisOptions = {...
             'axis on top=true', ...
             'at={(0,0)}', ...
@@ -88,6 +91,6 @@ switch type
         matlab2tikz([fileName '.tex'], 'height', '3.2094in', 'width', '3.2094in', ...
             'extraAxisOptions', extraAxisOptions)
         
-        title('Error plots')
+%         title('Error plots')
 end
         

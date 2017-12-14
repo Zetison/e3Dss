@@ -7,18 +7,12 @@ function B = dot3(A,n)
 M = size(A,1);
 if M > 1
     if size(n,2) > 1
-        B = zeros(M,1);
-        if isa(A,'sym')
-            B = vpa(B);
-        end
+        B = zeros(M,1,class(A));
         for i = 1:M
             B(i) = A(i,:)*n(:,i);
         end
     else
-        B = zeros(M,1);
-        if isa(A,'sym')
-            B = vpa(B);
-        end
+        B = zeros(M,1,class(A));
 
         for i = 1:M
             B(i) = A(i,:)*n;
@@ -26,10 +20,7 @@ if M > 1
     end
 else
     M = size(n,2);
-    B = zeros(M,1);
-    if isa(A,'sym')
-        B = vpa(B);
-    end
+    B = zeros(M,1,class(A));
 
     for i = 1:M
         B(i) = A*n(:,i);

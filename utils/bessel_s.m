@@ -3,19 +3,30 @@ function Z = bessel_s(n,z,i)
 %every element in z
 
 if isa(z,'sym')
-    Z = sqrt(vpa(pi)/2)./sqrt(z).*bessel_c(n+0.5,z,i);
+    PI = vpa('pi');
+    tiny = realmin('double');
+elseif isa(z,'mp')
+    PI = mp('pi');
+    tiny = realmin('double');
 else
-    Z = sqrt(pi/2)./sqrt(z).*bessel_c(n+0.5,z,i);
+    tiny = eps;
+    PI = pi;
 end
+if i == 1
+    indices = logical(abs(z) < tiny);
+    z(indices) = 1; % Avoid symbolic division by zero. These values will be replaced anyways
+end
+
+Z = sqrt(PI/2)./sqrt(z).*bessel_c(n+0.5,z,i);
 
 if i == 1
     if n == 0
-        Z(logical(abs(z) < eps)) = 1;
+        Z(indices) = 1;
     else
-        Z(logical(abs(z) < eps)) = 0;
+        Z(indices) = 0;
     end
 end
-if ~isa(z,'sym')
+if ~(isa(z,'sym') || isa(z,'mp'))
     if any(any(abs(Z) > 1e290))
         error('A Bessel function evaluation was too large')
     end

@@ -20,21 +20,22 @@ if ~(SHBC && M == 1)
     G = options.G;
 end
 
-%% Calculate submatrices
-H1 = zeros(I-2,I-2,length(omega),M);
-H2 = zeros(2,length(omega),M,2);
-H3 = zeros(2,length(omega),M,2);
-H4 = zeros(I-2,length(omega),M,2);
-
-H21 = zeros(length(omega),1);
-D2 = zeros(length(omega),1);
-
 if isa(R_o,'sym')
-    H1 = vpa(H1);
-    H2 = vpa(H2);
-    H3 = vpa(H3);
-    H4 = vpa(H4);
+    PI = vpa('pi');
+elseif isa(R_o,'mp')
+    PI = mp('pi');
+else
+    PI = pi;
 end
+
+%% Calculate submatrices
+H1 = zeros(I-2,I-2,length(omega),M,class(R_o));
+H2 = zeros(2,length(omega),M,2,class(R_o));
+H3 = zeros(2,length(omega),M,2,class(R_o));
+H4 = zeros(I-2,length(omega),M,2,class(R_o));
+
+H21 = zeros(length(omega),1,class(R_o));
+D2 = zeros(length(omega),1,class(R_o));
 
 if SHBC && M == 1 % as this case is independent of rho_f, we here avoid demanding its value
     rho_f_omega2 = omega.^2;
@@ -53,17 +54,11 @@ for m = 1:M+1
             end
         elseif options.usePointChargeWave
             q = @(v) sqrt(R_o(1)^2 + 2*r_s*R_o(1)*v + r_s^2);
-            F2 = zeros(size(k,1),1);
-            if isa(R_o,'sym')
-                F2 = vpa(F2);
-            end
+            F2 = zeros(size(k,1),1,class(R_o));
+            
             parfor i = 1:size(k,1)
-                if isa(R_o,'sym')
-                    Phi_k = @(v) exp(1i*k(i,1)*q(v))./(4*vpa(pi)*q(v));
-                else
-                    Phi_k = @(v) exp(1i*k(i,1)*q(v))./(4*pi*q(v));
-                end
-                integrand = @(v) 4*pi*r_s*(R_o(1) + r_s*v).*Phi_k(v)./q(v).^2.*(1i*k(i,1)*q(v) - 1).*legendre_(n,v);
+                Phi_k = @(v) exp(1i*k(i,1)*q(v))./(4*PI*q(v));
+                integrand = @(v) 4*PI*r_s*(R_o(1) + r_s*v).*Phi_k(v)./q(v).^2.*(1i*k(i,1)*q(v) - 1).*legendre_(n,v);
                 if isa(P_inc,'function_handle')
                     F2(i) = P_inc(omega(i))*(2*n+1)/2*integral(integrand,-1,1);
                 else
@@ -81,17 +76,10 @@ for m = 1:M+1
                     D2 = -P_inc*R_o(1)^2/(2*G(1))*(2*n+1)*1i^n*bessel_s(n,k(:,1)*R_o(1),1);
                 end
             elseif options.usePointChargeWave
-                F1 = zeros(size(k,1),1);
-                if isa(R_o,'sym')
-                    F1 = vpa(F1);
-                end
+                F1 = zeros(size(k,1),1,class(R_o));
                 parfor i = 1:size(k,1)
-                    if isa(R_o,'sym')
-                        Phi_k = @(v) exp(1i*k(i,1)*q(v))./(4*vpa(pi)*q(v));
-                    else
-                        Phi_k = @(v) exp(1i*k(i,1)*q(v))./(4*pi*q(v));
-                    end
-                    integrand = @(v) 4*pi*r_s*Phi_k(v).*legendre_(n,v);
+                    Phi_k = @(v) exp(1i*k(i,1)*q(v))./(4*PI*q(v));
+                    integrand = @(v) 4*PI*r_s*Phi_k(v).*legendre_(n,v);
                     if isa(P_inc,'function_handle')
                         F1(i) = P_inc(omega(i))*(2*n+1)/2*integral(integrand,-1,1);
                     else
@@ -156,19 +144,15 @@ elseif SSBC
 else
     systemSize = I*M;
 end
-CC = zeros(length(omega),6*M);
-if isa(R_o,'sym')
-    CC = vpa(CC);
-end
+CC = zeros(length(omega),6*M,class(R_o));
+
 % Loop over frequencies
 for i = 1:length(omega)
 % parfor i = 1:length(omega)
-    H = sparse([], [], [], systemSize,systemSize, M*((I-2)^2+2*(I-2)+8)); % global matrix
-    D = zeros(systemSize,1); % righ hand side
-    if isa(R_o,'sym')
-        H = vpa(H);
-        D = vpa(D);
-    end
+%     H = sparse([], [], [], systemSize,systemSize, M*((I-2)^2+2*(I-2)+8)); % global matrix
+    H = zeros(systemSize,class(R_o)); % global matrix
+    D = zeros(systemSize,1,class(R_o)); % righ hand side
+    
     for m = 1:M+1
         if m == 1            
             H(1,1) = H11(i);
@@ -252,7 +236,7 @@ for i = 1:length(omega)
     end
     % Fenders routine for reducing the complex system of linear equations
     % to a real system of linear equations is not implemented
-    CC_temp = zeros(1,6*M);
+    CC_temp = zeros(1,6*M,class(R_o));
     CC_temp(indices) = diag(Pinv).*((H*Pinv)\D);
     CC(i,:) = CC_temp;
     % Uncomment the following to get the spy matrix in the paper
@@ -298,17 +282,11 @@ eta = b*R_o;
 Z{1,1} = bessel_s(n,xi,1);
 Z{1,2} = bessel_s(n+1,xi,1);
 if n == 0
-    H = zeros(2,2,length(a));
-    if isa(R_o,'sym')
-        H = vpa(H);
-    end
+    H = zeros(2,2,length(a),class(R_o));
 
     H(1,1,:) = S_(5, 1, n, xi, eta, Z);
 else
-    H = zeros(4,4,length(a));
-    if isa(R_o,'sym')
-        H = vpa(H);
-    end
+    H = zeros(4,4,length(a),class(R_o));
 
     H(1,1,:) = S_(5, 1, n, xi, eta, Z);
     H(2,1,:) = S_(7, 1, n, xi, eta, Z);
@@ -329,10 +307,8 @@ Z{2,2} = bessel_s(n+1,xi,2);
 Z{1,1} = bessel_s(n,xi,1);
 Z{1,2} = bessel_s(n+1,xi,1);
 if n == 0
-    H = zeros(2,2,length(a));
-    if isa(R_o,'sym')
-        H = vpa(H);
-    end
+    H = zeros(2,2,length(a),class(R_o));
+    
     H(1,1,:) = S_(5, 1, n, xi, eta, Z);
     H(1,2,:) = S_(5, 2, n, xi, eta, Z);
 
@@ -346,10 +322,7 @@ if n == 0
     H(2,1,:) = S_(5, 1, n, xi, eta, Z);
     H(2,2,:) = S_(5, 2, n, xi, eta, Z);
 else
-    H = zeros(4,4,length(a));
-    if isa(R_o,'sym')
-        H = vpa(H);
-    end
+    H = zeros(4,4,length(a),class(R_o));
 
     H(1,1,:) = S_(5, 1, n, xi, eta, Z);
     H(1,2,:) = S_(5, 2, n, xi, eta, Z);
@@ -391,19 +364,15 @@ end
 
 function H = H2_(n,mu,k,R)
 
-H = zeros(2,length(k));
-if isa(R,'sym')
-    H = vpa(H);
-end
+H = zeros(2,length(k),class(R));
+
 H(1,:) = R^2/(2*mu)*bessel_s(n,k*R,1);
 H(2,:) = R^2/(2*mu)*bessel_s(n,k*R,2);
 
 function H = H3_(n,rho_f,k,omega,R)
 
-H = zeros(2,length(k));
-if isa(R,'sym')
-    H = vpa(H);
-end
+H = zeros(2,length(k),class(R));
+
 zeta = k*R;
 H(1,:) = -1./(rho_f*omega.^2).*dbessel_s(n,zeta,1,[],1); % dbessel_s = zeta*dj_n
 H(2,:) = -1./(rho_f*omega.^2).*dbessel_s(n,zeta,2,[],1); % dbessel_s = zeta*dy_n
@@ -416,16 +385,12 @@ Z = cell(2,2);
 Z{1,1} = bessel_s(n,xi,1);
 Z{1,2} = bessel_s(n+1,xi,1);
 if n == 0
-    H = zeros(2,length(a));
-    if isa(R,'sym')
-        H = vpa(H);
-    end
+    H = zeros(2,length(a),class(R));
+    
     H(1,:) = S_(1, 1, n, xi, eta, Z);
 else
-    H = zeros(4,length(a));
-    if isa(R,'sym')
-        H = vpa(H);
-    end
+    H = zeros(4,length(a),class(R));
+    
     H(1,:) = S_(1, 1, n, xi, eta, Z);
     
     Z{1,1} = bessel_s(n,eta,1);
@@ -445,17 +410,13 @@ Z{2,1} = bessel_s(n,xi,2);
 Z{2,2} = bessel_s(n+1,xi,2);
 
 if n == 0
-    H = zeros(2,length(a));
-    if isa(R,'sym')
-        H = vpa(H);
-    end
+    H = zeros(2,length(a),class(R));
+    
     H(1,:) = S_(1, 1, n, xi, eta, Z);
     H(2,:) = S_(1, 2, n, xi, eta, Z);
 else
-    H = zeros(4,length(a));
-    if isa(R,'sym')
-        H = vpa(H);
-    end
+    H = zeros(4,length(a),class(R));
+    
     H(1,:) = S_(1, 1, n, xi, eta, Z);
     H(2,:) = S_(1, 2, n, xi, eta, Z);
     

@@ -5,6 +5,9 @@ addpath ..
 addpath ../utils
 addpath ../models
 
+pathToResults = '../../plotData/e3Dss/';
+% pathToResults = '../results';
+
 startMatlabPool
 
 % Calculate Far-Field pattern (BI and Sweep)
@@ -17,6 +20,7 @@ d_vec = -[cos(beta_s)*cos(alpha_s);
           cos(beta_s)*sin(alpha_s);
           sin(beta_s)];
 models = {'S1','S3','S5','S35','S15','S13','S135'};
+models = {'S1'};
 
 for scatteringCase = {'BI'}
     switch scatteringCase{1}
@@ -35,12 +39,12 @@ for scatteringCase = {'BI'}
     for ii = 1:length(models)
         model = models{ii};
         close all
-        for SHBC = [0, 1]
-            for ESBC = [0, 1]
-                for SSBC = [0, 1]
+        for SHBC = 1 %[0, 1]
+            for ESBC = 0 %[0, 1]
+                for SSBC = 0 %[0, 1]
                     if ~(ESBC + SHBC + SSBC > 1)
                         if strcmp(model,'S5')
-                            load('../results/S5_SHBC_F30_specialValues')
+                            load([pathToResults 'S5_SHBC_F30_specialValues'])
                             alpha_f_arr = unique(sort([specialValues', alpha_f_arr]));
                         else
                             alpha_f_arr = (0:delta_alpha:360)*pi/180;
@@ -156,7 +160,8 @@ for scatteringCase = {'BI'}
         elseif strcmp(scatteringCase{1}, 'BI')
             for i = 1:length(f)
                 figure(i)
-                legend({'NNBC','SSBC','ESBC','SHBC'}, 'interpreter', 'none')
+%                 legend({'NNBC','SSBC','ESBC','SHBC'}, 'interpreter', 'none')
+                legend({'SHBC'}, 'interpreter', 'none')
                 title([filename(9:end-2) num2str(f(i)/1000)], 'interpreter', 'none')
                 savefig([filename(1:end-2) num2str(f(i)/1000) '.fig'])
             end

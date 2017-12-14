@@ -5,6 +5,9 @@ addpath ..
 addpath ../utils
 addpath ../models
 
+pathToResults = '../../plotData/e3Dss/';
+% pathToResults = '../results';
+
 startMatlabPool
 
 %% Chang and Demkowiz (1994) example
@@ -46,21 +49,26 @@ p_tot = data(1).p + p_inc(v);
 
 figure(16)
 plot(theta*180/pi, real(p_tot(:,1)), p_tot_Chang15(:,1), p_tot_Chang15(:,2))
-title(sprintf('$$h/a = %.2f, k = %.1f, N_{eps} = %d$$', h/a, k(1), data(1).N_eps(1)),'interpreter','latex')
-xlabel('theta (degree)')
-ylabel('real part of pressure')
+% title(sprintf('$$h/a = %.2f, k = %.1f, N_{eps} = %d$$', h/a, k(1), data(1).N_eps(1)),'interpreter','latex')
+xlabel('$\vartheta$','interpreter','latex')
+ylabel('Real part of pressure [Pa]')
 ylim([-2 2])
-legend({'Present work', 'Reference Solution from Chang (1994) - Figure 16'})
+legend({'Present work', 'Reference Solution from Chang (1994)'},'Location','northwest')
 xlim([0 180])
+xtickformat('degrees')
+savefig([pathToResults 'Figure7a'])
 
 figure(17)
 plot(theta*180/pi, real(p_tot(:,2)), p_tot_Chang20(:,1), p_tot_Chang20(:,2))
-title(sprintf('$$h/a = %.2f, k = %.1f, N_{eps} = %d$$', h/a, k(2), data(1).N_eps(2)),'interpreter','latex')
-xlabel('theta (degree)')
-ylabel('real part of pressure')
+% title(sprintf('$$h/a = %.2f, k = %.1f, N_{eps} = %d$$', h/a, k(2), data(1).N_eps(2)),'interpreter','latex')
+xlabel('$\vartheta$','interpreter','latex')
+xtickformat('degrees')
+ylabel('Real part of pressure [Pa]')
 ylim([-2 2])
-legend({'Present work', 'Reference Solution from Chang (1994) - Figure 17'})
+legend({'Present work', 'Reference Solution from Chang (1994)'})
 xlim([0 180])
+xtickformat('degrees')
+savefig([pathToResults 'Figure7b'])
 
 
 folderName = '../results';
@@ -114,3 +122,4 @@ saveName = [model '_' BC '_' scatteringCase '_A'  aspect '_E' elevation];
 filename = [folderName '/' saveName];
 figure(42)
 createConvergencePlot('2D',options,v,60,filename)
+savefig([pathToResults 'Figure8'])

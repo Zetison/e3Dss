@@ -5,6 +5,9 @@ addpath ..
 addpath ../utils
 addpath ../models
 
+pathToResults = '../../plotData/e3Dss/';
+% pathToResults = pathToResults '';
+
 startMatlabPool
 
 %% Create plot of bessel functinos for large n
@@ -28,14 +31,25 @@ parfor i = 1:length(N_arr)
 end
 semilogy(N_arr,abs(B1),N_arr,abs(B2))
 xlim([0,N])
+xlabel('$n$','interpreter','latex')
+ylabel('Magnitude of Bessel functions')
+switch type
+    case 1
+        ylim([2e-10,5e3])
+        savefig([pathToResults 'Figure4a'])
+    case 2
+        ylim([1e-223,1e223])
+        savefig([pathToResults 'Figure4b'])
+end
+legend({'$$|\mathrm{j}_n(500)|$$','$$|\mathrm{y}_n(500)|$$'},'interpreter','latex','location','northwest')
 
 % switch type
 %     case 1
 %         ylim([1e-10 1e4])
-%         printResultsToFile('../results/besseljForLargeN1', N_arr, abs(B1), [], 0, 1)
-%         printResultsToFile('../results/besselyForLargeN1', N_arr, abs(B2), [], 0, 1)
+%         printResultsToFile(pathToResults 'besseljForLargeN1', N_arr, abs(B1), [], 0, 1)
+%         printResultsToFile(pathToResults 'besselyForLargeN1', N_arr, abs(B2), [], 0, 1)
 %     case 2
 %         ylim([1e-220 1e220])
-%         printResultsToFile('../results/besseljForLargeN2', N_arr, abs(B1), [], 0, 1)
-%         printResultsToFile('../results/besselyForLargeN2', N_arr, abs(B2), [], 0, 1)
+%         printResultsToFile(pathToResults 'besseljForLargeN2', N_arr, abs(B1), [], 0, 1)
+%         printResultsToFile(pathToResults 'besselyForLargeN2', N_arr, abs(B2), [], 0, 1)
 % end

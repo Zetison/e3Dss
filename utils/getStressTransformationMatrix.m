@@ -1,9 +1,6 @@
 function D = getStressTransformationMatrix(theta,phi,type)
 
-D = zeros(6,6,length(theta));
-if isa(theta,'sym')
-    D = vpa(D);
-end
+D = zeros(6,6,length(theta),class(theta));
 switch type
     case 1
         D(1,1,:) = sin(theta).^2.*cos(phi).^2;

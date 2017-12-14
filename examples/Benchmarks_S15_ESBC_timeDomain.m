@@ -5,6 +5,9 @@ addpath ..
 addpath ../utils
 addpath ../models
 
+pathToResults = '../../plotData/e3Dss/';
+% pathToResults = '../results';
+
 startMatlabPool
 
 model = 'S15';
@@ -49,7 +52,7 @@ options = struct('d_vec', d_vec, ...
 
 options.Eps = 1e-8;
 extraPts = 40;
-folderName = ['../results/paraviewResults/' model '_' BC '/'];
+folderName = [pathToResults 'paraviewResults/' model '_' BC '/'];
 if ~exist(folderName, 'dir')
     mkdir(folderName);
 end

@@ -33,6 +33,9 @@ function data = e3Dss(X, newOptions)
 %           maximal relative contribution of the given term is compared
 %           with Eps
 % N_max:    Upper limit for the number of terms in the series
+% prec:     Precision of the calculations (default: 'double'). Both 'sym'
+%           and 'mp' are supported, with arbitrary precision altered by Digits and
+%           mp.Digits respectively
 % calc_farField: Set true if the far field is to be calculated for outer
 %           fluid domain
 % usePlaneWave: Set true for plane incident waves
@@ -43,30 +46,31 @@ function data = e3Dss(X, newOptions)
 % calc_dpdx: Calculate the derivative of the scattered pressure fields w.r.t. the cartesian coordinate x
 % calc_dpdy: Calculate the derivative of the scattered pressure fields w.r.t. the cartesian coordinate y
 % calc_dpdz: Calculate the derivative of the scattered pressure fields w.r.t. the cartesian coordinate z
-% calc_u_x: Calculate the derivative of the displacement fields w.r.t. the cartesian coordinate x
-% calc_u_y: Calculate the derivative of the displacement fields w.r.t. the cartesian coordinate y
-% calc_u_z: Calculate the derivative of the displacement fields w.r.t. the cartesian coordinate z
-% calc_u_r: Calculate the derivative of the displacement fields w.r.t. the spherical coordinate r
-% calc_u_t: Calculate the derivative of the displacement fields w.r.t. the spherical coordinate theta
+% calc_u_x: Calculate the x component of the displacement field
+% calc_u_y: Calculate the y component of the displacement field 
+% calc_u_z: Calculate the z component of the displacement field
+% calc_u_r: Calculate the r component of the displacement field
+% calc_u_t: Calculate the theta component of the displacement field
+% calc_du_xdx: Calculate the derivative of the x component of the displacement field w.r.t. x
+% calc_du_xdy: Calculate the derivative of the x component of the displacement field w.r.t. y
+% calc_du_xdz: Calculate the derivative of the x component of the displacement field w.r.t. z
+% calc_du_ydx: Calculate the derivative of the y component of the displacement field w.r.t. x
+% calc_du_ydy: Calculate the derivative of the y component of the displacement field w.r.t. y
+% calc_du_ydz: Calculate the derivative of the y component of the displacement field w.r.t. z
+% calc_du_zdx: Calculate the derivative of the z component of the displacement field w.r.t. x
+% calc_du_zdy: Calculate the derivative of the z component of the displacement field w.r.t. y
+% calc_du_zdz: Calculate the derivative of the z component of the displacement field w.r.t. z
 % calc_sigma_xx: Calculate the derivative of the xx component of the stress field (cartesian coordinates)
 % calc_sigma_yy: Calculate the derivative of the yy component of the stress field (cartesian coordinates)
 % calc_sigma_zz: Calculate the derivative of the zz component of the stress field (cartesian coordinates)
 % calc_sigma_yz: Calculate the derivative of the yz component of the stress field (cartesian coordinates)
 % calc_sigma_xz: Calculate the derivative of the xz component of the stress field (cartesian coordinates)
 % calc_sigma_xy: Calculate the derivative of the xy component of the stress field (cartesian coordinates)
-% calc_sigma_rr: Calculate the derivative of the rr component of the stress field (spherical coordinates)
-% calc_sigma_tt: Calculate the derivative of the thetatheta component of the stress field (spherical coordinates)
-% calc_sigma_pp: Calculate the derivative of the phiphi component of the stress field (spherical coordinates)
-% calc_sigma_rt: Calculate the derivative of the rtheta component of the stress field (spherical coordinates)
 % calc_p_laplace: Calculate the Laplace operator of the scattered pressure fields
 % calc_errorsDisplacementCondition: Calculate the errors for the displacement conditions
 % calc_errorsPressureCondition: Calculate the errors for the pressure conditions
 % calc_errorsHelmholtz: Calculate errors for the Helmholtz equation
 % calc_errorsNavier:    Calculate errors for the Navier equation
-% useSymbolicPrecision: Use symbolic precision for calculations. Note that
-%           if true, this option will significantly increase the
-%           computational time. The precision used is given by the built in
-%           function digits (which can be used to alter the precision)
 %
 % Note that only the minimal set of parameters should be given. For
 % example, if numel(E) < numel(R_o) it is assumed that the inner domain is
@@ -82,6 +86,19 @@ function data = e3Dss(X, newOptions)
 %
 % The function handles the case in which both X and omega are vectors.
 % 
+% The following improvement will be implemented in the future:
+%   - Implement a scaling in the linear system of equations such that
+%   evaluations of the spherical bessel functions j_n(x) and y_n(x) are
+%   replaced by j_n(x)/x^n and y_n(x)*x^(n+1), respectively. This will in
+%   turn solve the problem of evaluations extending the range of the given
+%   precision (10^290 is implemented for double), and thus enable
+%   evaluations at even higher frequencies.
+%   - Implement fluid-fluid layers, and solid-solid layers
+%   - Implement polynomial expansions for thin solid layers to avoid bad
+%   conditioning of matrix
+%   - Implement Fenders strategy of avoiding complex matrices.
+%   - Implement Fenders strategy of reducing the size of the matrix.
+%
 % Author: Jon Vegard Venås
 % E-mail: jon.venas@ntnu.no
 % Release: 1
@@ -100,6 +117,7 @@ options = struct('d_vec',   [0;0;1],  ... 	% Direction of the incident wave
                  'c_f',     1500, ...       % Speed of sound in fluid layers
                  'Eps',     eps,  ...       % Small parameter for series truncation
                  'N_max',   inf,  ...       % Upper limit for the number of terms in the series
+                 'prec',    'double', ...   % Precision of the calculations
                  'calc_farField',       false, ...  % Set true if the far field is to be calculated for outer fluid domain
                  'usePlaneWave',        true,  ...  % Set true for plane incident waves
                  'usePointChargeWave',  false, ...  % Set true for point charge incident waves
@@ -108,27 +126,29 @@ options = struct('d_vec',   [0;0;1],  ... 	% Direction of the incident wave
                  'calc_dpdx',           false, ...  % Calculate the derivative of the scattered pressure fields w.r.t. the cartesian coordinate x
                  'calc_dpdy',           false, ...  % Calculate the derivative of the scattered pressure fields w.r.t. the cartesian coordinate y
                  'calc_dpdz',           false, ...  % Calculate the derivative of the scattered pressure fields w.r.t. the cartesian coordinate z
-                 'calc_u_x',            false, ...  % Calculate the derivative of the displacement fields w.r.t. the cartesian coordinate x
-                 'calc_u_y',            false, ...  % Calculate the derivative of the displacement fields w.r.t. the cartesian coordinate y
-                 'calc_u_z',            false, ...  % Calculate the derivative of the displacement fields w.r.t. the cartesian coordinate z
-                 'calc_u_r',            false, ...  % Calculate the derivative of the displacement fields w.r.t. the spherical coordinate r
-                 'calc_u_t',            false, ...  % Calculate the derivative of the displacement fields w.r.t. the spherical coordinate theta
+                 'calc_u_x',            false, ...  % Calculate the x component of the displacement
+                 'calc_u_y',            false, ...  % Calculate the y component of the displacement
+                 'calc_u_z',            false, ...  % Calculate the z component of the displacement
+                 'calc_du_xdx',         false, ...  % Calculate the derivative of the x component of the displacement field w.r.t. x
+                 'calc_du_xdy',         false, ...  % Calculate the derivative of the x component of the displacement field w.r.t. y
+                 'calc_du_xdz',         false, ...  % Calculate the derivative of the x component of the displacement field w.r.t. z
+                 'calc_du_ydx',         false, ...  % Calculate the derivative of the y component of the displacement field w.r.t. x
+                 'calc_du_ydy',         false, ...  % Calculate the derivative of the y component of the displacement field w.r.t. y
+                 'calc_du_ydz',         false, ...  % Calculate the derivative of the y component of the displacement field w.r.t. z
+                 'calc_du_zdx',         false, ...  % Calculate the derivative of the z component of the displacement field w.r.t. x
+                 'calc_du_zdy',         false, ...  % Calculate the derivative of the z component of the displacement field w.r.t. y
+                 'calc_du_zdz',         false, ...  % Calculate the derivative of the z component of the displacement field w.r.t. z
                  'calc_sigma_xx',       false, ...  % Calculate the derivative of the xx component of the stress field (cartesian coordinates)
                  'calc_sigma_yy',       false, ...  % Calculate the derivative of the yy component of the stress field (cartesian coordinates)
                  'calc_sigma_zz',       false, ...  % Calculate the derivative of the zz component of the stress field (cartesian coordinates)
                  'calc_sigma_yz',       false, ...  % Calculate the derivative of the yz component of the stress field (cartesian coordinates)
                  'calc_sigma_xz',       false, ...  % Calculate the derivative of the xz component of the stress field (cartesian coordinates)
                  'calc_sigma_xy',       false, ...  % Calculate the derivative of the xy component of the stress field (cartesian coordinates)
-                 'calc_sigma_rr',       false, ...  % Calculate the derivative of the rr component of the stress field (spherical coordinates)
-                 'calc_sigma_tt',       false, ...  % Calculate the derivative of the thetatheta component of the stress field (spherical coordinates)
-                 'calc_sigma_pp',       false, ...  % Calculate the derivative of the phiphi component of the stress field (spherical coordinates)
-                 'calc_sigma_rt',       false, ...  % Calculate the derivative of the rtheta component of the stress field (spherical coordinates)
                  'calc_p_laplace',      false, ...  % Calculate the Laplace operator of the scattered pressure fields
                  'calc_errorsDisplacementCondition', false, ... % Calculate the errors for the displacement conditions
                  'calc_errorsPressureCondition', 	 false, ... % Calculate the errors for the pressure conditions
                  'calc_errorsHelmholtz',             false, ... % Calculate errors for the Helmholtz equation
-                 'calc_errorsNavier',                false, ... % Calculate errors for the Navier equation
-                 'useSymbolicPrecision',             false);    % Use symbolic precision for calculations
+                 'calc_errorsNavier',                false);	% Calculate errors for the Navier equation
                   
 if nargin > 1
     newOptionFields = fieldnames(newOptions);
@@ -140,27 +160,8 @@ end
 if ~iscell(X)
     X = {X};
 end
-useSymbolicPrecision = options.useSymbolicPrecision;
-if useSymbolicPrecision
-    options.d_vec = vpa(options.d_vec);
-    options.omega = vpa(options.omega);
-    options.R_i = vpa(options.R_i);
-    options.R_o = vpa(options.R_o);
-    options.P_inc = vpa(options.P_inc);
-    options.E = vpa(options.E);
-    options.nu = vpa(options.nu);
-    options.rho_s = vpa(options.rho_s);
-    options.rho_f = vpa(options.rho_f);
-    options.c_f = vpa(options.c_f);
-    options.Eps = vpa(options.Eps);
-    for i = 1:length(X)
-        X{i} = vpa(X{i});
-    end
-end
-calc_errorsPressureCondition = options.calc_errorsDisplacementCondition;
-calc_errorsDisplacementCondition = options.calc_errorsPressureCondition;
-calc_errorsHelmholtz = options.calc_errorsHelmholtz;
-calc_errorsNavier = options.calc_errorsNavier;
+prec = options.prec;
+
 omega = options.omega;
 E = options.E;
 nu = options.nu;
@@ -172,6 +173,11 @@ rho_f = options.rho_f;
 R_o = options.R_o;
 R_i = options.R_i;
 d_vec = options.d_vec;
+
+calc_errorsPressureCondition = options.calc_errorsPressureCondition;
+calc_errorsDisplacementCondition = options.calc_errorsDisplacementCondition;
+calc_errorsHelmholtz = options.calc_errorsHelmholtz;
+calc_errorsNavier = options.calc_errorsNavier;
 calc_p = options.calc_p || calc_errorsPressureCondition;
 calc_dpdx = options.calc_dpdx || calc_errorsDisplacementCondition;
 calc_dpdy = options.calc_dpdy || calc_errorsDisplacementCondition;
@@ -179,8 +185,16 @@ calc_dpdz = options.calc_dpdz || calc_errorsDisplacementCondition;
 calc_u_x = options.calc_u_x;
 calc_u_y = options.calc_u_y;
 calc_u_z = options.calc_u_z;
-calc_u_r = options.calc_u_r || calc_errorsDisplacementCondition;
-calc_u_t = options.calc_u_t || calc_errorsDisplacementCondition;
+
+calc_du_xdx = options.calc_du_xdx;
+calc_du_xdy = options.calc_du_xdy;
+calc_du_xdz = options.calc_du_xdz;
+calc_du_ydx = options.calc_du_ydx;
+calc_du_ydy = options.calc_du_ydy;
+calc_du_ydz = options.calc_du_ydz;
+calc_du_zdx = options.calc_du_xdx;
+calc_du_zdy = options.calc_du_zdy;
+calc_du_zdz = options.calc_du_zdz;
 calc_sigma_xx = options.calc_sigma_xx;
 calc_sigma_yy = options.calc_sigma_yy;
 calc_sigma_zz = options.calc_sigma_zz;
@@ -188,18 +202,19 @@ calc_sigma_yz = options.calc_sigma_yz;
 calc_sigma_xz = options.calc_sigma_xz;
 calc_sigma_xy = options.calc_sigma_xy;
 calc_p_laplace = options.calc_p_laplace;
-calc_sigma_rr = options.calc_sigma_rr;
-calc_sigma_tt = options.calc_sigma_tt;
-calc_sigma_pp = options.calc_sigma_pp;
-calc_sigma_rt = options.calc_sigma_rt;
 calc_errors = calc_errorsDisplacementCondition || calc_errorsPressureCondition || calc_errorsHelmholtz || calc_errorsNavier;
 
 options.calc_dpdr = calc_dpdx || calc_dpdy || calc_dpdz || calc_p_laplace;
 options.calc_dpdt = options.calc_dpdr;
 options.calc_d2pdr2 = calc_p_laplace || calc_errorsHelmholtz;
 options.calc_d2pdt2 = calc_p_laplace || calc_errorsHelmholtz;
-options.calc_u_r = calc_u_r || calc_u_x || calc_u_y || calc_u_z || calc_errorsNavier;
-options.calc_u_t = calc_u_t || calc_u_x || calc_u_y || calc_u_z || calc_errorsNavier;
+calcCartesianDispDerivatives = calc_du_xdx || calc_du_xdy || calc_du_xdz || calc_du_ydx || calc_du_ydy || calc_du_ydz || calc_du_zdx || calc_du_zdy || calc_du_zdz;
+options.calc_u_r = calc_errorsDisplacementCondition || calcCartesianDispDerivatives || calc_u_x || calc_u_y || calc_u_z || calc_errorsNavier;
+options.calc_u_t = calc_errorsDisplacementCondition || calcCartesianDispDerivatives || calc_u_x || calc_u_y || calc_u_z || calc_errorsNavier;
+options.calc_du_rdr = calcCartesianDispDerivatives;
+options.calc_du_rdt = calcCartesianDispDerivatives;
+options.calc_du_tdr = calcCartesianDispDerivatives;
+options.calc_du_tdt = calcCartesianDispDerivatives;
 
 calcStresses =  calc_sigma_xx || calc_sigma_yy || calc_sigma_zz || calc_sigma_yz || calc_sigma_xz ...
                              || calc_sigma_xy || calc_errorsNavier || calc_errorsPressureCondition;
@@ -216,7 +231,7 @@ if options.usePointChargeWave
     if isnan(options.r_s)
         options.r_s = 2*R_o(1);
     elseif abs(options.r_s) < R_o(1)
-        error('d must satisfy |d| > R_o(1)')
+        error('r_s must satisfy |r_s| > R_o(1)')
     end
     warning(['It is not implemented an efficient routine to evaluate Equation (D.7). ' ...
              'The built in MATLAB routine is used for this purpose.'])
@@ -288,53 +303,29 @@ for j = 1:length(X)
     if ~isempty(r{j})
         if mod(j,2)
             if calc_p
-                data(m).p = zeros(size(X{j},1),nFreqs);
-                if useSymbolicPrecision
-                    data(m).p = vpa(data(m).p);
-                end
+                data(m).p = zeros(size(X{j},1),nFreqs,prec);
             end
             if calc_dpdx
-                data(m).dpdx = zeros(size(X{j},1),nFreqs);
-                if useSymbolicPrecision
-                    data(m).dpdx = vpa(data(m).dpdx);
-                end
+                data(m).dpdx = zeros(size(X{j},1),nFreqs,prec);
             end
             if calc_dpdy
-                data(m).dpdy = zeros(size(X{j},1),nFreqs);
-                if useSymbolicPrecision
-                    data(m).dpdy = vpa(data(m).dpdy);
-                end
+                data(m).dpdy = zeros(size(X{j},1),nFreqs,prec);
             end
             if calc_dpdz
-                data(m).dpdz = zeros(size(X{j},1),nFreqs);
-                if useSymbolicPrecision
-                    data(m).dpdz = vpa(data(m).dpdz);
-                end
+                data(m).dpdz = zeros(size(X{j},1),nFreqs,prec);
             end
             if calc_p_laplace
-                data(m).p_laplace = zeros(size(X{j},1),nFreqs);
-                if useSymbolicPrecision
-                    data(m).p_laplace = vpa(data(m).p_laplace);
-                end
+                data(m).p_laplace = zeros(size(X{j},1),nFreqs,prec);
             end
         else
             if calc_u_x
-                data(m).u_x = zeros(size(X{j},1),nFreqs);
-                if useSymbolicPrecision
-                    data(m).u_x = vpa(data(m).u_x);
-                end
+                data(m).u_x = zeros(size(X{j},1),nFreqs,prec);
             end
             if calc_u_y
-                data(m).u_y = zeros(size(X{j},1),nFreqs);
-                if useSymbolicPrecision
-                    data(m).u_y = vpa(data(m).u_x);
-                end
+                data(m).u_y = zeros(size(X{j},1),nFreqs,prec);
             end
             if calc_u_z
-                data(m).u_z = zeros(size(X{j},1),nFreqs);
-                if useSymbolicPrecision
-                    data(m).u_z = vpa(data(m).u_x);
-                end
+                data(m).u_z = zeros(size(X{j},1),nFreqs,prec);
             end
         end
     end
@@ -412,21 +403,16 @@ for j = 1:length(X)
                 sigma_m{1} = data_0(m).sigma_rr;
                 sigma_m{2} = data_0(m).sigma_tt;
                 sigma_m{3} = data_0(m).sigma_pp;
-                sigma_m{4} = zeros(nFreqs,size(X{j},1));
-                sigma_m{5} = zeros(nFreqs,size(X{j},1));
+                sigma_m{4} = zeros(nFreqs,size(X{j},1),prec);
+                sigma_m{5} = zeros(nFreqs,size(X{j},1),prec);
                 sigma_m{6} = data_0(m).sigma_rt;
-                if useSymbolicPrecision
-                    sigma_m{4} = vpa(sigma_m{4});
-                    sigma_m{5} = vpa(sigma_m{5});
-                end
+                
                 D = getStressTransformationMatrix(theta{j},phi{j},2);
                 sigma_X_m = cell(6,1);
                 for ii = 1:6
-                    sigma_X_m{ii} = zeros(nFreqs,size(X{j},1));
-                    if useSymbolicPrecision
-                        sigma_X_m{ii} = vpa(sigma_X_m{ii});
-                    end
+                    sigma_X_m{ii} = zeros(nFreqs,size(X{j},1),prec);
                 end
+                sigma_X = sigma_X_m;
                 for ii = 1:6
                     for jj = 1:6
                         D_kl = D(ii, jj, :);
@@ -443,10 +429,7 @@ for j = 1:length(X)
                     sigma_X_m{6}(indices) = 0;
                 end
 
-                alpha = zeros(3);
-                if useSymbolicPrecision
-                    alpha = vpa(alpha);
-                end
+                alpha = zeros(3,prec);
                 I = eye(3);
                 for ii = 1:3
                     for jj = 1:3
@@ -463,31 +446,15 @@ for j = 1:length(X)
                 vgtinv = [1 6 5;
                           6 2 4;
                           5 4 3];
-                sigma_X = cell(6,1);
-                for ii = 1:6
-                    sigma_X{ii} = zeros(size(X{j},1),nFreqs);
-                    if useSymbolicPrecision
-                        sigma_X{ii} = vpa(sigma_X{ii});
-                    end
-                end
                 for vgtIdx = 1:6
                     for ii = 1:3
                         for jj = 1:3
-                            sigma_X{vgtIdx} = sigma_X{vgtIdx} + alpha(vgt(vgtIdx,1),ii)*alpha(vgt(vgtIdx,2),jj)*sigma_X_m{vgtinv(ii,jj)}.';
+                            sigma_X{vgtIdx} = sigma_X{vgtIdx} + alpha(vgt(vgtIdx,1),ii)*alpha(vgt(vgtIdx,2),jj)*sigma_X_m{vgtinv(ii,jj)};
                         end
                     end
                 end
-                if calc_sigma_rr
-                    data(m).sigma_rr = data_0(m).sigma_rr.';
-                end
-                if calc_sigma_tt
-                    data(m).sigma_tt = data_0(m).sigma_tt.';
-                end
-                if calc_sigma_pp
-                    data(m).sigma_pp = data_0(m).sigma_pp.';
-                end
-                if calc_sigma_rt
-                    data(m).sigma_rt = data_0(m).sigma_rt.';
+                for ii = 1:6
+                    sigma_X{ii} = sigma_X{ii}.';
                 end
                 if calc_sigma_xx
                     data(m).sigma_xx = sigma_X{1};
@@ -508,10 +475,132 @@ for j = 1:length(X)
                     data(m).sigma_xy = sigma_X{6};
                 end
             end
+            if calcCartesianDispDerivatives
+                % Transform the derivatives in the spherical coordinate system to the 
+                % Cartesian coordinate system
+                u_r = data_0(m).u_r;
+                u_t = data_0(m).u_t;
+                
+                du_m = cell(3,3);
+                du_m{1,1} = data_0(m).du_rdr;
+                du_m{1,2} = data_0(m).du_rdt.*sin(Theta); % rescale du_rdt
+                du_m{1,3} = zeros(nFreqs,size(X{j},1),prec);
+                du_m{2,1} = data_0(m).du_tdr.*sin(Theta); % rescale du_tdr
+                du_m{2,2} = data_0(m).du_tdt;
+                du_m{2,3} = zeros(nFreqs,size(X{j},1),prec);
+                du_m{3,1} = zeros(nFreqs,size(X{j},1),prec);
+                du_m{3,2} = zeros(nFreqs,size(X{j},1),prec);
+                du_m{3,3} = zeros(nFreqs,size(X{j},1),prec);
+                
+                [J_e,~,~,J_si,J_1,J_2] = getDerivativeTransformationMatrices(theta{j},phi{j},r{j});
+                du_X_m = cell(3,3);
+                for ii = 1:3
+                    for jj = 1:3
+                        du_X_m{ii,jj} = zeros(nFreqs,size(X{j},1),prec);
+                    end
+                end
+                du_X = du_X_m;
+                temp = du_X_m;
+                for ii = 1:3
+                    for jj = 1:3
+                        for ll = 1:3
+                            J_si_lj = J_si(ll, jj, :);
+                            J_si_lj = J_si_lj(:);
+                            temp{ii,jj} = temp{ii,jj} + du_m{ii,ll}.*repmat(J_si_lj.',nFreqs,1);
+                        end
+                    end
+                end
+                for ii = 1:3
+                    for jj = 1:3
+                        for ll = 1:3
+                            J_e_lj = J_e(ll, ii, :); % transpose of J_e ...
+                            J_e_lj = J_e_lj(:);
+                            du_X_m{ii,jj} = du_X_m{ii,jj} + repmat(J_e_lj.',nFreqs,1).*temp{ll,jj};
+                        end
+                    end
+                end
+                for ii = 1:3
+                    for jj = 1:3
+                        J_1_ij = J_1(ii, jj, :);
+                        J_1_ij = J_1_ij(:);
+                        du_X_m{ii,jj} = du_X_m{ii,jj} + repmat(J_1_ij.',nFreqs,1).*u_r;
+                        
+                        J_2_ij = J_2(ii, jj, :);
+                        J_2_ij = J_2_ij(:);
+                        du_X_m{ii,jj} = du_X_m{ii,jj} + repmat(J_2_ij.',nFreqs,1).*u_t;
+                    end
+                end
+                if ESBC && m == M
+                    du_X_m{1,1}(indices) = data_0(m).du_rdr(indices);
+                    du_X_m{2,2}(indices) = data_0(m).du_rdt(indices);
+                    du_X_m{3,3}(indices) = data_0(m).du_tdr(indices);
+                    for ii = 1:3
+                        for jj = 1:3
+                            if ii ~= jj
+                                du_X_m{ii,jj}(indices) = 0;
+                            end
+                        end
+                    end
+                end
+
+                for ii = 1:3
+                    for jj = 1:3
+                        temp{ii,jj}(:) = 0;
+                    end
+                end
+                Ainv = inv(A);
+                for ii = 1:3
+                    for jj = 1:3
+                        for ll = 1:3
+                            temp{ii,jj} = temp{ii,jj} + A(ii, ll)*du_X_m{ll,jj};
+                        end
+                    end
+                end
+                for ii = 1:3
+                    for jj = 1:3
+                        for ll = 1:3
+                            du_X{ii,jj} = du_X{ii,jj} + temp{ii, ll}*Ainv(ll,jj);
+                        end
+                    end
+                end
+                for ii = 1:3
+                    for jj = 1:3
+                        du_X{ii,jj} = du_X{ii,jj}.';
+                    end
+                end
+                
+                if calc_du_xdx
+                    data(m).du_xdx = du_X{1,1};
+                end
+                if calc_du_xdy
+                    data(m).du_xdy = du_X{1,2};
+                end
+                if calc_du_xdz
+                    data(m).du_xdz = du_X{1,3};
+                end
+                if calc_du_ydx
+                    data(m).du_ydx = du_X{2,1};
+                end
+                if calc_du_ydy
+                    data(m).du_ydy = du_X{2,2};
+                end
+                if calc_du_ydz
+                    data(m).du_ydz = du_X{2,3};
+                end
+                if calc_du_zdx
+                    data(m).du_zdx = du_X{3,1};
+                end
+                if calc_du_zdy
+                    data(m).du_zdy = du_X{3,2};
+                end
+                if calc_du_zdz
+                    data(m).du_zdz = du_X{3,3};
+                end
+            end
             if calc_u_x || calc_u_y || calc_u_z
                 u_X_m = cell(3,1);
                 u_r = data_0(m).u_r;
-                u_t = data_0(m).u_t;
+                u_t = data_0(m).u_t.*sin(Theta); % rescale u_t
                 u_X_m{1} = u_r.*sin(Theta).*cos(Phi) + u_t.*cos(Theta).*cos(Phi);
                 u_X_m{2} = u_r.*sin(Theta).*sin(Phi) + u_t.*cos(Theta).*sin(Phi);
                 u_X_m{3} = u_r.*cos(Theta) - u_t.*sin(Theta);
@@ -521,14 +610,10 @@ for j = 1:length(X)
                     u_X_m{3}(indices) = u_r(indices);
                 end
                 u_X = cell(3,1);
-                u_X{1} = zeros(size(X{j},1),nFreqs);
-                u_X{2} = zeros(size(X{j},1),nFreqs);
-                u_X{3} = zeros(size(X{j},1),nFreqs);
-                if useSymbolicPrecision
-                    u_X{1} = vpa(u_X{1});
-                    u_X{2} = vpa(u_X{2});
-                    u_X{3} = vpa(u_X{3});
-                end
+                u_X{1} = zeros(size(X{j},1),nFreqs,prec);
+                u_X{2} = zeros(size(X{j},1),nFreqs,prec);
+                u_X{3} = zeros(size(X{j},1),nFreqs,prec);
+                
                 for ii = 1:3
                     for jj = 1:3
                         u_X{ii} = u_X{ii} + A(ii,jj)*u_X_m{jj}.';
@@ -543,12 +628,6 @@ for j = 1:length(X)
                 if calc_u_z
                     data(m).u_z = u_X{3};
                 end
-            end
-            if calc_u_r || calc_errorsNavier
-                data(m).u_r = data_0(m).u_r.';
-            end
-            if calc_u_t || calc_errorsNavier
-                data(m).u_t = data_0(m).u_t.';
             end
             if calc_errorsNavier
                 data(m).navier1 = data_0(m).navier1.';
@@ -643,14 +722,12 @@ if calc_errors
                             sigma_cart{5} = data(m).sigma_xz(indices_s,:);
                             sigma_cart{6} = data(m).sigma_xy(indices_s,:);
 
-                            sigma_rr = zeros(size(sigma_cart{1}));
-                            if useSymbolicPrecision
-                                sigma_rr = vpa(sigma_rr);
-                            end
-                            phi = atan2(v_f(:,2),v_f(:,1));
-                            r = sqrt(v_f(:,1).^2+v_f(:,2).^2+v_f(:,3).^2);
-                            theta = acos(v_f(:,3)./r);
-                            D = getStressTransformationMatrix(theta,phi,1);
+                            sigma_rr = zeros(size(sigma_cart{1}),prec);
+                            
+                            phi_temp = atan2(v_f(:,2),v_f(:,1));
+                            r_temp = sqrt(v_f(:,1).^2+v_f(:,2).^2+v_f(:,3).^2);
+                            theta_temp = acos(v_f(:,3)./r_temp);
+                            D = getStressTransformationMatrix(theta_temp,phi_temp,1);
                             for l = 1:6
                                 D_kl = D(1, l, :);
                                 D_kl = repmat(D_kl(:),1,length(omega));
@@ -671,10 +748,15 @@ if calc_errors
                 end
             end
             if calc_errorsNavier && ~(SHBC && m == M)
+                Theta = repmat(theta{2*m},nFreqs,1);
                 rho_s = options.rho_s(m);
-                Omega = repmat(omega,size(data(m).u_r,1),1);
-                data(m).err_navier1 = max(abs(data(m).navier1 + rho_s*Omega.^2.*data(m).u_r),[],1)./max(abs(rho_s*Omega.^2.*data(m).u_r),[],1);
-                data(m).err_navier2 = max(abs(data(m).navier2 + rho_s*Omega.^2.*data(m).u_t),[],1)./max(abs(rho_s*Omega.^2.*data(m).u_t),[],1);
+                u_r = data_0(m).u_r;
+                u_t = data_0(m).u_t.*sin(Theta); % rescale u_t
+                u_r = u_r.';
+                u_t = u_t.';
+                Omega = repmat(omega,size(u_r,1),1);
+                data(m).err_navier1 = max(abs(data(m).navier1 + rho_s*Omega.^2.*u_r),[],1)./max(abs(rho_s*Omega.^2.*u_r),[],1);
+                data(m).err_navier2 = max(abs(data(m).navier2 + rho_s*Omega.^2.*u_t),[],1)./max(abs(rho_s*Omega.^2.*u_t),[],1);
             end
         end
         if calc_errorsHelmholtz && ~(m == M+1 && (SSBC || SHBC || ESBC))
@@ -696,24 +778,25 @@ function data = e3Dss_0(r, theta, options)
 % symmetry is the z-axis
 %
 %
-% Note that dpdt are scaled by csc(theta)
+% Note that dpdt, u_t, du_tdr, and du_rdt are scaled by csc(theta)
 
 omega = options.omega;
 c_f = options.c_f;
 E = options.E;
 R_o = options.R_o;
 
-k = omega*(1./c_f);
+prec = options.prec;
 
 SSBC = options.SSBC;
 ESBC = options.ESBC;
 SHBC = options.SHBC;
-useSymbolicPrecision = options.useSymbolicPrecision;
 
 Eps = options.Eps;
 nFreqs = length(omega);
 M = length(R_o);
 N_max = options.N_max;
+
+k = omega*(1./c_f);
 
 % Compute derived quantities
 if ~(SHBC && M == 1)
@@ -755,119 +838,72 @@ end
 m = 1;
 for j = 1:length(r)
     if ~isempty(r{j})
-        P{j} = zeros(2,length(theta{j})); 
-        dP{j} = zeros(2,length(theta{j})); 
-        d2P{j} = zeros(2,length(theta{j}));
-        if useSymbolicPrecision
-            P{j} = vpa(P{j});
-            dP{j} = vpa(dP{j});
-            d2P{j} = vpa(d2P{j});
-        end
+        P{j} = zeros(2,length(theta{j}),prec); 
+        dP{j} = zeros(2,length(theta{j}),prec); 
+        d2P{j} = zeros(2,length(theta{j}),prec);
         if mod(j,2)
-            Z(m).zeta{1,1} = zeros(nFreqs-computeForStaticCase,length(theta{j}));
-            Z(m).zeta{1,2} = zeros(nFreqs-computeForStaticCase,length(theta{j}));
-            Z(m).zeta{2,1} = zeros(nFreqs-computeForStaticCase,length(theta{j}));
-            Z(m).zeta{2,2} = zeros(nFreqs-computeForStaticCase,length(theta{j}));
-            if useSymbolicPrecision
-                Z(m).zeta{1,1} = vpa(Z(m).zeta{1,1});
-                Z(m).zeta{1,2} = vpa(Z(m).zeta{1,2});
-                Z(m).zeta{2,1} = vpa(Z(m).zeta{2,1});
-                Z(m).zeta{2,2} = vpa(Z(m).zeta{2,2});
-            end
+            Z(m).zeta{1,1} = zeros(nFreqs-computeForStaticCase,length(theta{j}),prec);
+            Z(m).zeta{1,2} = zeros(nFreqs-computeForStaticCase,length(theta{j}),prec);
+            Z(m).zeta{2,1} = zeros(nFreqs-computeForStaticCase,length(theta{j}),prec);
+            Z(m).zeta{2,2} = zeros(nFreqs-computeForStaticCase,length(theta{j}),prec);
             if options.calc_p
-                data(m).p = zeros(nFreqs,length(r{j}));
-                if useSymbolicPrecision
-                    data(m).p = vpa(data(m).p);
-                end
+                data(m).p = zeros(nFreqs,length(r{j}),prec);
             end
             if options.calc_dpdr
-                data(m).dpdr = zeros(nFreqs,length(r{j}));
-                if useSymbolicPrecision
-                    data(m).dpdr = vpa(data(m).dpdr);
-                end
+                data(m).dpdr = zeros(nFreqs,length(r{j}),prec);
             end
             if options.calc_dpdt
-                data(m).dpdt = zeros(nFreqs,length(r{j}));
-                if useSymbolicPrecision
-                    data(m).dpdt = vpa(data(m).dpdt);
-                end
+                data(m).dpdt = zeros(nFreqs,length(r{j}),prec);
             end
             if options.calc_d2pdr2
-                data(m).d2pdr2 = zeros(nFreqs,length(r{j}));
-                if useSymbolicPrecision
-                    data(m).d2pdr2 = vpa(data(m).d2pdr2);
-                end
+                data(m).d2pdr2 = zeros(nFreqs,length(r{j}),prec);
             end
             if options.calc_d2pdt2
-                data(m).d2pdt2 = zeros(nFreqs,length(r{j}));
-                if useSymbolicPrecision
-                    data(m).d2pdt2 = vpa(data(m).d2pdt2);
-                end
+                data(m).d2pdt2 = zeros(nFreqs,length(r{j}),prec);
             end
         else
-            Z(m).xi{1,1} = zeros(nFreqs-computeForStaticCase,length(theta{j}));
-            Z(m).xi{1,2} = zeros(nFreqs-computeForStaticCase,length(theta{j}));
-            Z(m).xi{2,1} = zeros(nFreqs-computeForStaticCase,length(theta{j}));
-            Z(m).xi{2,2} = zeros(nFreqs-computeForStaticCase,length(theta{j}));
+            Z(m).xi{1,1} = zeros(nFreqs-computeForStaticCase,length(theta{j}),prec);
+            Z(m).xi{1,2} = zeros(nFreqs-computeForStaticCase,length(theta{j}),prec);
+            Z(m).xi{2,1} = zeros(nFreqs-computeForStaticCase,length(theta{j}),prec);
+            Z(m).xi{2,2} = zeros(nFreqs-computeForStaticCase,length(theta{j}),prec);
 
-            Z(m).eta{1,1} = zeros(nFreqs-computeForStaticCase,length(theta{j}));
-            Z(m).eta{1,2} = zeros(nFreqs-computeForStaticCase,length(theta{j}));
-            Z(m).eta{2,1} = zeros(nFreqs-computeForStaticCase,length(theta{j}));
-            Z(m).eta{2,2} = zeros(nFreqs-computeForStaticCase,length(theta{j}));
-            if useSymbolicPrecision                
-                Z(m).xi{1,1} = vpa(Z(m).xi{1,1});
-                Z(m).xi{1,2} = vpa(Z(m).xi{1,2});
-                Z(m).xi{2,1} = vpa(Z(m).xi{2,1});
-                Z(m).xi{2,2} = vpa(Z(m).xi{2,2});
-                
-                Z(m).eta{1,1} = vpa(Z(m).eta{1,1});
-                Z(m).eta{1,2} = vpa(Z(m).eta{1,2});
-                Z(m).eta{2,1} = vpa(Z(m).eta{2,1});
-                Z(m).eta{2,2} = vpa(Z(m).eta{2,2});
-            end
+            Z(m).eta{1,1} = zeros(nFreqs-computeForStaticCase,length(theta{j}),prec);
+            Z(m).eta{1,2} = zeros(nFreqs-computeForStaticCase,length(theta{j}),prec);
+            Z(m).eta{2,1} = zeros(nFreqs-computeForStaticCase,length(theta{j}),prec);
+            Z(m).eta{2,2} = zeros(nFreqs-computeForStaticCase,length(theta{j}),prec);
             if options.calc_u_r
-                data(m).u_r = zeros(nFreqs,length(r{j}));
-                if useSymbolicPrecision
-                    data(m).u_r = vpa(data(m).u_r);
-                end
+                data(m).u_r = zeros(nFreqs,length(r{j}),prec);
             end
             if options.calc_u_t
-                data(m).u_t = zeros(nFreqs,length(r{j}));
-                if useSymbolicPrecision
-                    data(m).u_t = vpa(data(m).u_t);
-                end
+                data(m).u_t = zeros(nFreqs,length(r{j}),prec);
+            end
+            if options.calc_du_rdr
+                data(m).du_rdr = zeros(nFreqs,length(r{j}),prec);
+            end
+            if options.calc_du_rdt
+                data(m).du_rdt = zeros(nFreqs,length(r{j}),prec);
+            end
+            if options.calc_du_tdr
+                data(m).du_tdr = zeros(nFreqs,length(r{j}),prec);
+            end
+            if options.calc_du_tdt
+                data(m).du_tdt = zeros(nFreqs,length(r{j}),prec);
             end
             if options.calc_sigma_rr
-                data(m).sigma_rr = zeros(nFreqs,length(r{j}));
-                if useSymbolicPrecision
-                    data(m).sigma_rr = vpa(data(m).sigma_rr);
-                end
+                data(m).sigma_rr = zeros(nFreqs,length(r{j}),prec);
             end
             if options.calc_sigma_tt
-                data(m).sigma_tt = zeros(nFreqs,length(r{j}));
-                if useSymbolicPrecision
-                    data(m).sigma_tt = vpa(data(m).sigma_tt);
-                end
+                data(m).sigma_tt = zeros(nFreqs,length(r{j}),prec);
             end
             if options.calc_sigma_pp
-                data(m).sigma_pp = zeros(nFreqs,length(r{j}));
-                if useSymbolicPrecision
-                    data(m).sigma_pp = vpa(data(m).sigma_pp);
-                end
+                data(m).sigma_pp = zeros(nFreqs,length(r{j}),prec);
             end
             if options.calc_sigma_rt
-                data(m).sigma_rt = zeros(nFreqs,length(r{j}));
-                if useSymbolicPrecision
-                    data(m).sigma_rt = vpa(data(m).sigma_rt);
-                end
+                data(m).sigma_rt = zeros(nFreqs,length(r{j}),prec);
             end
             if options.calc_errorsNavier
-                data(m).navier1 = zeros(nFreqs,length(r{j}));
-                data(m).navier2 = zeros(nFreqs,length(r{j}));
-                if useSymbolicPrecision
-                    data(m).navier1 = vpa(data(m).navier1);
-                    data(m).navier2 = vpa(data(m).navier2);
-                end
+                data(m).navier1 = zeros(nFreqs,length(r{j}),prec);
+                data(m).navier2 = zeros(nFreqs,length(r{j}),prec);
             end
         end
     end
@@ -890,7 +926,7 @@ if computeForStaticCase
         if ~isempty(r{j})
             if mod(j,2)
                 if m > 1
-                    data(m).p(staticIdx,:) = P_inc*ones(1,length(r{j}));
+                    data(m).p(staticIdx,:) = P_inc*ones(1,length(r{j}),prec);
                 end
             else
                 A = -P_inc/(3*K);
@@ -898,13 +934,13 @@ if computeForStaticCase
                     data(m).u_r(staticIdx,:) = A*repmat(r{j},nFreqs,1);
                 end
                 if options.calc_sigma_rr
-                    data(m).sigma_rr(staticIdx,:) = A*ones(1,length(r{j}));
+                    data(m).sigma_rr(staticIdx,:) = A*ones(1,length(r{j}),prec);
                 end
                 if options.calc_sigma_tt
-                    data(m).sigma_tt(staticIdx,:) = A*ones(1,length(r{j}));
+                    data(m).sigma_tt(staticIdx,:) = A*ones(1,length(r{j}),prec);
                 end
                 if options.calc_sigma_pp
-                    data(m).sigma_pp(staticIdx,:) = A*ones(1,length(r{j}));
+                    data(m).sigma_pp(staticIdx,:) = A*ones(1,length(r{j}),prec);
                 end
             end
         end
@@ -926,10 +962,14 @@ hasCnvrgd = zeros(nFreqs,nExtraTerms); % matrix of element that "has converged"
 if computeForStaticCase
     hasCnvrgd(staticIdx,:) = 1;
 end
-tiny = 1e-200; % To avoid dividing by zero.
+if strcmp(prec,'sym')
+    tiny = vpa('1e-1000'); % To avoid dividing by zero.
+else
+    tiny = realmin(prec); % To avoid dividing by zero.
+end
 countUpwards = 1;
 if countUpwards
-    n = 0;
+    n = zeros(1,prec);
 else
     n = round(3*max(r{1})*max(k(:,1)));
 end
@@ -1036,7 +1076,7 @@ while n >= 0 && n <= N_max
                         B = CC(:,C_indices(3:4));
                     end
                     options.indices = indices;
-                    solid = u_(m,n,r{j},theta{j},M,A,B,xi,eta,G(m),a_temp(:,m),b_temp(:,m),...
+                    solid = u_(m,n,r{j},theta{j},M,A,B,xi,eta,G(m),K(m),a_temp(:,m),b_temp(:,m),...
                                 P{j}(2,:),dP{j}(2,:),d2P{j}(2,:), Z(m).xi, Z(m).eta, ESBC, options);
 
                     if options.calc_u_r
@@ -1046,6 +1086,22 @@ while n >= 0 && n <= N_max
                     if options.calc_u_t
                         data(m).u_t(indices,:) = data(m).u_t(indices,:) + solid.u_t;
                         hasCnvrgdTmp2 = hasCnvrgdTmp2.*prod(abs(solid.u_t)./(abs(data(m).u_t(indices,:))+tiny) < Eps,2);
+                    end
+                    if options.calc_du_rdr
+                        data(m).du_rdr(indices,:) = data(m).du_rdr(indices,:) + solid.du_rdr;
+                        hasCnvrgdTmp2 = hasCnvrgdTmp2.*prod(abs(solid.du_rdr)./(abs(data(m).du_rdr(indices,:))+tiny) < Eps,2);
+                    end
+                    if options.calc_du_rdt
+                        data(m).du_rdt(indices,:) = data(m).du_rdt(indices,:) + solid.du_rdt;
+                        hasCnvrgdTmp2 = hasCnvrgdTmp2.*prod(abs(solid.du_rdt)./(abs(data(m).du_rdt(indices,:))+tiny) < Eps,2);
+                    end
+                    if options.calc_du_tdr
+                        data(m).du_tdr(indices,:) = data(m).du_tdr(indices,:) + solid.du_tdr;
+                        hasCnvrgdTmp2 = hasCnvrgdTmp2.*prod(abs(solid.du_tdr)./(abs(data(m).du_tdr(indices,:))+tiny) < Eps,2);
+                    end
+                    if options.calc_du_tdt
+                        data(m).du_tdt(indices,:) = data(m).du_tdt(indices,:) + solid.du_tdt;
+                        hasCnvrgdTmp2 = hasCnvrgdTmp2.*prod(abs(solid.du_tdt)./(abs(data(m).du_tdt(indices,:))+tiny) < Eps,2);
                     end
                     if options.calc_sigma_rr
                         data(m).sigma_rr(indices,:) = data(m).sigma_rr(indices,:) + solid.sigma_rr;
@@ -1111,6 +1167,7 @@ function fluid = p_(m,n,zeta,theta,M,C,k,P,dP,d2P,Z,options)
 % Note that in the case of m = M+1 and zeta = 0: 
 % --- dpdz =: dpdr and dpdx = dpdy = dpdt = 0
 % --- nabla p =: d2pdr2, d2pdt2 := 0
+% Also note that dpdt is scaled by csc(theta)
 
 Q0 = P;
 if options.calc_farField
@@ -1227,11 +1284,12 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function solid = u_(m,n,r,theta,M,A,B,xi,eta,G,a,b,P,dP,d2P,Zxi,Zeta,ESBC,options)
+function solid = u_(m,n,r,theta,M,A,B,xi,eta,G,K,a,b,P,dP,d2P,Zxi,Zeta,ESBC,options)
 % Note that in the case of "ESBC" and r = 0: 
 % --- u_z =: u_r and u_x = u_y = u_t = 0
-% --- sigma_11 =: sigma_rr, sigma_22 =: sigma_tt, sigma_33 =: sigma_pp
-% --- 0 =: sigma_rt
+% --- du_xdx =: du_rdr, du_ydy =: du_rdt, du_zdz =: du_tdr, 0 =: du_tdt
+% --- sigma_11 =: sigma_rr, sigma_22 =: sigma_tt, sigma_33 =: sigma_pp, 0 =: sigma_rt
+% Also note that u_t, du_tdr and du_rdt are scaled by csc(theta)
 
 Q0 = Q_(0,theta,P,dP,d2P);
 Q1s = Q_(1,theta,P,dP,d2P,true);
@@ -1244,53 +1302,125 @@ if options.calc_u_r
     Q0r = Q0./r;
     u_r =   A(:,1)*Q0r.*S_(1,1,n,xi,eta,Zxi) ...
           + B(:,1)*Q0r.*T_(1,1,n,eta,Zeta);
-    if ~(ESBC && m == M)
-        u_r = u_r + A(:,2)*Q0r.*S_(1,2,n,xi,eta,Zxi) ...
-                  + B(:,2)*Q0r.*T_(1,2,n,eta,Zeta);
-    end
-    if ESBC
+    if ESBC && m == M
         indices = logical(r < eps);
         if n == 1
             u_r(:,indices) = repmat((a.*A(:,1) - 2*b.*B(:,1))/3,1,sum(indices));
         else
             u_r(:,indices) = 0;
         end
+    else
+        u_r = u_r + A(:,2)*Q0r.*S_(1,2,n,xi,eta,Zxi) ...
+                  + B(:,2)*Q0r.*T_(1,2,n,eta,Zeta);
     end
     solid.u_r = u_r;
 end
 
 if options.calc_u_t
-    Q1r = Q1./r;
-    u_t =   A(:,1)*Q1r.*S_(2,1,n,xi,eta,Zxi) ...
-          + B(:,1)*Q1r.*T_(2,1,n,eta,Zeta);
-    if ~(ESBC && m == M)
-        u_t = u_t + A(:,2)*Q1r.*S_(2,2,n,xi,eta,Zxi) ...
-                  + B(:,2)*Q1r.*T_(2,2,n,eta,Zeta);
-    end
-    if ESBC
+    Q1sr = Q1s./r;
+    u_t =   A(:,1)*Q1sr.*S_(2,1,n,xi,eta,Zxi) ...
+          + B(:,1)*Q1sr.*T_(2,1,n,eta,Zeta);
+    if ESBC && m == M
         u_t(:,logical(r < eps)) = 0;
+    else
+        u_t = u_t + A(:,2)*Q1sr.*S_(2,2,n,xi,eta,Zxi) ...
+                  + B(:,2)*Q1sr.*T_(2,2,n,eta,Zeta);
     end
     solid.u_t = u_t;
 end
+
+if options.calc_du_rdr
+    Q0r2 = Q0./r2;
+    du_rdr =   A(:,1)*Q0r2.*S_(3,1,n,xi,eta,Zxi) ...
+             + B(:,1)*Q0r2.*T_(3,1,n,eta,Zeta);
+    if ESBC && m == M
+        indices = logical(r < eps);
+        if n == 0
+            du_rdr(:,indices) = repmat(G/K*(4*a.^2-3*b.^2).*A(:,1)/9,1,sum(indices));
+        elseif n == 2
+            du_rdr(:,indices) = repmat(-(a.^2.*A(:,1)-3*b.^2.*B(:,1))/15,1,sum(indices));
+        else
+            du_rdr(:,indices) = 0;
+        end
+    else
+        du_rdr = du_rdr + A(:,2)*Q0r2.*S_(3,2,n,xi,eta,Zxi) ...
+                        + B(:,2)*Q0r2.*T_(3,2,n,eta,Zeta);
+    end
+    solid.du_rdr = du_rdr;
+end
+
+if options.calc_du_rdt
+    Q1sr = Q1s./r;
+    du_rdt =   A(:,1)*Q1sr.*S_(1,1,n,xi,eta,Zxi) ...
+             + B(:,1)*Q1sr.*T_(1,1,n,eta,Zeta);
+    if ESBC && m == M
+        indices = logical(r < eps);
+        if n == 0
+            du_rdt(:,indices) = repmat(G/K*(4*a.^2-3*b.^2).*A(:,1)/9,1,sum(indices));
+        elseif n == 2
+            du_rdt(:,indices) = repmat(-(a.^2.*A(:,1)-3*b.^2.*B(:,1))/15,1,sum(indices));
+        else
+            du_rdt(:,indices) = 0;
+        end
+    else
+        du_rdt = du_rdt + A(:,2)*Q1sr.*S_(1,2,n,xi,eta,Zxi) ...
+                        + B(:,2)*Q1sr.*T_(1,2,n,eta,Zeta);
+    end
+    solid.du_rdt = du_rdt;
+end
+
+if options.calc_du_tdr
+    Q1sr2 = Q1s./r2;
+    du_tdr =   A(:,1)*Q1sr2.*S_(4,1,n,xi,eta,Zxi) ...
+             + B(:,1)*Q1sr2.*T_(4,1,n,eta,Zeta);
+    if ESBC && m == M
+        indices = logical(r < eps);
+        if n == 0
+            du_tdr(:,indices) = repmat(G/K*(4*a.^2-3*b.^2).*A(:,1)/9,1,sum(indices));
+        elseif n == 2
+            du_tdr(:,indices) = repmat(2*(a.^2.*A(:,1)-3*b.^2.*B(:,1))/15,1,sum(indices));
+        else
+            du_tdr(:,indices) = 0;
+        end
+    else
+        du_tdr = du_tdr + A(:,2)*Q1sr2.*S_(4,2,n,xi,eta,Zxi) ...
+                        + B(:,2)*Q1sr2.*T_(4,2,n,eta,Zeta);
+    end
+    solid.du_tdr = du_tdr;
+end
+
+if options.calc_du_tdt
+    Q2r1 = Q2./r;
+    du_tdt =   A(:,1)*Q2r1.*S_(2,1,n,xi,eta,Zxi) ...
+             + B(:,1)*Q2r1.*T_(2,1,n,eta,Zeta);
+    if ESBC && m == M
+        du_tdt(:,logical(r < eps)) = 0;
+    else
+        du_tdt = du_tdt + A(:,2)*Q2r1.*S_(2,2,n,xi,eta,Zxi) ...
+                        + B(:,2)*Q2r1.*T_(2,2,n,eta,Zeta);
+    end
+    solid.du_tdt = du_tdt;
+end
+
 if options.calc_sigma_rr
     Q0r2 = Q0./r2;
     sigma_rr =   A(:,1)*Q0r2.*S_(5,1,n,xi,eta,Zxi) ...
                + B(:,1)*Q0r2.*T_(5,1,n,eta,Zeta);
-    if ~(ESBC && m == M)
+    if ESBC && m == M
+        indices = logical(r < eps);
+        if n == 0
+            sigma_rr(:,indices) = repmat(5*(4*a.^2-3*b.^2).*A(:,1)/30,1,sum(indices));
+        elseif n == 2
+            sigma_rr(:,indices) = repmat((-2*a.^2.*A(:,1) + 6*b.^2.*B(:,1))/30,1,sum(indices));
+        else
+            sigma_rr(:,indices) = 0;
+        end
+    else
         sigma_rr = sigma_rr + A(:,2)*Q0r2.*S_(5,2,n,xi,eta,Zxi) ...
                             + B(:,2)*Q0r2.*T_(5,2,n,eta,Zeta);
     end
 	sigma_rr = 2*G*sigma_rr;
-    if ESBC
-        indices = logical(r < eps);
-        if n == 0
-            sigma_rr(:,indices) = G/15*repmat(5*(4*a.^2-3*b.^2).*A(:,1),1,sum(indices));
-        elseif n == 2
-            sigma_rr(:,indices) = G/15*repmat(-2*a.^2.*A(:,1) + 6*b.^2.*B(:,1),1,sum(indices));
-        else
-            sigma_rr(:,indices) = 0;
-        end
-    end
+    
 	solid.sigma_rr = sigma_rr;
 end
 if options.calc_sigma_tt
@@ -1300,23 +1430,23 @@ if options.calc_sigma_tt
                + B(:,1)*Q0r2.*T_(6,1,n,eta,Zeta) ...
                + A(:,1)*Q2r2.*S_(2,1,n,xi,eta,Zxi) ...
                + B(:,1)*Q2r2.*T_(2,1,n,eta,Zeta);
-    if ~(ESBC && m == M)
+    if ESBC && m == M
+        indices = logical(r < eps);
+        if n == 0
+            sigma_tt(:,indices) = repmat(5*(4*a.^2-3*b.^2).*A(:,1)/30,1,sum(indices));
+        elseif n == 2
+            sigma_tt(:,indices) = repmat((-2*a.^2.*A(:,1) + 6*b.^2.*B(:,1))/30,1,sum(indices));
+        else
+            sigma_tt(:,indices) = 0;
+        end
+    else
         sigma_tt = sigma_tt + A(:,2)*Q0r2.*S_(6,2,n,xi,eta,Zxi) ...
                             + B(:,2)*Q0r2.*T_(6,2,n,eta,Zeta) ...
                             + A(:,2)*Q2r2.*S_(2,2,n,xi,eta,Zxi) ...
                             + B(:,2)*Q2r2.*T_(2,2,n,eta,Zeta);
     end
 	sigma_tt = 2*G*sigma_tt;
-    if ESBC
-        indices = logical(r < eps);
-        if n == 0
-            sigma_tt(:,indices) = G/15*repmat(5*(4*a.^2-3*b.^2).*A(:,1),1,sum(indices));
-        elseif n == 2
-            sigma_tt(:,indices) = G/15*repmat(-2*a.^2.*A(:,1) + 6*b.^2.*B(:,1),1,sum(indices));
-        else
-            sigma_tt(:,indices) = 0;
-        end
-    end
+    
 	solid.sigma_tt = sigma_tt;
 end
 if options.calc_sigma_pp
@@ -1326,37 +1456,37 @@ if options.calc_sigma_pp
                + B(:,1)*Q0r2.*T_(6,1,n,eta,Zeta) ...
                + A(:,1)*cott_Q1r2.*S_(2,1,n,xi,eta,Zxi) ...
                + B(:,1)*cott_Q1r2.*T_(2,1,n,eta,Zeta);
-    if ~(ESBC && m == M)
+    if ESBC && m == M
+        indices = logical(r < eps);
+        if n == 0
+            sigma_pp(:,indices) = repmat(5*(4*a.^2-3*b.^2).*A(:,1)/30,1,sum(indices));
+        elseif n == 2
+            sigma_pp(:,indices) = repmat((4*a.^2.*A(:,1) - 12*b.^2.*B(:,1))/30,1,sum(indices));
+        else
+            sigma_pp(:,indices) = 0;
+        end
+    else
         sigma_pp = sigma_pp + A(:,2)*Q0r2.*S_(6,2,n,xi,eta,Zxi) ...
                             + B(:,2)*Q0r2.*T_(6,2,n,eta,Zeta) ...
                             + A(:,2)*cott_Q1r2.*S_(2,2,n,xi,eta,Zxi) ...
                             + B(:,2)*cott_Q1r2.*T_(2,2,n,eta,Zeta);
     end
 	sigma_pp = 2*G*sigma_pp;
-    if ESBC
-        indices = logical(r < eps);
-        if n == 0
-            sigma_pp(:,indices) = G/15*repmat(5*(4*a.^2-3*b.^2).*A(:,1),1,sum(indices));
-        elseif n == 2
-            sigma_pp(:,indices) = G/15*repmat(4*a.^2.*A(:,1) - 12*b.^2.*B(:,1),1,sum(indices));
-        else
-            sigma_pp(:,indices) = 0;
-        end
-    end
+    
 	solid.sigma_pp = sigma_pp;
 end
 if options.calc_sigma_rt
     Q1r2 = Q1./r2;
     sigma_rt =   A(:,1)*Q1r2.*S_(7,1,n,xi,eta,Zxi) ...
                + B(:,1)*Q1r2.*T_(7,1,n,eta,Zeta);
-    if ~(ESBC && m == M)
+    if ESBC && m == M
+        sigma_rt(:,logical(r < eps)) = 0;
+    else
         sigma_rt = sigma_rt + A(:,2)*Q1r2.*S_(7,2,n,xi,eta,Zxi) ...
                             + B(:,2)*Q1r2.*T_(7,2,n,eta,Zeta);
     end
 	sigma_rt = 2*G*sigma_rt;
-    if ESBC
-        sigma_rt(:,logical(r < eps)) = 0;
-    end
+    
 	solid.sigma_rt = sigma_rt;
 end
 if options.calc_errorsNavier

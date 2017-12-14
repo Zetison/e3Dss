@@ -5,14 +5,19 @@ addpath ..
 addpath ../utils
 addpath ../models
 
+pathToResults = '../../plotData/e3Dss/';
+% pathToResults = '../results';
+
 startMatlabPool
 
-ESBC = 0;
+ESBC = 1;
 SSBC = 0;
 for SHBC = 0 %[0, 1]
-    for modelCell = {'IL'} %{'S5', 'S35', 'S135'}
+    for modelCell = {'S1'} %{'IL', 'S5', 'S35', 'S135'}
         model = modelCell{1};
         switch model
+            case 'S1'
+                setS1Parameters
             case 'S5'
                 setS5Parameters
             case 'S35'
@@ -24,13 +29,22 @@ for SHBC = 0 %[0, 1]
         end
         R_i = R_o - t;
         defineBCstring
-        k_arr = [1.892808062465205, 1.8929];
+%         k_arr = [1.892808062465205, 1.8929];
         plotRealPart = 1;
-        for k = 2 % 30/R_o(1)
+        for k = 12.566370614359172 % 30/R_o(1)
             omega = k*c_f(1);
             % rho_f(end) = 0;
-            R_a = 2*5; %R_o(1);
-            d_vec = [1, 0, 0]';  
+            R_a = 2; %R_o(1);
+            
+            alpha_s = 240*pi/180;
+            beta_s = 30*pi/180;
+            beta_f = beta_s;
+            beta_f_arr = beta_s;
+            d_vec = -[cos(beta_s)*cos(alpha_s);
+                      cos(beta_s)*sin(alpha_s);
+                      sin(beta_s)]; 
+%             d_vec = [0, 0, 1]'; 
+                  
             usePointChargeWave = false;
             options = struct('d_vec', d_vec, ...
                              'omega', omega, ...
@@ -45,20 +59,21 @@ for SHBC = 0 %[0, 1]
                              'SHBC', SHBC, ...
                              'ESBC', ESBC, ...
                              'SSBC', SSBC, ...
+                             'computeForSolidDomain', 1, ...
                              'plotTimeOscillation', 0, ...
                              'plotInTimeDomain', 0, ...
                              'usePointChargeWave', usePointChargeWave, ...
                              'usePlaneWave', ~usePointChargeWave, ...
                              'R_a', R_a);
 
-%                     folderName = ['../results/paraviewResults/' model '/'];
-            folderName = ['otherFunctions/e3Dss/results/paraviewResults/' model '/'];
+            folderName = [pathToResults 'paraviewResults/' model '/'];
+%             folderName = ['results/paraviewResults/' model '/'];
             if ~exist(folderName, 'dir')
                 mkdir(folderName);
             end
             vtfFileName = [folderName BC '_ka_' num2str(k*R_o(1))];
 
-            extraPts = 40;
+            extraPts = 80;
 
             createParaviewFiles_exact3(extraPts, vtfFileName, options)
         end

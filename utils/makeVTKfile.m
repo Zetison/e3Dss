@@ -13,6 +13,15 @@ options = struct('name','untitled',...
                  'plotStressYZ',0,...
                  'plotStressXZ',0,...
                  'plotStressXY',0,...
+                 'plotdu_xdx',0,...
+                 'plotdu_xdy',0,...
+                 'plotdu_xdz',0,...
+                 'plotdu_ydx',0,...
+                 'plotdu_ydy',0,...
+                 'plotdu_ydz',0,...
+                 'plotdu_zdx',0,...
+                 'plotdu_zdy',0,...
+                 'plotdu_zdz',0,...
                  'plotPolarStress_rr',0,...
                  'plotPolarStress_thetatheta',0,...
                  'plotPolarStress_zz',0,...
@@ -34,6 +43,7 @@ options = struct('name','untitled',...
                  'plotErrorEnergy', 0,...
                  'plotGradientVectors', 0, ...
                  'plotP_inc', 0, ...
+                 'plotAnalytic', 0, ...
                  'plotTotField',0,...
                  'plotTotFieldAbs',0,...
                  'plotErrorFunc', 0, ...
@@ -50,7 +60,11 @@ end
 vtfFileName = options.name;
 nodes = data.nodes;
 visElements = data.visElements;
-omega = data.omega;
+if isfield(data,'omega')
+    omega = data.omega;
+else
+    omega = 1;
+end
 noSteps = options.noSteps;
 
 if ~options.plotTimeOscillation
@@ -90,6 +104,12 @@ if length(omega) > 1
         data.P_inc = interp1_new(t_arr, data.P_inc, tq_arr);
     end
 
+
+    %% Analytic
+    if options.plotAnalytic && timeStepMult > 1
+        data.analytic = interp1_new(t_arr, data.analytic, tq_arr);
+    end
+
     %% Error function
     if options.plotErrorFunc && timeStepMult > 1
         data.errorFunc = interp1_new(t_arr, data.errorFunc, tq_arr);
@@ -127,6 +147,16 @@ if length(omega) > 1
     if any(toggleStressVector) && timeStepMult > 1
         data.stress = interp1_new(t_arr, data.stress, tq_arr);
     end
+    
+    %% Jacobian (scalars)
+    toggleJacobianMatrix = [options.plotdu_xdx options.plotdu_xdy options.plotdu_xdz ...
+                            options.plotdu_ydx options.plotdu_ydy options.plotdu_ydz ...
+                            options.plotdu_zdx options.plotdu_zdy options.plotdu_zdz];
+
+    if any(toggleJacobianMatrix) && timeStepMult > 1
+        data.jacobian = interp1_new(t_arr, data.jacobian, tq_arr);
+    end
+    
 else
     Nq = noSteps;
 end
@@ -277,6 +307,11 @@ parfor i = 1:Nq
         printField(data.P_inc(:,:,i), 'P_inc', fid)
     end
 
+    %% Analytic
+    if options.plotAnalytic
+        printField(data.analytic(:,:,i), 'Analytic', fid)
+    end
+
     %% Error function
     if options.plotErrorFunc
         printField(data.errorFunc(:,:,i), 'plotErrorFunc', fid)
@@ -354,6 +389,19 @@ parfor i = 1:Nq
             printField(stress(:,l,i), stressTitles{l}, fid)
         end
     end
+
+    %% Derivatives (scalars)
+    toggleJacobianMatrix = [options.plotdu_xdx options.plotdu_xdy options.plotdu_xdz ...
+                            options.plotdu_ydx options.plotdu_ydy options.plotdu_ydz ...
+                            options.plotdu_zdx options.plotdu_zdy options.plotdu_zdz];
+    jacobianTitles = {'du_xdx','du_xdy','du_xdz','du_ydx','du_ydy','du_ydz','du_zdx','du_zdy','du_zdz'};
+    
+    for l = 1:9
+        if toggleJacobianMatrix(l)
+            jacobian = data.jacobian;
+            printField(jacobian(:,l,i), jacobianTitles{l}, fid)
+        end
+    end
     
     %% Polar stress (scalars)
     togglePolarStressVector = [options.plotPolarStress_rr options.plotPolarStress_thetatheta options.plotPolarStress_zz ...
@@ -428,7 +476,9 @@ parfor i = 1:Nq
     fprintf(fid,'</VTKFile>');        
     
     fclose(fid);
-    disp(['Completed ' num2str(i) ' out of ' num2str(Nq) ' time steps.'])
+    if Nq > 1
+        disp(['Completed ' num2str(i) ' out of ' num2str(Nq) ' time steps.'])
+    end
 end
 
 % uncomment the following to get .pvd collector files

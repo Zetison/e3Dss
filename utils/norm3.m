@@ -3,10 +3,7 @@ function nrm = norm3(x)
 
 M = size(x,1);
 
-nrm = zeros(M,1);
-if isa(x,'sym')
-    nrm = vpa(nrm);
-end
+nrm = zeros(M,1,class(x));
 for i = 1:M
     nrm(i) = sqrt(x(i,:)*x(i,:).');
 end

@@ -2,7 +2,7 @@ function Q = Q_(j,theta,P,dP,d2P,scaleByCsc)
 if nargin < 6
     scaleByCsc = false;
 end
-if ~mod(j,2) && scaleByCsc
+if ~mod(j,2) && scaleByCsc && (any(theta == 0) || any(theta == pi))
     error('Q is not defined in this case (when theta = 0 or theta = pi)')
 end
 switch j

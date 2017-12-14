@@ -19,7 +19,10 @@ for i = 1:Nr-1
     X(counter:counter+N-1,:) = r*[cos(theta), sin(theta)];
     counter = counter + N;
 end
+
 X = X(1:counter-1,:);
+% r = 0.0001*R;
+% X = [X; r*[cos(theta), sin(theta)]];
 X(end+1,:) = [0,0];
 tri = delaunay(X(:,1),X(:,2));
 

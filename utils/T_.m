@@ -1,4 +1,5 @@
 function T = T_(tIdx, i, n, eta, Z)
+
 switch tIdx  
     case 1
         T = -n*(n+1)*Z{i,1};
@@ -7,7 +8,7 @@ switch tIdx
     case 3
         T = -n*(n+1)*((n-1)*Z{i,1} - eta.*Z{i,2});   
     case 4
-        T = (eta.^2-n^2+1)*Z{i,1} - eta.*Z{i,2};        
+        T = (eta.^2-n^2+1).*Z{i,1} - eta.*Z{i,2};        
     case 5
         T = -n*(n+1)*((n-1)*Z{i,1} - eta.*Z{i,2});
     case 6

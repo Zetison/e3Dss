@@ -5,6 +5,9 @@ addpath ..
 addpath ../utils
 addpath ../models
 
+pathToResults = '../../plotData/e3Dss/';
+% pathToResults = '../results';
+
 startMatlabPool
 
 %% Fender (1972) example
@@ -36,11 +39,11 @@ if 0
     v = [0,0,R_o*cos(pi)];
     f = @(k)-objFunc(k,options,v,c_f(1),1);
     specialValues = [specialValues; findExtremas(f, 2/nFreqs, 32, 100000)'];
-    save('../results/Fender_extremas', 'specialValues')
+    save([pathToResults 'Fender_extremas'], 'specialValues')
     delta = 1e-4;
     specialValues = sort([specialValues; (specialValues-delta); (specialValues+delta)]);
 else
-    load('../results/Fender_extremas')
+    load([pathToResults 'Fender_extremas'])
 end
 k = unique(sort([k; specialValues]));
 omega = k*c_f(1);   % Wave number for outer fluid domain
@@ -56,23 +59,25 @@ SPL = 20*log10(abs(p_tot)); % sound pressure level
 figure(2)
 plot(k*R_o, SPL(1,:), SPL_Fender0(:,1), SPL_Fender0(:,2))
 set(0,'defaulttextinterpreter','latex')
-title('Predicted total pressure as a function of $$ka$$ at the surface of the shell, $$\theta = 0^\circ$$')
-xlabel('$$k_Oa$$')
-ylabel('Surface sound pressure level')
+% title('Predicted total pressure as a function of $$ka$$ at the surface of the shell, $$\theta = 0^\circ$$')
+xlabel('$$k_1 R_{0,1}$$')
+ylabel('Surface sound pressure level [dB]')
 ylim([-80 120])
-legend({'Present work', 'Reference Solution from Fender (1972) - Figure 2'})
+legend({'Present work', 'Reference Solution from Fender (1972)'})
 xlim(R_o*[k(1) k(end)])
+savefig([pathToResults 'Figure13a'])
 
 %%%%%%%%
 figure(3)
 plot(k*R_o, SPL(2,:), SPL_Fender180(:,1), SPL_Fender180(:,2))
 set(0,'defaulttextinterpreter','latex')
-title('Predicted total pressure as a function of $$ka$$ at the surface of the shell, $$\theta = 180^\circ$$')
-xlabel('$$k_Oa$$')
-ylabel('Surface sound pressure level')
+% title('Predicted total pressure as a function of $$ka$$ at the surface of the shell, $$\theta = 180^\circ$$')
+xlabel('$$k_1 R_{0,1}$$')
+ylabel('Surface sound pressure level [dB]')
 ylim([-60 120])
-legend({'Present work', 'Reference Solution from Fender (1972) - Figure 2'})
+legend({'Present work', 'Reference Solution from Fender (1972)'})
 xlim(R_o*[k(1) k(end)])
+savefig([pathToResults 'Figure13b'])
 
 %         
 %         folderName = '../results';
@@ -126,18 +131,54 @@ if 0
     savefig('results/FenderError.fig')
 end
 
-% figure(4)
-% nFreqs = 2000;
-% k_max = 500;
-% k = linspace(k_max/nFreqs,k_max,nFreqs);
-% omega = k*c_f(1);   % Wave number for outer fluid domain
-% options.omega = omega;
-% v = [0,0,R_o*cos(0);
-%      0,0,R_o*cos(pi)];
-% tic
-% data = e3Dss(v, options);
-% toc
-% plot(k*R_o,data(1).N_eps)
-% xlabel('$k_1R_0$')
-% ylabel('$N$')
-% printResultsToFile('../results/Fender_Bound', k(~isnan(data(1).N_eps)).'*R_o, data(1).N_eps(~isnan(data(1).N_eps)), [], 0, 1)
+figure(4)
+keyboard % remember to disable line 18-20 in bessel_s.m
+nFreqs = 2000;
+
+k_max = 450;
+k = [linspace(1e-300,k_max/nFreqs,200), linspace((k_max+1)/nFreqs,k_max,nFreqs)];
+omega = k*c_f(1);   % Wave number for outer fluid domain
+
+x = k*R_o(1);
+
+K = E./(3*(1-2*nu));
+G = E./(2*(1+nu));
+c_s_1 = sqrt((3*K+4*G)./(3*rho_s));
+c_s_2 = sqrt(G./rho_s);
+
+Upsilon = min([R_i./c_s_1, R_i./c_s_2, R_o./c_f(1:end-1)]);
+
+NN = 0:600;
+N = zeros(size(x));
+for i = 1:length(x)
+    temp = abs(bessel_s(NN,omega(i)*Upsilon,2)) - 10^290;
+    indices = find(temp > 0);
+    N(i) = NN(indices(1));
+end
+hold on
+set(0,'defaulttextinterpreter','latex')
+plot(x, N, 'DisplayName','$N=\lceil\upsilon\rceil$ as a function of $k_1 R_{0,1}$ for when $\mathrm{y}_\upsilon(\omega\Upsilon)=10^{290}$','color',[0,70,147]/255)
+
+% printResultsToFile(pathToResults 'Fender_Bessely_Bound', x.', N.', [], 0, 1)
+
+
+keyboard %remember to enable line 18-20 in bessel_s.m
+k_max = 1000;
+k = linspace(k_max/nFreqs,k_max,nFreqs);
+omega = k*c_f(1);   % Wave number for outer fluid domain
+options.omega = omega;
+v = [0,0,R_o*cos(0);
+     0,0,R_o*cos(pi)];
+tic
+data = e3Dss(v, options);
+toc
+plot(k*R_o, data(1).N_eps, 'DisplayName','$N=N_\varepsilon$ needed for convergence of $p_1^{(N_\varepsilon)}$ within machine epsilon precision','color',[178,0,0]/255)
+xlabel('$k_1R_{0,1}$')
+ylabel('$N$')
+leg1 = legend('show','Location','northwest');
+set(leg1,'Interpreter','latex');
+
+savefig([pathToResults 'Figure14'])
+
+% printResultsToFile(pathToResults 'Fender_Bound', k(~isnan(data(1).N_eps)).'*R_o, data(1).N_eps(~isnan(data(1).N_eps)), [], 0, 1)
+

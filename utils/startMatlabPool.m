@@ -1,5 +1,3 @@
-
-noCoresToUse = 321;
 waringMessageId = 'MATLAB:mir_warning_maybe_uninitialized_temporary';
 warning('off',waringMessageId)
 if verLessThan('matlab', '8.3 (R2014a)')
@@ -9,12 +7,15 @@ if verLessThan('matlab', '8.3 (R2014a)')
         warning('Change the above number to match the number of workers available!')
     end
 else
-    noCoresToUse = feature('numCores');
-    if noCoresToUse > 12
-        noCoresToUse = 12;
+    if ~exist('noCoresToUse','var')
+        noCoresToUse = feature('numCores');
+        if noCoresToUse > 12
+            noCoresToUse = 12;
+        end
     end
     poolobj = gcp('nocreate');
     if isempty(poolobj)
+        noCoresToUse = min(feature('numCores'),noCoresToUse);
         parpool(noCoresToUse, 'IdleTimeout', Inf)
     end
 end

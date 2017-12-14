@@ -8,6 +8,8 @@ addpath ../models
 %% Test benchmark models
 alpha_s = 240*pi/180;
 beta_s = 30*pi/180;
+alpha_s = 0;
+beta_s = 0;
 
 beta_f = beta_s;
 beta_f_arr = beta_f;
@@ -27,9 +29,10 @@ switch scatteringCase
         f = 10e3; % frequencies in Hertz
     case 'BI'
         delta_alpha = 1;
-        alpha_f_arr = (0:delta_alpha:360)*pi/180;
-        alpha_f_arr = 0;
-        f = 3e3; % frequencies in Hertz
+        alpha_f_arr = linspace(0,360,7200)*pi/180;
+%         beta_f_arr = 0;
+        beta_f_arr = beta_f;
+        f = 10e3; % frequencies in Hertz
     case 'Sweep'
         alpha_f_arr = alpha_s;
         delta_f = 1;
@@ -39,7 +42,7 @@ switch scatteringCase
         kend = 2;
         f = linspace(kstart*c_f/(2*pi),kend*c_f/(2*pi),Nfreqs);
 end
-model = 'S5';
+model = 'S1';
 
 switch model
     case 'S1'
@@ -77,14 +80,27 @@ options = struct('d_vec', d_vec,...
                  'nu', nu, ...
                  'rho_s', rho_s, ...
                  'rho_f', rho_f, ...
-                 'calc_farField', 0, ...
+                 'calc_farField', 1, ...
                  'c_f', c_f);
              
-specialValues = [];
-alpha_f_arr = unique(sort([specialValues', linspace(0,2*pi,10000)]));
-v = R_o(1)*[cos(beta_f)*cos(alpha_f_arr); cos(beta_f)*sin(alpha_f_arr); sin(beta_f)*ones(size(alpha_f_arr))]';
+v = R_o(1)*[cos(beta_f_arr)*cos(alpha_f_arr); cos(beta_f_arr)*sin(alpha_f_arr); sin(beta_f_arr)*ones(size(alpha_f_arr))]';
 data = e3Dss(v, options);
+TS = 20*log10(abs(data(1).p));
+% plot(180/pi*alpha_f_arr, TS,'DisplayName','Analytic')
 
+% for res = [1,2,3,4]
+%     T = readtable(['../../../comsol/models/S1/S1_F' num2str(f) '_res' num2str(res) '_TSVSalpha.txt'],'FileType','text', 'HeaderLines',1);
+%     x = T.Var1;
+%     y = T.Var2;
+% %     plot(x,y,'DisplayName',['resolution = ' num2str(res)])
+%     semilogy(x,abs(y-TS),'DisplayName',['resolution = ' num2str(res)])
+%     hold on
+% end
+% 
+% legend('off');
+% legend('show');
+specialValues = [];
+% alpha_f_arr = unique(sort([specialValues', linspace(0,2*pi,1000)]));
 k = omega./c_f;
 p_inc = @(v) P_inc*exp(1i*k*dot3(v,d_vec));
 plot(180/pi*alpha_f_arr, real(data(1).p+p_inc(v)), 180/pi*alpha_f_arr, 2*real(p_inc(v)))
@@ -92,9 +108,10 @@ xlim([60,240])
 figure(2)
 plot(180/pi*alpha_f_arr, imag(data(1).p+p_inc(v)), 180/pi*alpha_f_arr, 2*imag(p_inc(v)))
 xlim([60,240])
-figure(3)
-plot(180/pi*alpha_f_arr, abs(data(1).p+p_inc(v)))
-xlim([60,240])
-
-legend('TS')
-xlabel('k')
+% figure(3)
+% plot(180/pi*alpha_f_arr, abs(data(1).p+p_inc(v)))
+% xlim([60,240])
+% 
+% plot(180/pi*alpha_f_arr, real(data(1).p))
+% xlim([0,360])
+% ylim([-11,-1.8])

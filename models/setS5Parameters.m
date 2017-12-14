@@ -6,4 +6,4 @@ t = 0.008; % The thickness of the sphere
 E = 210e9; % Youngs modulus of elastic material
 nu = 0.3; % Poisson ratio of elastic material
 
-R_o = 5; % Distance to far field point
+R_o = 5; % Outer radius of shell

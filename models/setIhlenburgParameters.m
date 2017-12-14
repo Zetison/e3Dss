@@ -8,4 +8,3 @@ nu = 0.3; % Poisson ratio of elastic material
 
 R = 5; % Midsurface radius
 R_o = R+t/2; % Outer radius of shell
-

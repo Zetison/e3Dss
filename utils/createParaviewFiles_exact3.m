@@ -33,6 +33,20 @@ if computeForSolidDomain
      options.calc_sigma_yz = 1;
      options.calc_sigma_xz = 1;
      options.calc_sigma_xy = 1; 
+     
+     options.calc_u_x = 1; 
+     options.calc_u_y = 1; 
+     options.calc_u_z = 1; 
+     
+     options.calc_du_xdx = 1; 
+     options.calc_du_xdy = 1; 
+     options.calc_du_xdz = 1; 
+     options.calc_du_ydx = 1; 
+     options.calc_du_ydy = 1; 
+     options.calc_du_ydz = 1; 
+     options.calc_du_zdx = 1; 
+     options.calc_du_zdy = 1; 
+     options.calc_du_zdz = 1; 
 end
 tic
 for m = 1:M+1-ESBC-SHBC-SSBC
@@ -132,16 +146,44 @@ for j = 1:length(nodes)
         if mod(j,2) == 0 && computeForSolidDomain
             if ESBC && m == M
                 VTKoptions = struct('name',[vtfFileName 'solid' num2str(m)], 'celltype', 'VTK_TRIANGLE', 'plotTimeOscillation', plotTimeOscillation, ...
-                            'plotSphericalRadialDisplacement',0, 'plotDisplacementVectors',0,'plotSphericalStress_rr',0,'plotVonMisesStress',1); 
+                            'plotSphericalRadialDisplacement',1, 'plotdu_xdx',1, 'plotdu_xdy',1, 'plotdu_xdz',1, 'plotdu_ydx',1, 'plotdu_ydy',1, 'plotdu_ydz',1, 'plotdu_zdx',1, 'plotdu_zdy',1, 'plotdu_zdz',1, ...
+                            'plotDisplacementVectors',0,'plotSphericalStress_rr',1,'plotStressXX',1,'plotStressZZ',1,'plotVonMisesStress',1); 
             else
                 VTKoptions = struct('name',[vtfFileName 'solid' num2str(m)], 'celltype', 'VTK_HEXAHEDRON', 'plotTimeOscillation', plotTimeOscillation, ...
                             'plotSphericalRadialDisplacement',0, 'plotDisplacementVectors',0,'plotSphericalStress_rr',1,'plotVonMisesStress',0); 
             end
+            toggleJacobianMatrix = [VTKoptions.plotdu_xdx VTKoptions.plotdu_xdy VTKoptions.plotdu_xdz ...
+                                    VTKoptions.plotdu_ydx VTKoptions.plotdu_ydy VTKoptions.plotdu_ydz ...
+                                    VTKoptions.plotdu_zdx VTKoptions.plotdu_zdy VTKoptions.plotdu_zdz];
                     
-            if VTKoptions.plotDisplacementVectors
+            if VTKoptions.plotDisplacementVectors || VTKoptions.plotSphericalRadialDisplacement
                 displacement = zeros(size(nodes{j},1),3,length(omega));
                 for i = 2:length(omega)
                     displacement(:,:,i) = [data(m).u_x(:,i-1) data(m).u_y(:,i-1) data(m).u_z(:,i-1)];
+                end
+                if ~plotInTimeDomain
+                    VTKdata.displacement = [data(m).u_x data(m).u_y data(m).u_z];
+                    
+                    temp = VTKdata.displacement;
+                    VTKdata.displacement = zeros([size(VTKdata.displacement), N]);
+                    for i = 1:N
+                        t = (i-1)/N*2*pi/omega;
+                        VTKdata.displacement(:,:,i) = real(temp*exp(-1i*omega*t));
+                    end
+                end
+            end
+            if any(toggleJacobianMatrix)
+                VTKdata.jacobian = zeros(size(nodes{j},1),6,length(omega));
+                
+                if ~plotInTimeDomain
+                    VTKdata.jacobian = [data(m).du_xdx data(m).du_xdy data(m).du_xdz data(m).du_ydx data(m).du_ydy data(m).du_ydz data(m).du_zdx data(m).du_zdy data(m).du_zdz];
+                    
+                    temp = VTKdata.jacobian;
+                    VTKdata.jacobian = zeros([size(VTKdata.jacobian), N]);
+                    for i = 1:N
+                        t = (i-1)/N*2*pi/omega;
+                        VTKdata.jacobian(:,:,i) = real(temp*exp(-1i*omega*t));
+                    end
                 end
             end
             if VTKoptions.plotVonMisesStress || VTKoptions.plotSphericalStress_rr 
@@ -168,7 +210,7 @@ for j = 1:length(nodes)
             end
         elseif mod(j,2) ~= 0
             VTKoptions = struct('name',[vtfFileName 'fluid' num2str(m)], 'celltype', 'VTK_TRIANGLE', 'plotTimeOscillation', plotTimeOscillation, 'plotDisplacementVectors', 0, ...
-                             'plotSphericalRadialDisplacement',0, 'plotTotField', 1);
+                             'plotSphericalRadialDisplacement',0, 'plotTotField', 1, 'plotScalarField', 1);
             if ~(plotInTimeDomain || plotTimeOscillation)
                 VTKoptions.plotTotFieldAbs = 1;
             end
@@ -200,6 +242,7 @@ for j = 1:length(nodes)
                     p_inc = @(v) exp(1i*dot3(v, k_vec));   
                     VTKdata.P_inc = p_inc(nodes{1});
                     VTKdata.totField = data(m).p(:,1) + VTKdata.P_inc;
+                    VTKdata.scalarField = data(m).p(:,1);
                 end
                 VTKdata = rmfield(VTKdata,'P_inc');
             else

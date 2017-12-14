@@ -5,6 +5,9 @@ addpath ..
 addpath ../utils
 addpath ../models
 
+pathToResults = '../../plotData/e3Dss/';
+% pathToResults = '../results';
+
 startMatlabPool
 
 %% Ihlenburg (1998) example
@@ -15,10 +18,16 @@ ESBC = 0;
 for i = 1:3
     if i == 1
         nFreqs = 2000;
+        color = [0,70,147]/255;
+        legendEntry = 'Sound-hard boundary condition';
     elseif i == 2
         nFreqs = 5000;
+        color = [178,0,0]/255;
+        legendEntry = 'Sound-soft boundary condition';
     else
         nFreqs = 5000;
+        color = [59,124,37]/255;
+        legendEntry = 'Neumann-Neumann boundary condition';
     end
     P_inc = 1; % Amplitude of incident wave
     rho_f = [1000, 1000]; % Density of outer fluid
@@ -62,9 +71,9 @@ for i = 1:3
             v = R_o*[cos(pi),0,0];
             f = @(k)-objFunc(k,options,v,c_f(1),0);
             specialValues = [specialValues; findExtremas(f, 2/nFreqs, 2, 100000)'];
-            save(['../results/Ihlenburg_' BC '_extremas'], 'specialValues')
+            save([pathToResults 'Ihlenburg_' BC '_extremas'], 'specialValues')
         else
-            load(['../results/Ihlenburg_' BC '_extremas'])
+            load([pathToResults 'Ihlenburg_' BC '_extremas'])
         end
         delta = 1e-4;
         specialValues = sort([specialValues; (specialValues-delta); (specialValues+delta)]);
@@ -80,25 +89,34 @@ for i = 1:3
     figure(3)
     F = data(1).p;
     TS = 20*log10(abs(F));
-    plot(k*R_o, TS(1,:))
+%     plot(k*R_o, TS(1,:))
+    plot(k*R_o, TS(1,:),'DisplayName',legendEntry,'color',color)
     set(0,'defaulttextinterpreter','latex')
     hold on
-    title('Ihlenburg (1998) example, $$\theta = 180^\circ$$')
-    xlabel('$$kR_0$$')
+%     title('Ihlenburg (1998) example, $$\theta = 180^\circ$$')
+    xlabel('$$k_1 R_{0,1}$$')
     xlim([0, max(k*R_o)])
-    ylabel('TS')   
+    ylim([-50, 35])
+    ylabel('TS [dB]')  
+    legend('off');
+    legend('show','location','southeast');
+    savefig(pathToResults 'Figure9a')
 
     figure(4)
     F = data(1).p;
     TS = 20*log10(abs(F));
-    plot(k*R_o, TS(2,:))
+    plot(k*R_o, TS(2,:),'DisplayName',legendEntry,'color',color)
     set(0,'defaulttextinterpreter','latex')
     hold on
-    title('Ihlenburg (1998) example - $$\theta = 0^\circ$$')
-    xlabel('$$kR_0$$')
+%     title('Ihlenburg (1998) example - $$\theta = 0^\circ$$')
+    xlabel('$$k_1 R_{0,1}$$')
     xlim([0, max(k*R_o)])
-    ylabel('TS')  
-%             return
+    ylim([-50, 35])
+    ylabel('TS [dB]')  
+    legend('off');
+    legend('show','location','southeast');
+    savefig(pathToResults 'Figure9b')
+    
     folderName = '../results';
     if ~exist(folderName, 'dir')
         mkdir(folderName);
@@ -125,7 +143,7 @@ for i = 1:3
 %             filename = [folderName '/' saveName];
 %             printResultsToFile(filename, k*R_o, TS(2,:).', varCol, 1, 0, 'NTNU_FFI', 'Analytic solution')
 % %             
-    if 0
+    if 1
         figure(40+i)
         nFreqs = 500;
         k = linspace(2/nFreqs,2,nFreqs)'; % wave number
@@ -133,6 +151,9 @@ for i = 1:3
         omega = k*c_f(1);   % Wave number for outer fluid domain
         options.omega = omega;
 
-        createConvergencePlot('3D',options,v,35, ['../results/IhlenburgError_' num2str(i)])
+        createConvergencePlot('3D',options,v,35, [pathToResults 'IhlenburgError_' num2str(i)])
+        savefig([pathToResults 'Figure' num2str(9+i)])
     end
 end
+
+% figure
