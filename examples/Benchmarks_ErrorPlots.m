@@ -5,8 +5,8 @@ addpath ..
 addpath ../utils
 addpath ../models
 
-pathToResults = '../../plotData/e3Dss/';
-% pathToResults = '../results';
+
+pathToResults = '../results';
 % mpstartup
 startMatlabPool
 %% Calculate errors
