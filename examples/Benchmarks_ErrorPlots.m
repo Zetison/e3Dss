@@ -1,24 +1,22 @@
 close all
 clear all %#ok
 
-addpath ..
-addpath ../utils
-addpath ../models
-
-
-pathToResults = '../results';
-% mpstartup
+% pathToResults = '../../../results/e3Dss/';
+pathToResults = '../results/';
+mpstartup
 startMatlabPool
+mp = NaN;
 %% Calculate errors
-for useSymbolicPrecision = [0,1]
+for useSymbolicPrecision = 0 %[0,1]
     if useSymbolicPrecision
-        prec = 'mp';
-%         prec = 'sym';
+%         prec = 'mp';
+        prec = 'sym';
     else
         prec = 'double';
     end
-    models = {'S1','S3','S5','S35','S15','S13','S135'};
-%     models = {'S1'};
+    models = {'S1','S3','S5','S13','S15','S35','S135'};
+%     models = {'S13','S15','S35','S135'};
+%     models = {'S35'};
     counter = 1;
     for i_model = 1:length(models)
         for ESBC = [0, 1]
@@ -35,8 +33,8 @@ for useSymbolicPrecision = [0,1]
             end
         end
     end
-%     for i = 1:length(models)
-    parfor i = 1:length(tasks)
+    for i = 1:length(tasks)
+%     parfor i = 1:length(tasks)
         switch prec
             case 'single'
                 Eps = 1e-7;
@@ -64,109 +62,21 @@ for useSymbolicPrecision = [0,1]
         tic
         switch model
             case 'S1'
-%                                     setS1Parameters
-                P_inc = 1; % Amplitude of incident wave
-                rho_s = 7850; % Density of solid
-                rho_f = [1000, 1.2]; % Density of fluids
-                c_f = [1500, 340];  % Speed of sound in fluid domains
-                t = 0.05; % The thickness of the sphere
-                E = 210e9; % Youngs modulus of elastic material
-                nu = 0.3; % Poisson ratio of elastic material
-
-                R_o = 1; % Distance to far field point
-
+                layer = setS1Parameters(prec);
             case 'S3'
-%                                     setS3Parameters
-                P_inc = 1; % Amplitude of incident wave
-                rho_s = 7850; % Density of solid
-                rho_f = [1000, 1.2]; % Density of fluids
-                c_f = [1500, 340];  % Speed of sound in fluid domains
-                t = 0.02; % The thickness of the sphere
-                E = 210e9; % Youngs modulus of elastic material
-                nu = 0.3; % Poisson ratio of elastic material
-
-                R_o = 3; % Distance to far field point
+                layer = setS3Parameters(prec);
             case 'S5'
-%                                     setS5Parameters
-                P_inc = 1; % Amplitude of incident wave
-                rho_s = 7850; % Density of solid
-                rho_f = [1000, 1000]; % Density of fluids
-                c_f = [1500, 1500];  % Speed of sound in fluid domains
-                t = 0.008; % The thickness of the sphere
-                E = 210e9; % Youngs modulus of elastic material
-                nu = 0.3; % Poisson ratio of elastic material
-
-                R_o = 5; % Distance to far field point
+                layer = setS5Parameters(prec);
             case 'S13'
-%                                     setS13Parameters
-                P_inc = 1; % Amplitude of incident wave
-                rho_s = [7850, 7850]; % Density of solid
-                rho_f = [1000, 1.2, 1.2]; % Density of fluids
-                c_f = [1500, 340, 340];  % Speed of sound in fluid domains
-                t = [0.02 0.05]; % The thickness of the sphere
-                E = [210e9, 210e9]; % Youngs modulus of elastic material
-                nu = [0.3, 0.3]; % Poisson ratio of elastic material
-
-                R_o = [3, 1];
+                layer = setS13Parameters(prec);
             case 'S15'
-%                                     setS15Parameters
-                P_inc = 1; % Amplitude of incident wave
-                rho_s = [7850, 7850]; % Density of solid
-                rho_f = [1000, 1000, 1.2]; % Density of fluids
-                c_f = [1500, 1500, 340];  % Speed of sound in fluid domains
-                t = [0.008, 0.05]; % The thickness of the sphere
-                E = [210e9, 210e9]; % Youngs modulus of elastic material
-                nu = [0.3, 0.3]; % Poisson ratio of elastic material
-
-                R_o = [5, 1];
-
+                layer = setS15Parameters(prec);
             case 'S35'
-%                                     setS35Parameters
-                P_inc = 1; % Amplitude of incident wave
-                rho_s = [7850, 7850]; % Density of solid
-                rho_f = [1000, 1000, 1.2]; % Density of fluids
-                c_f = [1500, 1500, 340];  % Speed of sound in fluid domains
-                t = [0.008, 0.02]; % The thickness of the sphere
-                E = [210e9, 210e9]; % Youngs modulus of elastic material
-                nu = [0.3, 0.3]; % Poisson ratio of elastic material
-
-                R_o = [5, 3]; 
-
+                layer = setS35Parameters(prec);
             case 'S135'
-%                                     setS135Parameters
-                P_inc = 1; % Amplitude of incident wave
-                rho_s = [7850, 7850, 7850]; % Density of solid
-                rho_f = [1000, 1000, 1.2, 1.2]; % Density of fluids
-                c_f = [1500, 1500, 340, 340];  % Speed of sound in fluid domains
-                t = [0.008, 0.02, 0.05]; % The thickness of the sphere
-                E = [210e9, 210e9, 210e9]; % Youngs modulus of elastic material
-                nu = [0.3, 0.3, 0.3]; % Poisson ratio of elastic material
-
-                R_o = [5, 1, 0.5];
-
-        end
-        if strcmp(prec,'sym')
-            P_inc = vpa(P_inc);
-            rho_s = vpa(rho_s);
-            rho_f = vpa(rho_f);
-            c_f = vpa(c_f);
-            t = vpa(t);
-            E = vpa(E);
-            nu = vpa(nu);
-            R_o = vpa(R_o); % Density of solid
-        elseif strcmp(prec,'mp')
-            P_inc = mp(P_inc);
-            rho_s = mp(rho_s);
-            rho_f = mp(rho_f);
-            c_f = mp(c_f);
-            t = mp(t);
-            E = mp(E);
-            nu = mp(nu);
-            R_o = mp(R_o); % Density of solid
-
+                layer = setS135Parameters(prec);
         end
 
-        R_i = R_o - t; % Inner radius of shell
         alpha_s = 240*PI/180;
         beta_s = 30*PI/180;
         d_vec = zeros(3,1,class(PI));
@@ -174,51 +84,54 @@ for useSymbolicPrecision = [0,1]
         d_vec(2) = -cos(beta_s)*sin(alpha_s);
         d_vec(3) = -sin(beta_s);
 
-%                             defineBCstring
+
         if SHBC
-            E = E(1:end-1);
-            rho_s = rho_s(1:end-1);
-            rho_f = rho_f(1:end-1);
-            c_f = c_f(1:end-1);
-            nu = nu(1:end-1);
-            R_i = R_i(1:end-1);
+            layer = layer(1:end-2);
             BC = 'SHBC';
         elseif ESBC
-            rho_f = rho_f(1:end-1);
-            c_f = c_f(1:end-1);
-            R_i = R_i(1:end-1);
+            layer = layer(1:end-1);
+            layer{end}.R_i = 0;
             BC = 'ESBC';
         elseif SSBC
-            rho_f = rho_f(1:end-1);
-            c_f = c_f(1:end-1);
+            layer = layer(1:end-1);
             BC = 'SSBC';
         else
             BC = 'NNBC';
         end
-
-        M = length(R_o);
-        noDomains = 2*M+1-ESBC-2*SHBC-SSBC;
-        vv = cell(noDomains,1);
-        m = 1;
+        M = length(layer);
+        
+        E = [];
+        nu = [];
+        rho_s = [];
+        c_f = [];
+        R_i = [];
+        R_o = [];
+        for m = 1:M
+            switch layer{m}.media
+                case 'fluid'
+                    c_f = [c_f, layer{m}.c_f];
+                case 'solid'
+                    E = [E, layer{m}.E];
+                    nu = [nu, layer{m}.nu];
+                    rho_s = [rho_s, layer{m}.rho];
+                    if ~(strcmp(BC,'ESBC') && m == M)
+                        R_i = [R_i,layer{m}.R_i];
+                    end
+                    R_o = [R_o,layer{m-1}.R_i];
+            end
+        end
+        if strcmp(BC,'SHBC')
+            R_o = [R_o, layer{end}.R_i];
+        end
+        
         npts_r = 4;
         npts_theta = 4;
         npts_phi = 4;
-        for j = 1:noDomains
-            if j == 1
-                r = linspaceHP(R_o(1), 2*R_o(1), npts_r);
-            elseif mod(j,2)
-                if m == M+1
-                    r = linspaceHP(O, R_i(m-1), npts_r);
-                else
-                    r = linspaceHP(R_o(m), R_i(m-1), npts_r);
-                end
+        for m = 1:M
+            if m == 1
+                r = linspaceHP(layer{m}.R_i, 2*layer{m}.R_i, npts_r);
             else
-                if ESBC && m == M
-                    r = linspaceHP(O, R_o(m), npts_r);    
-                else
-                    r = linspaceHP(R_i(m), R_o(m), npts_r);     
-                end
-                m = m + 1;
+                r = linspaceHP(layer{m}.R_i, layer{m-1}.R_i, npts_r);
             end
             theta = linspaceHP(O,PI,npts_theta);
             phi = linspaceHP(O,2*PI,npts_phi);
@@ -234,7 +147,7 @@ for useSymbolicPrecision = [0,1]
                 end
             end
             [~, I, ~] = uniquetol(double(pts),10*eps,'ByRows',true, 'DataScale',max(max(abs(double(pts)))));
-            vv{j} = pts(I,:);
+            layer{m}.X = pts(I,:);
         end
         K = E./(3*(1-2*nu));
         G = E./(2*(1+nu));
@@ -250,8 +163,8 @@ for useSymbolicPrecision = [0,1]
                 Upsilon = min([R_i./c_s_1, R_i./c_s_2, R_o./c_f(1:end-1)]);
         end
 
-        C = (R_o(1)./c_f(1))^(3/2)/Upsilon^(1/2);
-        if 1
+        C = (layer{1}.R_i./layer{1}.c_f)^(3/2)/Upsilon^(1/2);
+        if 0
             nFreqs = 2; %
 %             f = 10.^linspaceHP(-log10(1e3*C),-log10(5e2*C),nFreqs);
             f = 10.^linspaceHP(-log10(1e3*C),log10(4e2/C),nFreqs);
@@ -261,70 +174,53 @@ for useSymbolicPrecision = [0,1]
         end
 
         omega = 2*PI*f;
-        options = struct('d_vec', d_vec, ...
+        options = struct('BC', BC, ...
+                         'd_vec', d_vec, ...
                          'omega', omega, ...
-                         'R_i', R_i, ...
-                         'R_o', R_o, ...
-                         'P_inc', P_inc, ...
-                         'E', E, ...
-                         'nu', nu, ...
-                         'rho_s', rho_s, ...
-                         'rho_f', rho_f, ...
-                         'c_f', c_f, ...
-                         'calc_u_x', 1, ...
-                         'calc_u_y', 1, ...
-                         'calc_u_z', 1, ...
-                         'calc_dpdx', 1, ...
-                         'calc_dpdy', 1, ...
-                         'calc_dpdz', 1, ...
-                         'calc_p_laplace', 1, ...
-                         'calc_sigma_xx', 1, ...
-                         'calc_sigma_yy', 1, ...
-                         'calc_sigma_zz', 1, ...
-                         'calc_sigma_yz', 1, ...
-                         'calc_sigma_xz', 1, ...
-                         'calc_sigma_xy', 1, ...
-                         'calc_sigma_rr', 1, ...
-                         'calc_navier', 1, ...
-                         'calc_errorsNavier', 1, ...
-                         'calc_errorsDisplacementCondition', 1, ...
-                         'calc_errorsPressureCondition', 1, ...
-                         'calc_errorsHelmholtz', 1, ...
-                         'useSymbolicPrecision', useSymbolicPrecision, ...
+                         'P_inc', ones(1,class(O)), ...
                          'prec', prec, ...
                          'Eps', Eps);
-
-        data = e3Dss(vv, options);
-        err_navier1 = zeros(M,nFreqs,class(PI));
-        err_navier2 = zeros(M,nFreqs,class(PI));
-        err_helmholtz = zeros(M+1,nFreqs,class(PI));
-        err_pc = zeros(M,nFreqs,class(PI));
-        err_dc = zeros(M,nFreqs,class(PI));
-        for m = 1:M+1
-            if m ~= M+1
-                err_dc(m,:) = data(m).err_dc;
-                if ~(SHBC && m == M)
-                    err_pc(m,:) = data(m).err_pc;
-                    err_navier1(m,:) = data(m).err_navier1;
-                    err_navier2(m,:) = data(m).err_navier2;
-                end
-            end
-            if ~(m == M+1 && (SHBC || SSBC || ESBC))
-                err_helmholtz(m,:) = data(m).err_helmholtz;
+        for m = 1:M
+            layer{m}.calc_errPresCond = true; 
+            layer{m}.calc_errDispCond = true;  
+            switch layer{m}.media
+                case 'fluid'
+                    layer{m}.calc_errHelm = true;  
+                    layer{m}.calc_p_0 = false;
+                case 'solid'
+                    layer{m}.calc_errNav = true;
             end
         end
-        err_navier1 = max(err_navier1,[],1);
-        err_navier2 = max(err_navier2,[],1);
-        err_helmholtz = max(err_helmholtz,[],1);
-        err_pc = max(err_pc,[],1);
-        err_dc = max(err_dc,[],1);
+        layer = e3Dss(layer, options);
+        
+        err_navier1 = zeros(1,nFreqs,class(PI));
+        err_navier2 = zeros(1,nFreqs,class(PI));
+        err_helmholtz = zeros(1,nFreqs,class(PI));
+        err_pc = zeros(1,nFreqs,class(PI));
+        err_dc = zeros(1,nFreqs,class(PI));
+        for m = 1:M
+            isSphere = layer{m}.R_i == 0;
+            if ~isSphere && ~(m == M && SHBC)
+                err_pc = max([err_pc; layer{m}.err_pc],[],1);
+            end
+            if ~isSphere && ~(m == M && SSBC)
+                err_dc = max([err_dc; layer{m}.err_dc],[],1);
+            end
+            switch layer{m}.media
+                case 'fluid'
+                    err_helmholtz = max([err_helmholtz; layer{m}.err_helmholtz],[],1);
+                case 'solid'
+                    err_navier1 = max([err_navier1; layer{m}.err_navier1],[],1);
+                    err_navier2 = max([err_navier2; layer{m}.err_navier2],[],1);
+            end
+        end
 
         sc = f*C;
         figure
         if M == 1 && SHBC
             loglog(sc, err_helmholtz,'color',[0,70,147]/255,'DisplayName','Helmholtz')
             hold on
-            loglog(sc, err_dc,'color',[178,0,0]/255,'DisplayName','Displacenemnt condition')
+            loglog(sc, err_dc,'color',[149,49,157]/255,'DisplayName','Displacenemnt condition')
             legendArr = {'Helmholtz', 'DisplacementCond'};
             err = [err_helmholtz; err_dc];
         else
@@ -341,7 +237,7 @@ for useSymbolicPrecision = [0,1]
         set(leg1,'Interpreter','latex');
         filename = [pathToResults 'errors_' model '_' BC '_Symbolic' num2str(useSymbolicPrecision)];
 
-        printResultsToFile(filename, double(sc.'), double(err.'), [], 0, 1, [], [], {'Cf'},legendArr)
+%         printResultsToFile(filename, {'x',double(sc.'), 'y', double(err.')})
         xlabel('$C f$','interpreter','latex')
         ylabel('Relative residual error')
         title(['Errors for model ' model '_' BC], 'interpreter', 'none')
@@ -351,7 +247,7 @@ for useSymbolicPrecision = [0,1]
         end
         xlim([double(sc(1)), double(sc(end))])
         drawnow
-        savefig([filename '.fig'])
+%         savefig([filename '.fig'])
         fprintf('Finished a case in %f seconds!\n\n', toc)
     end
 end

@@ -51,6 +51,6 @@ else
 end
 if ~isa(z,'sym')
     if any(any(abs(dZ) > 1e290))
-        error('A Bessel function evaluation was too large')
+        error('e3Dss:infBessel','A Bessel function evaluation was too large')
     end
 end

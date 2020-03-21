@@ -12,6 +12,7 @@ candidates = find([0 candidates 0]);
 x = [x(candidates-1); x(candidates+1)];
 x_extremas = zeros(size(x));
 options = optimset('TolX',newEpsilon, 'TolFun', newEpsilon, 'MaxIter', 1000,'MaxFunEvals',1000);%,'Display','iter');
+% for i = 1:size(x,2)
 parfor i = 1:size(x,2)
     tic
     I = x(:,i);

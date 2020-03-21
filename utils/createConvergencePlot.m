@@ -1,17 +1,17 @@
-function createConvergencePlot(type,options,v,noRuns,fileName)
+function createConvergencePlot(type,layer,options,noRuns,fileName)
  
 switch type
     case '2D'
         count = 1;
         Error = zeros(noRuns,2);
         N_arr = 0:noRuns-1;
-        data = e3Dss(v, options);
-        p = data(1).p;
+        layer = e3Dss(layer, options);
+        p = layer{1}.p;
         for N = N_arr
             N
             options.N_max = N;
-            data = e3Dss(v, options);
-            p_N = data(1).p;
+            layer = e3Dss(layer, options);
+            p_N = layer{1}.p;
             Error(count,:) = norm2((p - p_N).')./norm2(p.');
             count = count + 1;
         end
@@ -23,8 +23,10 @@ switch type
         legend({'$$k_1 = 15\mathrm{m}^{-1}$$', '$$k_1 = 20\mathrm{m}^{-1}$$'},'interpreter','latex')
         yLim = ylim;
         ylim([yLim(1),1e1])
-        for i = 1:size(Error,2)
-            printResultsToFile([fileName '_Errors_' num2str(i)], N_arr.', Error(:,i), NaN, 0, 1)
+        if ~isempty(fileName)
+            for i = 1:size(Error,2)
+                printResultsToFile([fileName '_Errors_' num2str(i)], {'x',N_arr.', 'y', Error(:,i)})
+            end
         end
             
     case '3D'
@@ -34,13 +36,13 @@ switch type
         nFreqs = numel(options.omega);
         Error = zeros(noRuns,nFreqs);
         N_arr = 0:noRuns-1;
-        data = e3Dss(v, options);
-        p = data(1).p;
+        layer = e3Dss(layer, options);
+        p = layer(1).p;
         for N = N_arr
             N
             options.N_max = N;
-            data = e3Dss(v, options);
-            p_N = data(1).p;
+            layer = e3Dss(layer, options);
+            p_N = layer(1).p;
             Error(N+1,:) = norm2((p - p_N).')./norm2(p.');
         end
 %         keyboard
@@ -77,19 +79,14 @@ switch type
             'at={(0,0)}', ...
             'colorbar style={ylabel={$\frac{\left\|p_1-p_1^{(N)}\right\|_2}{\|p_1\|_2}$}, ytick={-18,-16,...,0}, yticklabels={$10^{-18}$, $10^{-16}$, $10^{-14}$, $10^{-12}$, $10^{-10}$, $10^{-8}$, $10^{-6}$, $10^{-4}$, $10^{-2}$, $10^0$}}'};
         
-        colormap gray
-        map = colormap;
-        map = flipud(map);
-        colormap(map)
-        matlab2tikz([fileName '_bw.tex'], 'height', '3.2094in', ...
-            'extraAxisOptions', extraAxisOptions)
-        
         colormap default
         map = colormap;
         map = [1,1,1; map];
         colormap(map)
-        matlab2tikz([fileName '.tex'], 'height', '3.2094in', 'width', '3.2094in', ...
-            'extraAxisOptions', extraAxisOptions)
+        if ~isempty(fileName)
+            matlab2tikz([fileName '.tex'], 'height', '3.2094in', 'width', '3.2094in', ...
+                'extraAxisOptions', extraAxisOptions)
+        end
         
 %         title('Error plots')
 end

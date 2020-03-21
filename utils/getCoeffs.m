@@ -1,247 +1,274 @@
-function CC = getCoeffs(n, omega, a, b, k, options)
+function C = getCoeffs(n, omega, layer, options)
 
-% Define the system size, I
-if n == 0
-    I = 4;
-else
-    I = 6;
-end
-ESBC = options.ESBC;
+prec = options.prec;
 SHBC = options.SHBC;
 SSBC = options.SSBC;
-rho_f = options.rho_f;
-P_inc = options.P_inc;
-R_i = options.R_i;
-R_o = options.R_o;
-M = length(R_o);
-r_s = options.r_s;
-
-if ~(SHBC && M == 1)
-    G = options.G;
-end
-
-if isa(R_o,'sym')
-    PI = vpa('pi');
-elseif isa(R_o,'mp')
-    PI = mp('pi');
-else
-    PI = pi;
-end
+M = numel(layer);
+m_s = options.m_s;
 
 %% Calculate submatrices
-H1 = zeros(I-2,I-2,length(omega),M,class(R_o));
-H2 = zeros(2,length(omega),M,2,class(R_o));
-H3 = zeros(2,length(omega),M,2,class(R_o));
-H4 = zeros(I-2,length(omega),M,2,class(R_o));
+H1 = cell(M,1);
+D1 = cell(M,1);
 
-H21 = zeros(length(omega),1,class(R_o));
-D2 = zeros(length(omega),1,class(R_o));
-
-if SHBC && M == 1 % as this case is independent of rho_f, we here avoid demanding its value
-    rho_f_omega2 = omega.^2;
+dofs = zeros(M,1);
+if M > 1
+    nextMedia = layer{2}.media;
 else
-    rho_f_omega2 = rho_f(1)*omega.^2;
+    nextMedia = 'void';
 end
-for m = 1:M+1
-    if m == 1
-        zeta = k(:,1)*R_o(1);
-        H11 = -1./rho_f_omega2.*(n*hankel_s(n,zeta,1) - zeta.*hankel_s(n+1,zeta,1));
-        if options.usePlaneWave
-            if isa(P_inc,'function_handle') 
-                D1 = P_inc(omega)*(2*n+1)*1i^n./rho_f_omega2.*dbessel_s(n,zeta,1,[],1);  % dbessel_s = zeta*dj_n
-            else
-                D1 = P_inc*(2*n+1)*1i^n./rho_f_omega2.*dbessel_s(n,zeta,1,[],1);  % dbessel_s = zeta*dj_n
-            end
-        elseif options.usePointChargeWave
-            q = @(v) sqrt(R_o(1)^2 + 2*r_s*R_o(1)*v + r_s^2);
-            F2 = zeros(size(k,1),1,class(R_o));
-            
-            parfor i = 1:size(k,1)
-                Phi_k = @(v) exp(1i*k(i,1)*q(v))./(4*PI*q(v));
-                integrand = @(v) 4*PI*r_s*(R_o(1) + r_s*v).*Phi_k(v)./q(v).^2.*(1i*k(i,1)*q(v) - 1).*legendre_(n,v);
-                if isa(P_inc,'function_handle')
-                    F2(i) = P_inc(omega(i))*(2*n+1)/2*integral(integrand,-1,1);
-                else
-                    F2(i) = P_inc*(2*n+1)/2*integral(integrand,-1,1);
-                end
-            end
-            D1 = R_o(1)./rho_f_omega2.*F2;
-        end
-        if ~(SHBC && M == 1)
-            H21 = R_o(1)^2/(2*G(1))*hankel_s(n,zeta,1);   
-            if options.usePlaneWave    
-                if isa(P_inc,'function_handle') 
-                    D2 = -P_inc(omega)*R_o(1)^2/(2*G(1))*(2*n+1)*1i^n.*bessel_s(n,k(:,1)*R_o(1),1);
-                else
-                    D2 = -P_inc*R_o(1)^2/(2*G(1))*(2*n+1)*1i^n*bessel_s(n,k(:,1)*R_o(1),1);
-                end
-            elseif options.usePointChargeWave
-                F1 = zeros(size(k,1),1,class(R_o));
-                parfor i = 1:size(k,1)
-                    Phi_k = @(v) exp(1i*k(i,1)*q(v))./(4*PI*q(v));
-                    integrand = @(v) 4*PI*r_s*Phi_k(v).*legendre_(n,v);
-                    if isa(P_inc,'function_handle')
-                        F1(i) = P_inc(omega(i))*(2*n+1)/2*integral(integrand,-1,1);
-                    else
-                        F1(i) = P_inc*(2*n+1)/2*integral(integrand,-1,1);
-                    end
-                end
-                D2 = -R_o(1)^2/(2*G(1))*F1;
-            end
-            if M == 1 && ESBC
-                H1(:,:,:,1) = H1_solid_(n,a(:,1),b(:,1),R_o(1));
-                H4(:,:,1,2) = H4_solid_(n,a(:,1),b(:,1),R_o(1)); % H4 at R_o
-            else
-                H1(:,:,:,1) = H1_(n,a(:,1),b(:,1),R_o(1),R_i(1));
-                H4(:,:,1,2) = H4_(n,a(:,1),b(:,1),R_o(1)); % H4 at R_o
-            end
-            if ~(M == 1 && (SSBC || ESBC))
-                H4(:,:,1,1) = H4_(n,a(:,1),b(:,1),R_i(1)); % H4 at R_i
-            end
-        end        
-    elseif m < M+1
-        H2(:,:,m,1) = H2_(n,G(m-1),k(:,m),R_i(m-1)); % H2 at R_i
-        H3(:,:,m,1) = H3_(n,rho_f(m),k(:,m),omega,R_i(m-1)); % H3 at R_i
-        H3(:,:,m,2) = H3_(n,rho_f(m),k(:,m),omega,R_o(m)); % H3 at R_o
-        if ~(SHBC && M == m)
-            H2(:,:,m,2) = H2_(n,G(m),k(:,m),R_o(m)); % H2 at R_o
-
-            if M == m && ESBC
-                H1(:,:,:,m) = H1_solid_(n,a(:,m),b(:,m),R_o(m));
-                H4(:,:,m,2) = H4_solid_(n,a(:,m),b(:,m),R_o(m)); % H4 at R_o
-            else
-                H1(:,:,:,m) = H1_(n,a(:,m),b(:,m),R_o(m),R_i(m));
-                H4(:,:,m,2) = H4_(n,a(:,m),b(:,m),R_o(m)); % H4 at R_o
-            end
-            if ~(M == m && (SSBC || ESBC))
-                H4(:,:,m,1) = H4_(n,a(:,m),b(:,m),R_i(m)); % H4 at R_i
-            end
-        end
-    else
-        if ~(SSBC || ESBC || SHBC)
-            zeta = k(:,M+1)*R_i(M);
-            H2iMp1 = R_i(M)^2/(2*G(M))*bessel_s(n,zeta,1);
-            H3iMp1 = -1./(rho_f(M+1)*omega.^2).*dbessel_s(n,zeta,1,[],1); % dbessel_s = zeta*dj_n
+for m = 1:M
+    R_i = layer{m}.R_i;
+    isSphere = R_i == 0;
+    isOuterDomain = m == 1;
+    if m == m_s && ~isSphere
+        k = layer{m}.k_temp;
+        rho = layer{m}.rho;
+        Z_zeta = layer{m}.Z_zeta_i;
+        if strcmp(options.applyLoad,'pointCharge')
+            Z_r_s = layer{m}.Z_r_s;
         else
-            H2iMp1 = NaN(length(omega),1);
-            H3iMp1 = NaN(length(omega),1);
-        end        
+            Z_r_s = NaN;
+        end
+        if SSBC && M == m_s
+            D1{m} = D2_(n,k,R_i,Z_zeta,Z_r_s,options);
+        elseif SHBC && M == m_s
+            D1{m} = D1_(n,k,R_i,Z_zeta,Z_r_s,rho,omega,options);
+        else
+            D1{m} = cat(1,D1_(n,k,R_i,Z_zeta,Z_r_s,rho,omega,options),...    
+                          D2_(n,k,R_i,Z_zeta,Z_r_s,options));
+        end
+    elseif m+1 == m_s
+        k = layer{m+1}.k_temp;
+        rho = layer{m+1}.rho;
+        Z_zeta = layer{m+1}.Z_zeta_o;
+        if strcmp(options.applyLoad,'pointCharge')
+            Z_r_s = layer{m+1}.Z_r_s;
+        else
+            Z_r_s = NaN;
+        end
+        if strcmp(layer{m}.media,'solid') || strcmp(layer{m}.media,'viscoelastic')
+            void = zeros(n > 0,1,numel(omega),class(R_i));
+            D1{m} = cat(1,void,...
+                          D2_(n,k,R_i,Z_zeta,Z_r_s,options),...    
+                          D1_(n,k,R_i,Z_zeta,Z_r_s,rho,omega,options));
+        else
+            D1{m} = cat(1,D1_(n,k,R_i,Z_zeta,Z_r_s,rho,omega,options),...    
+                          D2_(n,k,R_i,Z_zeta,Z_r_s,options));
+        end
+    end
+    switch layer{m}.media
+        case 'fluid'
+            k = layer{m}.k_temp;
+            rho = layer{m}.rho;
+            if ~strcmp(nextMedia,'origin')
+                Z_zeta = layer{m}.Z_zeta_i;
+            end
+            switch nextMedia
+                case 'void'
+                    if SHBC
+                        H1{m} = dp_dr_s_(n,rho,k,omega,R_i,Z_zeta,isSphere,isOuterDomain);
+                    elseif SSBC
+                        H1{m} = p_(Z_zeta,isSphere,isOuterDomain);
+                    end
+                case 'fluid'
+                        k2 = layer{m+1}.k_temp;
+                        rho2 = layer{m+1}.rho;
+                        Z_zeta2 = layer{m+1}.Z_zeta_o;
+                        isSphere2 = layer{m+1}.R_i == 0;
+                        dp_dr_s = dp_dr_s_(n,rho, k, omega,R_i,Z_zeta, isSphere,isOuterDomain);
+                        dp_dr_s2 = dp_dr_s_(n,rho2,k2,omega,R_i,Z_zeta2,isSphere2,0);
+                        p = p_(Z_zeta, isSphere,isOuterDomain);
+                        p2 = p_(Z_zeta2,isSphere2,0);
+                        
+                        H1{m} = cat(1,cat(2, dp_dr_s, -dp_dr_s2),...    
+                                      cat(2, p, -p2));
+                case {'solid','viscoelastic'}
+                        isSphere2 = layer{m+1}.R_i == 0;
+                        G = layer{m+1}.G;
+                        a = layer{m+1}.a_temp;
+                        b = layer{m+1}.b_temp;
+                        Z_xi  = layer{m+1}.Z_xi_o;
+                        Z_eta = layer{m+1}.Z_eta_o;
+                        dp_dr_s = dp_dr_s_(n,rho,k,omega,R_i,Z_zeta,isSphere,isOuterDomain);
+                        p = p_(Z_zeta, isSphere,isOuterDomain);
+                        u_r = u_r_(n,a,b,R_i,Z_xi,Z_eta,isSphere2);
+                        sigma_rr = sigma_rr_(n,a,b,R_i,Z_xi,Z_eta,isSphere2,G);
+                        sigma_rt = sigma_rt_(n,a,b,R_i,Z_xi,Z_eta,isSphere2,G);
+                        void = zeros(size(sigma_rt,1),size(p,2),size(sigma_rt,3),class(a));
+                        
+                        H1{m} = cat(1,cat(2, dp_dr_s,u_r),...
+                                      cat(2, p, sigma_rr),... 
+                                      cat(2, void,sigma_rt));
+            end
+            if isSphere || isOuterDomain
+                dofs(m) = 1;
+            else
+                dofs(m) = 2;
+            end
+        case {'solid','viscoelastic'}
+            G = layer{m}.G;
+            a = layer{m}.a_temp;
+            b = layer{m}.b_temp;
+
+            if ~strcmp(nextMedia,'origin')
+                Z_xi  = layer{m}.Z_xi_i;
+                Z_eta = layer{m}.Z_eta_i;
+            end
+            switch nextMedia
+                case 'void'
+                    if SHBC
+                        u_r = u_r_(n,a,b,R_i,Z_xi,Z_eta,isSphere);
+                        u_t = u_t_(n,a,b,R_i,Z_xi,Z_eta,isSphere);
+                        
+                        H1{m} = cat(1,u_r,u_t);
+                    elseif SSBC
+                        sigma_rr = sigma_rr_(n,a,b,R_i,Z_xi,Z_eta,isSphere,G);
+                        sigma_rt = sigma_rt_(n,a,b,R_i,Z_xi,Z_eta,isSphere,G);
+                        
+                        H1{m} = cat(1,sigma_rr,sigma_rt);
+                    end
+                case 'fluid'
+                        k = layer{m+1}.k_temp;
+                        rho = layer{m+1}.rho;
+                        isSphere2 = layer{m+1}.R_i == 0;
+                        Z_zeta = layer{m+1}.Z_zeta_o;
+                        dp_dr_s = dp_dr_s_(n,rho,k,omega,R_i,Z_zeta,isSphere2,0);
+                        p = p_(Z_zeta, isSphere2,0);
+                        u_r = u_r_(n,a,b,R_i,Z_xi,Z_eta,isSphere);
+                        sigma_rr = sigma_rr_(n,a,b,R_i,Z_xi,Z_eta,isSphere,G);
+                        sigma_rt = sigma_rt_(n,a,b,R_i,Z_xi,Z_eta,isSphere,G);
+                        void = zeros(size(sigma_rt,1),size(p,2),numel(a),class(a));
+                        
+                        H1{m} = cat(1,cat(2, sigma_rt,void),...
+                                      cat(2, sigma_rr, p),...
+                                      cat(2, u_r,dp_dr_s));
+                case {'solid','viscoelastic'}
+                        G2 = layer{m+1}.G;
+                        a2 = layer{m+1}.a_temp;
+                        b2 = layer{m+1}.b_temp;
+                        isSphere2 = layer{m+1}.R_i == 0;
+                        Z_xi2  = layer{m+1}.Z_xi_o;
+                        Z_eta2 = layer{m+1}.Z_eta_o;
+                        u_r = u_r_(n,a, b, R_i,Z_xi, Z_eta, isSphere);
+                        u_r2 = u_r_(n,a2,b2,R_i,Z_xi2,Z_eta2,isSphere2);
+                        u_t = u_t_(n,a, b, R_i,Z_xi, Z_eta, isSphere);
+                        u_t2 = u_t_(n,a2,b2,R_i,Z_xi2,Z_eta2,isSphere2);
+                        sigma_rr = sigma_rr_(n,a, b, R_i,Z_xi, Z_eta, isSphere,G);
+                        sigma_rr2 = sigma_rr_(n,a2,b2,R_i,Z_xi2,Z_eta2,isSphere2,G2);
+                        sigma_rt = sigma_rt_(n,a, b, R_i,Z_xi, Z_eta, isSphere,G);
+                        sigma_rt2 = sigma_rt_(n,a2,b2,R_i,Z_xi2,Z_eta2,isSphere2,G2);
+                        
+                        H1{m} = cat(1,cat(2, u_r,-u_r2),...
+                                      cat(2, sigma_rr,-sigma_rr2),...
+                                      cat(2, sigma_rt,-sigma_rt2),...
+                                      cat(2, u_t,-u_t2));
+            end
+            if isSphere || isOuterDomain
+                if n == 0
+                    dofs(m) = 1;
+                else
+                    dofs(m) = 2;
+                end
+            else
+                if n == 0
+                    dofs(m) = 2;
+                else
+                    dofs(m) = 4;
+                end
+            end
+    end
+    if M > 1 && ~(strcmp(nextMedia,'void') || strcmp(nextMedia,'origin'))
+        if m+1 == M
+            if layer{end}.R_i == 0
+                nextMedia = 'origin';
+            else
+                nextMedia = 'void';
+            end
+        else
+            nextMedia = layer{m+2}.media;
+        end
     end
 end
-
 %% Calculate coefficients CC for each frequency
-% Allocate memory for coefficients, right hand side and global matrix
-if ESBC
-    if n == 0
-        systemSize = I*M-2; 
+C = cell(M,1);
+if M == 1
+    if SSBC || SHBC
+        C{1} = D1{1}(:)./H1{1}(:);
     else
-        systemSize = I*M-3;   
+        error('Not implemented')
     end
-elseif SHBC
-    systemSize = I*M-(I-1); 
-elseif SSBC
-    systemSize = I*M-1;   
-else
-    systemSize = I*M;
+    return
 end
-CC = zeros(length(omega),6*M,class(R_o));
+systemSize = sum(dofs);
+CC = zeros(length(omega),systemSize,prec);
 
-% Loop over frequencies
-for i = 1:length(omega)
-% parfor i = 1:length(omega)
-%     H = sparse([], [], [], systemSize,systemSize, M*((I-2)^2+2*(I-2)+8)); % global matrix
-    H = zeros(systemSize,class(R_o)); % global matrix
-    D = zeros(systemSize,1,class(R_o)); % righ hand side
+% The matrix H and vector D should be allocated outside the for-loop if parfor is not used (for efficiency
+% H = zeros(systemSize,prec); % global matrix
+% D = zeros(systemSize,1,prec); % righ hand side
+
+for j = 1:length(omega)
+% parfor j = 1:length(omega)
+    H = zeros(systemSize,prec); % global matrix
+    D = zeros(systemSize,1,prec); % righ hand side
     
-    for m = 1:M+1
-        if m == 1            
-            H(1,1) = H11(i);
-            D(1) = D1(i);
-            if ~(SHBC && M == 1)
-                H(2,1) = H21(i);
-                D(2) = D2(i);
-                if ESBC && M == 1
-                    H4_temp = H4(:,i,1,2); % H4 at R_o
-                    H1_temp = H1(:,:,i,1);
-
-                    if n == 0
-                        H(I*(M-1)+1,2) = H4_temp(1);
-                        H(I*(M-1)+2,2) = H1_temp(1,1);
-                    else
-                        H(I*(M-1)+1,2:I-3) = H4_temp([1,3]);
-                        H(I*(M-1)+2:I*M-3,2:I-3) = H1_temp([1,2],[1,3]);
-                    end
-                else
-                    H(1:1,2:I-1) = H4(:,i,1,2); % H4 at R_o
-                    H(2:I-1,2:I-1) = H1(:,:,i,1);
-                end
-                if ~(1 == M && (SSBC || ESBC))
-                    H(I,2:I-1) = H4(:,i,1,1);  % H4 at R_i
-                end  
+    I = 1;
+    J = 1;
+    for m = 1:M
+        if ~isempty(H1{m})
+            H_temp = H1{m}(:,:,j);
+            ii = size(H_temp,1);
+            jj = size(H_temp,2);
+            H(I:I+ii-1,J:J+jj-1) = H_temp;
+            if ~isempty(D1{m})
+                ii2 = size(D1{m},1);
+                D(I:I+ii2-1) = D1{m}(:,:,j);
             end
-
-        elseif m < M+1
-            H(I*(m-1)-1,I*(m-1):I*(m-1)+1) = H2(:,i,m,1);  % H2 at R_i(m-1)
-            H(I*(m-1),I*(m-1):I*(m-1)+1) = H3(:,i,m,1);  % H3 at R_i(m-1)
-
-            H(I*(m-1)+1,I*(m-1):I*(m-1)+1) = H3(:,i,m,2);  % H3 at R_o(m)
-            if ~(SHBC && M == m)
-                H(I*(m-1)+2,I*(m-1):I*(m-1)+1) = H2(:,i,m,2);  % H2 at R_o(m)
-                if ESBC && M == m
-                    H4_temp = H4(:,i,m,2);
-                    H1_temp = H1(:,:,i,m);
-
-                    if n == 0
-                        H(I*(M-1)+1,I*(m-1)+2) = H4_temp(1);
-                        H(I*(M-1)+2,I*(m-1)+2) = H1_temp(1,1);
-                    else
-                        H(I*(M-1)+1,I*(m-1)+2:I*m-3) = H4_temp([1,3]);
-                        H(I*(M-1)+2:I*M-3,I*(m-1)+2:I*m-3) = H1_temp([1,2],[1,3]);
-                    end
-                else
-                    H(I*(m-1)+1:I*(m-1)+1,I*(m-1)+2:I*m-1) = H4(:,i,m,2); % K4 at R_o
-                    H(I*(m-1)+2:I*m-1,I*(m-1)+2:I*m-1) = H1(:,:,i,m);
-                end
-                if ~(m == M && (SSBC || ESBC))
-                    H(I*m,I*(m-1)+2:I*m-1) = H4(:,i,m,1);  % K4 at R_i
-                end 
-            end
-        else
-            if ~(SSBC || ESBC || SHBC)
-                H(I*M-1,I*M) = H2iMp1(i); 
-                H(I*M,I*M) = H3iMp1(i);     
-            end
+            I = I + ii;
+            J = J + dofs(m);
         end
     end
-%     keyboard
     Pinv = diag(1./max(abs(H)));
     if any(isinf(Pinv(:)))
-        error('K was singular')
+        error('e3Dss:singularK','K was singular')
     end
-    if n == 0
-        indices = setdiff(1:6*M, sort([(4:6:6*M) (5:6:6*M)]));
-    else
-        indices = 1:6*M;
-    end
-    if ESBC
-        if n == 0
-            indices = indices(1:end-2);    
-        else
-            indices = indices([1:end-4,6*M-2]);    
+    H2 = H*Pinv;
+    Pinv2 = diag(1./max(abs(H2),[],2));
+    H2 = Pinv2*H2;
+    CC(j,:) = diag(Pinv).*(H2\(Pinv2*D));
+    
+    if 0
+        k_L = layer{2}.k_temp(j);
+        cL = layer{1}.c_f;
+        rho = layer{1}.rho;
+        mu = 0;
+        lambda=cL^2*rho - 2*mu;
+        dispScaling = ((2*n+1)*1i^n/(layer{2}.rho*omega(j).^2));
+        presScaling = ((2*n+1)*1i^n/(layer{1}.k_temp(j)^2*lambda));
+
+
+
+        G = [H(1,end:-1:1)/dispScaling
+             H(2,end:-1:1)/presScaling];
+        G(1,2) = 2*G(1,2);
+        G(2,1) = 2*G(2,1);
+        b = [D(1)/dispScaling
+             D(2)/presScaling];
+    % 	G\b
+    %     CC(j,1)/(options.P_inc*rho*omega(j)^2*1i^n*(2*n+1))
+    % 
+    %     CC(j,1)/(options.P_inc*lambda*k_L^2*1i^n*(2*n+1))
+        if j == 2
+    %         if n == 35
+    %             keyboard
+    %         end
+            x = CC(j,1)/(options.P_inc*1i^n*(2*n+1));
+            fprintf('n = %d: C = %g + %gi\n', n,real(x),imag(x))
+            keyboard
         end
-    elseif SHBC
-        indices = indices(1:end-(I-1));   
-    elseif SSBC
-        indices = indices(1:end-1); 
+    %     for n = 1:size(coeffs,1),fprintf('n = %d: C = %g + %gi\n', n-1,real(coeffs(n,end,end)),imag(coeffs(n,end,end))),end
     end
-    % Fenders routine for reducing the complex system of linear equations
-    % to a real system of linear equations is not implemented
-    CC_temp = zeros(1,6*M,class(R_o));
-    CC_temp(indices) = diag(Pinv).*((H*Pinv)\D);
-    CC(i,:) = CC_temp;
     % Uncomment the following to get the spy matrix in the paper
 %     if n == 300
-%         keyboard
 %         fileName = 'results/spy_H';
 %         figure(1)
 %         spy2(H)
@@ -255,177 +282,220 @@ for i = 1:length(omega)
 %             'ylabel=$i$', ...
 %             'colorbar style={ylabel={$H_{ij,300}$}, ytick={-300,-200,...,200}, yticklabels={$10^{-300}$, $10^{-200}$, $10^{-100}$, $10^{0}$, $10^{100}$, $10^{200}$}}'};
 %         
-%         matlab2tikz([fileName '_1.tex'], 'height', '3.2094in', ...
-%             'extraAxisOptions', extraAxisOptions, 'relativeDataPath', '../../../matlab/otherFunctions/e3Dss/results/') % , 'imagesAsPng', false
+% %         matlab2tikz([fileName '_1.tex'], 'height', '3.2094in', ...
+% %             'extraAxisOptions', extraAxisOptions, 'relativeDataPath', '../../../matlab/otherFunctions/e3Dss/results/') % , 'imagesAsPng', false
 %         figure(2)
-%         spy2(K,1)
-%         cond(full(K))
-%         matlab2tikz([fileName '_1_bw.tex'], 'height', '3.2094in', ...
-%             'extraAxisOptions', extraAxisOptions, 'relativeDataPath', '../../../matlab/otherFunctions/e3Dss/results/')
-%         figure(3)
-%         spy2(K*Pinv)
-%         cond(full(K*Pinv))
+%         spy2(Pinv2*H*Pinv)
+%         cond(full(Pinv2*H*Pinv))
 %         extraAxisOptions{7} = 'colorbar style={ylabel={$\tilde{H}_{ij,300}$}, ytick={-10,-8,...,0}, yticklabels={$10^{-10}$, $10^{-8}$, $10^{-6}$, $10^{-4}$, $10^{-2}$, $10^0$}}';
-%         matlab2tikz([fileName '_2.tex'], 'height', '3.2094in', ...
-%             'extraAxisOptions', extraAxisOptions, 'relativeDataPath', '../../../matlab/otherFunctions/e3Dss/results/')
-%         figure(4)
-%         spy2(K*Pinv,1)
-%         cond(full(K*Pinv))
-%         matlab2tikz([fileName '_2_bw.tex'], 'height', '3.2094in', ...
-%             'extraAxisOptions', extraAxisOptions, 'relativeDataPath', '../../../matlab/otherFunctions/e3Dss/results/')
+% %         matlab2tikz([fileName '_2.tex'], 'height', '3.2094in', ...
+% %             'extraAxisOptions', extraAxisOptions, 'relativeDataPath', '../../../matlab/otherFunctions/e3Dss/results/')
+%         keyboard
 %     end
 end
-
-function H = H1_solid_(n,a,b,R_o)
-xi = a*R_o;
-eta = b*R_o;
-Z{1,1} = bessel_s(n,xi,1);
-Z{1,2} = bessel_s(n+1,xi,1);
-if n == 0
-    H = zeros(2,2,length(a),class(R_o));
-
-    H(1,1,:) = S_(5, 1, n, xi, eta, Z);
-else
-    H = zeros(4,4,length(a),class(R_o));
-
-    H(1,1,:) = S_(5, 1, n, xi, eta, Z);
-    H(2,1,:) = S_(7, 1, n, xi, eta, Z);
-
-    Z{1,1} = bessel_s(n,eta,1);
-    Z{1,2} = bessel_s(n+1,eta,1);
-
-    H(1,3,:) = T_(5, 1, n, eta, Z);
-    H(2,3,:) = T_(7, 1, n, eta, Z);
+J = 1;
+for m = 1:M
+    C{m} = CC(:,J:J+dofs(m)-1);
+    J = J + dofs(m);
 end
 
-function H = H1_(n,a,b,R_o,R_i)
+function D1 = D1_(n,k,R,Z,Z_r_s,rho,omega,options)
+zeta = k*R;
+switch options.applyLoad
+    case 'planeWave'
+        D1 = (2*n+1)*1i^n/R*(n*Z{1,1} - zeta.*Z{1,2});
+    case 'pointCharge'
+        r_s = options.r_s;
+        if r_s < R
+            D1 = (2*n+1)*1i*(-1)^n/R*k.*Z_r_s{1,1}.*(n*(Z{1,1}+1i*Z{2,1}) - zeta.*(Z{1,2}+1i*Z{2,2}));
+        else
+            D1 = (2*n+1)*1i*(-1)^n/R*k.*(n*Z{1,1} - zeta.*Z{1,2}).*(Z_r_s{1,1}+1i*Z_r_s{2,1});
+        end
+    case 'radialPulsation'
+        if n == 0
+            D1 = -(1/R+1i*k);
+        else
+            D1 = zeros(size(omega));
+        end
+end
+D1 = 1./(rho*omega.^2).*D1;
+D1 = reshape(D1,1,1,numel(D1));
 
-xi = a*R_o;
-eta = b*R_o;
-Z{2,1} = bessel_s(n,xi,2);
-Z{2,2} = bessel_s(n+1,xi,2);
-Z{1,1} = bessel_s(n,xi,1);
-Z{1,2} = bessel_s(n+1,xi,1);
-if n == 0
-    H = zeros(2,2,length(a),class(R_o));
-    
-    H(1,1,:) = S_(5, 1, n, xi, eta, Z);
-    H(1,2,:) = S_(5, 2, n, xi, eta, Z);
+function D2 = D2_(n,k,R,Z,Z_r_s,options)
+switch options.applyLoad
+    case 'planeWave'  
+        D2 = (2*n+1)*1i^n.*Z{1,1};
+    case 'pointCharge'
+        r_s = options.r_s;
+        if r_s < R
+            D2 = (2*n+1)*1i*(-1)^n*k.*Z_r_s{1,1}.*(Z{1,1}+1i*Z{2,1});
+        else
+            D2 = (2*n+1)*1i*(-1)^n*k.*Z{1,1}.*(Z_r_s{1,1}+1i*Z_r_s{2,1});
+        end
+    case 'radialPulsation' 
+        if n == 0
+            D2 = ones(size(k));
+        else
+            D2 = zeros(size(k));
+        end
+end
+D2 = reshape(-D2,1,1,numel(D2));
+                    
+function H = p_(Z,isSphere,isOuterDomain)
 
-    xi = a*R_i;
-    eta = b*R_i;
-    Z{1,1} = bessel_s(n,xi,1);
-    Z{2,1} = bessel_s(n,xi,2);
-    Z{1,2} = bessel_s(n+1,xi,1);
-    Z{2,2} = bessel_s(n+1,xi,2);
-
-    H(2,1,:) = S_(5, 1, n, xi, eta, Z);
-    H(2,2,:) = S_(5, 2, n, xi, eta, Z);
+if isSphere
+    H = zeros(1,1,length(Z{1,1}),class(Z{1,1}));
+    H(1,1,:) = Z{1,1};
+elseif isOuterDomain
+    H = zeros(1,1,length(Z{1,1}),class(Z{1,1}));
+    H(1,1,:) = Z{1,1}+1i*Z{2,1};   
 else
-    H = zeros(4,4,length(a),class(R_o));
+    H = zeros(1,2,length(Z{1,1}),class(Z{1,1}));
 
-    H(1,1,:) = S_(5, 1, n, xi, eta, Z);
-    H(1,2,:) = S_(5, 2, n, xi, eta, Z);
-    H(2,1,:) = S_(7, 1, n, xi, eta, Z);
-    H(2,2,:) = S_(7, 2, n, xi, eta, Z);
-
-    Z{1,1} = bessel_s(n,eta,1);
-    Z{2,1} = bessel_s(n,eta,2);
-    Z{1,2} = bessel_s(n+1,eta,1);
-    Z{2,2} = bessel_s(n+1,eta,2);
-
-    H(1,3,:) = T_(5, 1, n, eta, Z);
-    H(1,4,:) = T_(5, 2, n, eta, Z);
-    H(2,3,:) = T_(7, 1, n, eta, Z);
-    H(2,4,:) = T_(7, 2, n, eta, Z);
-    
-    xi = a*R_i;
-    eta = b*R_i;
-    Z{1,1} = bessel_s(n,xi,1);
-    Z{2,1} = bessel_s(n,xi,2);
-    Z{1,2} = bessel_s(n+1,xi,1);
-    Z{2,2} = bessel_s(n+1,xi,2);
-
-    H(3,1,:) = S_(7, 1, n, xi, eta, Z);
-    H(3,2,:) = S_(7, 2, n, xi, eta, Z);
-    H(4,1,:) = S_(5, 1, n, xi, eta, Z);
-    H(4,2,:) = S_(5, 2, n, xi, eta, Z);
-
-    Z{1,1} = bessel_s(n,eta,1);
-    Z{2,1} = bessel_s(n,eta,2);
-    Z{1,2} = bessel_s(n+1,eta,1);
-    Z{2,2} = bessel_s(n+1,eta,2);
-
-    H(3,3,:) = T_(7, 1, n, eta, Z);
-    H(3,4,:) = T_(7, 2, n, eta, Z);
-    H(4,3,:) = T_(5, 1, n, eta, Z);
-    H(4,4,:) = T_(5, 2, n, eta, Z);
+    H(1,1,:) = Z{1,1};
+    H(1,2,:) = Z{2,1};
 end
 
-function H = H2_(n,mu,k,R)
-
-H = zeros(2,length(k),class(R));
-
-H(1,:) = R^2/(2*mu)*bessel_s(n,k*R,1);
-H(2,:) = R^2/(2*mu)*bessel_s(n,k*R,2);
-
-function H = H3_(n,rho_f,k,omega,R)
-
-H = zeros(2,length(k),class(R));
+function H = dp_dr_s_(n,rho,k,omega,R,Z,isSphere,isOuterDomain)
 
 zeta = k*R;
-H(1,:) = -1./(rho_f*omega.^2).*dbessel_s(n,zeta,1,[],1); % dbessel_s = zeta*dj_n
-H(2,:) = -1./(rho_f*omega.^2).*dbessel_s(n,zeta,2,[],1); % dbessel_s = zeta*dy_n
+if isSphere
+    H = zeros(1,1,length(k),class(R));
+    zeta_dj_n = n*Z{1,1} - zeta.*Z{1,2}; % = zeta*dj_n
+    temp = -1./(rho*omega.^2);
+    H(1,1,:) = temp.*zeta_dj_n;
+elseif isOuterDomain
+    H = zeros(1,1,length(k),class(R));
+    zeta_dj_n = n*(Z{1,1}+1i*Z{2,1}) - zeta.*(Z{1,2}+1i*Z{2,2}); % = zeta*dj_n
+    temp = -1./(rho*omega.^2);
+    H(1,1,:) = temp.*zeta_dj_n;
+else
+    H = zeros(1,2,length(k),class(R));
 
-function H = H4_solid_(n,a,b,R)
+    zeta_dj_n = n*Z{1,1} - zeta.*Z{1,2}; % = zeta*dj_n
+    zeta_dy_n = n*Z{2,1} - zeta.*Z{2,2}; % = zeta*dy_n
+    temp = -1./(rho*omega.^2);
+    H(1,1,:) = temp.*zeta_dj_n;
+    H(1,2,:) = temp.*zeta_dy_n;
+end
+H = H/R;
+
+function H = u_r_(n,a,b,R,Z_xi,Z_eta,isSphere)
 
 xi = a*R;
 eta = b*R;
-Z = cell(2,2);
-Z{1,1} = bessel_s(n,xi,1);
-Z{1,2} = bessel_s(n+1,xi,1);
-if n == 0
-    H = zeros(2,length(a),class(R));
-    
-    H(1,:) = S_(1, 1, n, xi, eta, Z);
+if isSphere
+    if n == 0
+        H = zeros(1,1,length(a),class(R));
+
+        H(1,1,:) = S_(1, 1, n, xi, eta, Z_xi);
+    else
+        H = zeros(1,2,length(a),class(R));
+
+        H(1,1,:) = S_(1, 1, n, xi, eta, Z_xi);
+        H(1,2,:) = T_(1, 1, n, eta, Z_eta);
+    end
 else
-    H = zeros(4,length(a),class(R));
-    
-    H(1,:) = S_(1, 1, n, xi, eta, Z);
-    
-    Z{1,1} = bessel_s(n,eta,1);
-    Z{1,2} = bessel_s(n+1,eta,1);
-    H(3,:) = T_(1, 1, n, eta, Z);
+    if n == 0
+        H = zeros(1,2,length(a),class(R));
+
+        H(1,1,:) = S_(1, 1, n, xi, eta, Z_xi);
+        H(1,2,:) = S_(1, 2, n, xi, eta, Z_xi);
+    else
+        H = zeros(1,4,length(a),class(R));
+
+        H(1,1,:) = S_(1, 1, n, xi, eta, Z_xi);
+        H(1,2,:) = S_(1, 2, n, xi, eta, Z_xi);
+        H(1,3,:) = T_(1, 1, n, eta, Z_eta);
+        H(1,4,:) = T_(1, 2, n, eta, Z_eta);
+    end
+end
+H = H/R;
+
+function H = u_t_(n,a,b,R,Z_xi,Z_eta,isSphere)
+
+if n == 0
+    if isSphere
+        H = zeros(0,1,length(a),class(R));
+    else
+        H = zeros(0,2,length(a),class(R));
+    end
+else
+    xi = a*R;
+    eta = b*R;
+    if isSphere
+        H = zeros(1,2,length(a),class(R));
+
+        H(1,1,:) = S_(2, 1, n, xi, eta, Z_xi);
+        H(1,2,:) = T_(2, 1, n, eta, Z_eta);
+    else
+        H = zeros(1,4,length(a),class(R));
+
+        H(1,1,:) = S_(2, 1, n, xi, eta, Z_xi);
+        H(1,2,:) = S_(2, 2, n, xi, eta, Z_xi);
+        H(1,3,:) = T_(2, 1, n, eta, Z_eta);
+        H(1,4,:) = T_(2, 2, n, eta, Z_eta);
+    end
+    H = H/R;
 end
 
-
-function H = H4_(n,a,b,R)
+function H = sigma_rr_(n,a,b,R,Z_xi,Z_eta,isSphere,G)
 
 xi = a*R;
 eta = b*R;
-Z = cell(2,2);
-Z{1,1} = bessel_s(n,xi,1);
-Z{1,2} = bessel_s(n+1,xi,1);
-Z{2,1} = bessel_s(n,xi,2);
-Z{2,2} = bessel_s(n+1,xi,2);
+if isSphere
+    if n == 0
+        H = zeros(1,1,length(a),class(R));
+
+        H(1,1,:) = S_(5, 1, n, xi, eta, Z_xi);
+    else
+        H = zeros(1,2,length(a),class(R));
+
+        H(1,1,:) = S_(5, 1, n, xi, eta, Z_xi);
+        H(1,2,:) = T_(5, 1, n, eta, Z_eta);
+    end
+else
+    if n == 0
+        H = zeros(1,2,length(a),class(R));
+
+        H(1,1,:) = S_(5, 1, n, xi, eta, Z_xi);
+        H(1,2,:) = S_(5, 2, n, xi, eta, Z_xi);
+    else
+        H = zeros(1,4,length(a),class(R));
+
+        H(1,1,:) = S_(5, 1, n, xi, eta, Z_xi);
+        H(1,2,:) = S_(5, 2, n, xi, eta, Z_xi);
+
+        H(1,3,:) = T_(5, 1, n, eta, Z_eta);
+        H(1,4,:) = T_(5, 2, n, eta, Z_eta);
+    end
+end
+H = 2*G/R^2*H;
+
+function H = sigma_rt_(n,a,b,R,Z_xi,Z_eta,isSphere,G)
 
 if n == 0
-    H = zeros(2,length(a),class(R));
-    
-    H(1,:) = S_(1, 1, n, xi, eta, Z);
-    H(2,:) = S_(1, 2, n, xi, eta, Z);
+    if isSphere
+        H = zeros(0,1,length(a),class(R));
+    else
+        H = zeros(0,2,length(a),class(R));
+    end
 else
-    H = zeros(4,length(a),class(R));
-    
-    H(1,:) = S_(1, 1, n, xi, eta, Z);
-    H(2,:) = S_(1, 2, n, xi, eta, Z);
-    
-    Z{1,1} = bessel_s(n,eta,1);
-    Z{1,2} = bessel_s(n+1,eta,1);
-    H(3,:) = T_(1, 1, n, eta, Z);
-    Z{2,1} = bessel_s(n,eta,2);
-    Z{2,2} = bessel_s(n+1,eta,2);
-    H(4,:) = T_(1, 2, n, eta, Z);
+    xi = a*R;
+    eta = b*R;
+    if isSphere
+        H = zeros(1,2,length(a),class(R));
+
+        H(1,1,:) = S_(7, 1, n, xi, eta, Z_xi);
+        H(1,2,:) = T_(7, 1, n, eta, Z_eta);
+    else
+        H = zeros(1,4,length(a),class(R));
+        H(1,1,:) = S_(7, 1, n, xi, eta, Z_xi);
+        H(1,2,:) = S_(7, 2, n, xi, eta, Z_xi);
+        H(1,3,:) = T_(7, 1, n, eta, Z_eta);
+        H(1,4,:) = T_(7, 2, n, eta, Z_eta);
+    end
+    H = 2*G/R^2*H;
 end
 
 

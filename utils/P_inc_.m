@@ -1,4 +1,4 @@
-function p = P_inc_(omega,omega_c,type)
+function p = P_inc_(omega,omega_c,P_inc,type)
 
 switch type
     case 1
@@ -12,3 +12,4 @@ switch type
                           +(abs(abs(omega)-abs(2*omega_c))/abs(2*omega_c) < 10*eps));
         p(indices) = pi/(2*omega_c)*exp(1i*pi*omega(indices)/omega_c);
 end
+p = P_inc*p;

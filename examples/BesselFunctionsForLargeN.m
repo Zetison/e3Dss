@@ -5,14 +5,14 @@ addpath ..
 addpath ../utils
 addpath ../models
 
-
+pathToResults = '../../../results/e3Dss/';
 % pathToResults = pathToResults '';
 
 startMatlabPool
 
 %% Create plot of bessel functinos for large n
 xi = 500;
-type = 2;
+type = 1;
 switch type
     case 1
         N = 550;

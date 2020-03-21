@@ -1,4 +1,4 @@
-function p = Pt_inc_(t,z,omega_c,k_c,type,terms)
+function p = Pt_inc_(t,z,omega_c,k_c,P_inc,type,terms)
 
 switch type
     case 1
@@ -48,8 +48,8 @@ switch type
                 p(indices) = p(indices) + a(i)*sin(i*(omega_c*t(indices)-k_c*z));
             end
         end
-        
 end
+p = P_inc*p;
         
 
 

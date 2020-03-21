@@ -5,6 +5,9 @@ options = struct('name','untitled',...
                  'noSteps',30,...
                  'plotDisplacementVectors',0,...
                  'plotScalarField',0,...
+                 'plotDensity',0,...
+                 'plotFarField',0,...
+                 'plotFarFieldError',0,...
                  'plotPolarRadialDisplacement',0,...
                  'plotSphericalRadialDisplacement',0,...
                  'plotStressXX',0,...
@@ -38,7 +41,7 @@ options = struct('name','untitled',...
                  'plotOrgJacobi',0,...
                  'plotTimeOscillation', 0,...
                  'plotError', 0,...
-                 'plotErrorGradient', 0,...
+                 'plotErrorGrad', 0,...
                  'plotErrorTot', 0,...
                  'plotErrorEnergy', 0,...
                  'plotGradientVectors', 0, ...
@@ -46,8 +49,10 @@ options = struct('name','untitled',...
                  'plotAnalytic', 0, ...
                  'plotTotField',0,...
                  'plotTotFieldAbs',0,...
+                 'plotSPL',0,...
                  'plotErrorFunc', 0, ...
                  'plotTestFun', 0, ...
+                 'plotTestField', 0, ...
                  'timeStepMult', 1, ...
                  'N', NaN, ...
                  'addDynamicScalars', 0);
@@ -93,6 +98,21 @@ if length(omega) > 1
     if options.plotScalarField && timeStepMult > 1
         data.scalarField = interp1_new(t_arr, data.scalarField, tq_arr);
     end
+
+    %% Density
+    if options.plotDensity && timeStepMult > 1
+        data.density = interp1_new(t_arr, data.density, tq_arr);
+    end
+
+    %% Far field
+    if options.plotFarField && timeStepMult > 1
+        data.farField = interp1_new(t_arr, data.farField, tq_arr);
+    end
+
+    %% Far field Error
+    if options.plotFarFieldError && timeStepMult > 1
+        data.farFieldError = interp1_new(t_arr, data.farFieldError, tq_arr);
+    end
     
     %% Total field
     if options.plotTotField && timeStepMult > 1
@@ -120,14 +140,19 @@ if length(omega) > 1
         data.testFun = interp1_new(t_arr, data.testFun, tq_arr);
     end
     
+    %% Test field
+    if options.plotTestField && timeStepMult > 1
+        data.testField = interp1_new(t_arr, data.testField, tq_arr);
+    end
+    
     %% Error in scalar field
     if options.plotError && timeStepMult > 1
         data.Error = interp1_new(t_arr, data.Error, tq_arr);
     end
     
     %% Error in gradient field
-    if options.plotErrorGradient && timeStepMult > 1
-        data.ErrorGradient = interp1_new(t_arr, data.ErrorGradient, tq_arr);
+    if options.plotErrorGrad && timeStepMult > 1
+        data.ErrorGrad = interp1_new(t_arr, data.ErrorGrad, tq_arr);
     end
     
     %% Total Error
@@ -161,7 +186,6 @@ else
     Nq = noSteps;
 end
 
-[noVisElems, noCorners] = size(visElements);
 [noNodes, d] = size(nodes);
 if ~exist(fileparts(vtfFileName),'dir')
     mkdir(fileparts(vtfFileName))
@@ -172,6 +196,7 @@ end
 
 parfor i = 1:Nq
 % for i = 1:Nq
+    [noVisElems, noCorners] = size(visElements);
     if Nq == 1
         fid = fopen([vtfFileName '.vtu'],'wt+','b');
     else
@@ -199,6 +224,7 @@ parfor i = 1:Nq
     switch options.celltype
         case {'VTK_POLY_LINE', 'VTK_TRIANGLE_STRIP', 'VTK_POLYGON'}
             for eVis = 1:noVisElems
+                noCorners = numel(visElements{eVis});
                 fprintf(fid,['\t\t\t\t\t' repmat('%d ', 1, noCorners) '\n'], visElements{eVis}-1);
             end            
         otherwise
@@ -292,6 +318,21 @@ parfor i = 1:Nq
         printField(data.scalarField(:,:,i), 'Scalar field', fid)
     end
 
+    %% Density field
+    if options.plotDensity
+        printField(data.density(:,:,i), 'Density', fid)
+    end
+
+    %% Far field
+    if options.plotFarField
+        printField(data.farField(:,:,i), 'Far field', fid)
+    end
+
+    %% Far field error
+    if options.plotFarFieldError
+        printField(data.farFieldError(:,:,i), 'Error far field', fid)
+    end
+
     %% Total field
     if options.plotTotField
         printField(data.totField(:,:,i), 'Total scalar field (real)', fid)
@@ -300,6 +341,11 @@ parfor i = 1:Nq
     %% Total field (absolute Value)
     if options.plotTotFieldAbs
         printField(data.totFieldAbs(:,:,i), 'Total scalar field (abs)', fid)
+    end
+
+    %% Sound pressure level
+    if options.plotSPL
+        printField(20*log10(data.totFieldAbs(:,:,i)), 'SPL', fid)
     end
 
     %% P_inc
@@ -322,14 +368,19 @@ parfor i = 1:Nq
         printField(data.testFun(:,:,i), 'plotTestFun', fid)
     end
     
+    %% Test field
+    if options.plotTestField
+        printField(data.testField(:,:,i), 'plotTestField', fid)
+    end
+    
     %% Error in scalar field
     if options.plotError
         printField(data.Error(:,:,i), 'Error', fid)
     end
     
     %% Error in gradient field
-    if options.plotErrorGradient
-        printField(data.ErrorGradient(:,:,i), 'Error Gradient', fid)
+    if options.plotErrorGrad
+        printField(data.ErrorGrad(:,:,i), 'Error Gradient', fid)
     end
     
     %% Total Error
@@ -354,7 +405,7 @@ parfor i = 1:Nq
         u_x = displacement(:,1,i);
         u_y = displacement(:,2,i);
         u_r = u_y.*sin(theta) + u_x.*cos(theta);
-        printField(u_r(:,:), 'Polar radial displacement', fid)
+        printField(u_r(:,:,i), 'Polar radial displacement', fid)
     end
 
     %% Displacement spherical radial direction (scalars)
@@ -375,7 +426,7 @@ parfor i = 1:Nq
         u_r = u_x.*sin(theta).*cos(phi) + u_y.*sin(theta).*sin(phi) + u_z.*cos(theta);
     %     u_theta = u_x.*cos(theta).*cos(phi) + u_y.*cos(theta).*sin(phi) - u_z.*sin(theta);
     %     u_phi = -u_x.*sin(phi) + u_y.*cos(phi);
-        printField(u_r(:,:), 'Spherical radial displacement', fid)
+        printField(u_r(:,:,i), 'Spherical radial displacement', fid)
     end
 
     %% Stress (scalars)
