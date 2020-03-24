@@ -17,6 +17,7 @@ options = struct('d_vec', d_vec,...
                  'P_inc', 1);
              
 layer{1}.X = -layer{1}.R_i*d_vec;
+layer{1}.calc_p_0 = true; % Calculate the far field pattern
 
 %% Create spy matrix (requires to be in debug mode in getCoeffs.m)
 % uncomment keyboard command in getCoeffs.m to get spy matrix

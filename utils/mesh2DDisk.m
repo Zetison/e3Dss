@@ -1,11 +1,13 @@
-function [tri, X] = mesh2DDisk(R,N)
+function [tri, X] = mesh2DDisk(R,d)
 
 
-dt = 2*pi/N;
-h = sqrt(3)/2*dt*R;
+% dt = 2*pi/N;
+h = sqrt(3)/2*d;
 Nr = ceil(R/h)+1;
 dr0 = R/(Nr-1);
 
+dt = d/R;
+N = round(2*pi/dt);
 X = zeros(Nr*N,2);
 counter = 1;
 for i = 1:Nr-1
@@ -42,6 +44,7 @@ tri = delaunay(X(:,1),X(:,2));
 % theta = linspace(0,2*pi,1000);
 % plot(R*cos(theta),R*sin(theta),'red')
 % hold off
+% keyboard
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 

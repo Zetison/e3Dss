@@ -1,8 +1,8 @@
-function [tri, X] = meshRectangleWcircHole(xl,xu,R,N)
+function [tri, X] = meshRectangleWcircHole(xl,xu,R,d)
 
 Lx = xu(1)-xl(1);
 Ly = xu(2)-xl(2);
-d = Lx/(N-1);
+N = round(Lx/d + 1);
 h = sqrt(3)/2*d;
 Ny = ceil(Ly/h)+1;
 x1 = linspace(xl(1),xu(1),N);
@@ -30,13 +30,13 @@ tri = delaunay(X(:,1),X(:,2));
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % figure(1)
 % triplot(tri,X(:,1),X(:,2))
-% for i = 1:size(X,1)
-%     text(X(i,1),X(i,2),num2str(i), 'HorizontalAlignment', 'left', 'VerticalAlignment', 'top')
-% end
-% for i = 1:size(tri,1)
-%     x = mean(X(tri(i,:),:));
-%     text(x(1),x(2),num2str(i), 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle','color','red')
-% end
+% % for i = 1:size(X,1)
+% %     text(X(i,1),X(i,2),num2str(i), 'HorizontalAlignment', 'left', 'VerticalAlignment', 'top')
+% % end
+% % for i = 1:size(tri,1)
+% %     x = mean(X(tri(i,:),:));
+% %     text(x(1),x(2),num2str(i), 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle','color','red')
+% % end
 % axis equal
 % hold on
 % theta = linspace(0,2*pi,1000);
@@ -82,15 +82,16 @@ for i = length(removeIndices):-1:1
 end
 X(removeIndices,:) = [];
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % triplot(tri,X(:,1),X(:,2))
 % hold on
 % theta = linspace(0,2*pi,1000);
 % plot(R*cos(theta),R*sin(theta),'red')
 % axis equal
 % hold off
+% keyboard
 % 
-% 
-% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 

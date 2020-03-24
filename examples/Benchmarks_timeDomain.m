@@ -17,7 +17,8 @@ SSBC = 0;
 ESBC = 0; 
 f_c = 1500;
 % applyLoad = 'planeWave';
-applyLoad = 'pointCharge';
+% applyLoad = 'pointCharge';
+applyLoad = 'surfExcitation';
 % applyLoad = 'radialPulsation';
 switch applyLoad
     case 'pointCharge'
@@ -27,6 +28,10 @@ switch applyLoad
         N = 2^10;
     case 'planeWave'
         ESBC = 1;
+        T = 120/f_c;
+        N = 2^10;
+    case 'surfExcitation'
+        SSBC = 1;
         T = 120/f_c;
         N = 2^10;
     case 'radialPulsation'  
@@ -45,14 +50,17 @@ defineBCstring
 R_a = 1.5*R_i;
 P_inc = 1;
 r_s = 2*R_i; 
+theta_s = NaN(1,2);
 d_vec = -[-sqrt(r_s^2-R_a^2), R_a, 0].';  
 d_vec = d_vec/norm(d_vec);
 if strcmp(applyLoad,'pointCharge')
     if intermediatePointCharge
         r_s = layer{2}.R_i*1/3 + layer{3}.R_i*2/3;
-        d_vec = -d_vec;
     end
     P_inc = P_inc*r_s;
+elseif strcmp(applyLoad,'surfExcitation')
+    r_s = layer{1}.R_i;
+    theta_s = [0,10]*pi/180+pi/2;
 else
     d_vec = [1, 0, 0].';  
 end
@@ -60,14 +68,15 @@ end
 options = struct('d_vec', d_vec, ...
                  'P_inc', P_inc, ...
                  'applyLoad', applyLoad, ...
-                 'Eps', 1e-8, ...
                  'plotTimeOscillation', 0, ...
                  'plotInTimeDomain', 1, ...
+                 'BC',BC, ...
                  'SHBC', SHBC, ...
                  'ESBC', ESBC, ...
                  'SSBC', SSBC, ...
                  'R_a', R_a, ...
                  'r_s', r_s, ...
+                 'theta_s', theta_s, ...
                  'f_c', f_c, ...
                  'N', N, ...
                  'T', T,...

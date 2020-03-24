@@ -9,6 +9,10 @@ else
 end
 i = 1;
 P = [zeros(size(x)); ones(size(x))];
+if n < 0
+    P = P(1,:);
+    return
+end
 while i <= n
     P = legendreDerivs(i, x, P);
     i = i + 1;

@@ -9,6 +9,7 @@ m_s = options.m_s;
 %% Calculate submatrices
 H1 = cell(M,1);
 D1 = cell(M,1);
+singleLayerSupport = strcmp(options.applyLoad,'mechExcitation') || strcmp(options.applyLoad,'surfExcitation');
 
 dofs = zeros(M,1);
 if M > 1
@@ -20,10 +21,16 @@ for m = 1:M
     R_i = layer{m}.R_i;
     isSphere = R_i == 0;
     isOuterDomain = m == 1;
-    if m == m_s && ~isSphere
-        k = layer{m}.k_temp;
+    supportAtR_i = ~(singleLayerSupport && options.r_s ~= R_i);
+    if m == m_s && supportAtR_i
         rho = layer{m}.rho;
-        Z_zeta = layer{m}.Z_zeta_i;
+        if singleLayerSupport
+            k = NaN(size(layer{1}.k_temp)); % Not used
+            Z_zeta = NaN;                   % Not used
+        else
+            k = layer{m}.k_temp;
+            Z_zeta = layer{m}.Z_zeta_i;
+        end
         if strcmp(options.applyLoad,'pointCharge')
             Z_r_s = layer{m}.Z_r_s;
         else
@@ -37,14 +44,19 @@ for m = 1:M
             D1{m} = cat(1,D1_(n,k,R_i,Z_zeta,Z_r_s,rho,omega,options),...    
                           D2_(n,k,R_i,Z_zeta,Z_r_s,options));
         end
-    elseif m+1 == m_s
-        k = layer{m+1}.k_temp;
+    elseif m+1 == m_s && supportAtR_i
         rho = layer{m+1}.rho;
-        Z_zeta = layer{m+1}.Z_zeta_o;
         if strcmp(options.applyLoad,'pointCharge')
             Z_r_s = layer{m+1}.Z_r_s;
         else
             Z_r_s = NaN;
+        end
+        if singleLayerSupport
+            k = NaN(size(layer{1}.k_temp)); % Not used
+            Z_zeta = NaN;                   % Not used
+        else
+            k = layer{m+1}.k_temp;
+            Z_zeta = layer{m+1}.Z_zeta_o;
         end
         if strcmp(layer{m}.media,'solid') || strcmp(layer{m}.media,'viscoelastic')
             void = zeros(n > 0,1,numel(omega),class(R_i));
@@ -202,15 +214,13 @@ end
 systemSize = sum(dofs);
 CC = zeros(length(omega),systemSize,prec);
 
-% The matrix H and vector D should be allocated outside the for-loop if parfor is not used (for efficiency
+% The matrix H and vector D should be allocated outside the for-loop if parfor is not used
 % H = zeros(systemSize,prec); % global matrix
 % D = zeros(systemSize,1,prec); % righ hand side
-
-for j = 1:length(omega)
-% parfor j = 1:length(omega)
+% for j = 1:length(omega)
+parfor j = 1:length(omega)
     H = zeros(systemSize,prec); % global matrix
     D = zeros(systemSize,1,prec); % righ hand side
-    
     I = 1;
     J = 1;
     for m = 1:M
@@ -236,37 +246,6 @@ for j = 1:length(omega)
     H2 = Pinv2*H2;
     CC(j,:) = diag(Pinv).*(H2\(Pinv2*D));
     
-    if 0
-        k_L = layer{2}.k_temp(j);
-        cL = layer{1}.c_f;
-        rho = layer{1}.rho;
-        mu = 0;
-        lambda=cL^2*rho - 2*mu;
-        dispScaling = ((2*n+1)*1i^n/(layer{2}.rho*omega(j).^2));
-        presScaling = ((2*n+1)*1i^n/(layer{1}.k_temp(j)^2*lambda));
-
-
-
-        G = [H(1,end:-1:1)/dispScaling
-             H(2,end:-1:1)/presScaling];
-        G(1,2) = 2*G(1,2);
-        G(2,1) = 2*G(2,1);
-        b = [D(1)/dispScaling
-             D(2)/presScaling];
-    % 	G\b
-    %     CC(j,1)/(options.P_inc*rho*omega(j)^2*1i^n*(2*n+1))
-    % 
-    %     CC(j,1)/(options.P_inc*lambda*k_L^2*1i^n*(2*n+1))
-        if j == 2
-    %         if n == 35
-    %             keyboard
-    %         end
-            x = CC(j,1)/(options.P_inc*1i^n*(2*n+1));
-            fprintf('n = %d: C = %g + %gi\n', n,real(x),imag(x))
-            keyboard
-        end
-    %     for n = 1:size(coeffs,1),fprintf('n = %d: C = %g + %gi\n', n-1,real(coeffs(n,end,end)),imag(coeffs(n,end,end))),end
-    end
     % Uncomment the following to get the spy matrix in the paper
 %     if n == 300
 %         fileName = 'results/spy_H';
@@ -307,15 +286,19 @@ switch options.applyLoad
     case 'pointCharge'
         r_s = options.r_s;
         if r_s < R
-            D1 = (2*n+1)*1i*(-1)^n/R*k.*Z_r_s{1,1}.*(n*(Z{1,1}+1i*Z{2,1}) - zeta.*(Z{1,2}+1i*Z{2,2}));
+            D1 = (2*n+1)*1i/R*k.*Z_r_s{1,1}.*(n*(Z{1,1}+1i*Z{2,1}) - zeta.*(Z{1,2}+1i*Z{2,2}));
         else
-            D1 = (2*n+1)*1i*(-1)^n/R*k.*(n*Z{1,1} - zeta.*Z{1,2}).*(Z_r_s{1,1}+1i*Z_r_s{2,1});
+            D1 = (2*n+1)*1i/R*k.*(n*Z{1,1} - zeta.*Z{1,2}).*(Z_r_s{1,1}+1i*Z_r_s{2,1});
         end
+    case 'mechExcitation'
+        D1 = zeros(size(k));
+    case 'surfExcitation'
+        D1 = zeros(size(k));
     case 'radialPulsation'
         if n == 0
             D1 = -(1/R+1i*k);
         else
-            D1 = zeros(size(omega));
+            D1 = zeros(size(k));
         end
 end
 D1 = 1./(rho*omega.^2).*D1;
@@ -328,10 +311,16 @@ switch options.applyLoad
     case 'pointCharge'
         r_s = options.r_s;
         if r_s < R
-            D2 = (2*n+1)*1i*(-1)^n*k.*Z_r_s{1,1}.*(Z{1,1}+1i*Z{2,1});
+            D2 = (2*n+1)*k.*Z_r_s{1,1}.*(Z{1,1}+1i*Z{2,1});
         else
-            D2 = (2*n+1)*1i*(-1)^n*k.*Z{1,1}.*(Z_r_s{1,1}+1i*Z_r_s{2,1});
+            D2 = (2*n+1)*k.*Z{1,1}.*(Z_r_s{1,1}+1i*Z_r_s{2,1});
         end
+    case 'mechExcitation'
+        D2 = (2*n+1)/(4*pi*R^2)*ones(size(k));
+    case 'surfExcitation'
+        theta_s = options.theta_s;
+        D2 = (  legendre_(n-1,cos(theta_s(2))) - legendre_(n+1,cos(theta_s(2))) ...
+              -(legendre_(n-1,cos(theta_s(1))) - legendre_(n+1,cos(theta_s(1)))))/2*ones(size(k));
     case 'radialPulsation' 
         if n == 0
             D2 = ones(size(k));

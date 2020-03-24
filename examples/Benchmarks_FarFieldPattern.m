@@ -55,6 +55,7 @@ for scatteringCase = {'BI'} %,'Sweep'}
                             case 'tripleShell'
                                 layer = setTripleShellParameters();
                         end
+                        layer{1}.calc_p_0 = true; % Calculate the far field pattern
                         defineBCstring
                         options = struct('BC', BC,...
                                          'd_vec', d_vec, ...

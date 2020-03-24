@@ -3,14 +3,18 @@ clear all %#ok
 
 % pathToResults = '../../../results/e3Dss/';
 pathToResults = '../results/';
+if ~exist(pathToResults, 'dir')
+    mkdir(pathToResults);
+end
+
 mpstartup
 startMatlabPool
-mp = NaN;
+% mp = NaN;
 %% Calculate errors
-for useSymbolicPrecision = 0 %[0,1]
+for useSymbolicPrecision = 1 %[0,1]
     if useSymbolicPrecision
-%         prec = 'mp';
-        prec = 'sym';
+        prec = 'mp';
+%         prec = 'sym';
     else
         prec = 'double';
     end
@@ -33,25 +37,28 @@ for useSymbolicPrecision = 0 %[0,1]
             end
         end
     end
-    for i = 1:length(tasks)
-%     parfor i = 1:length(tasks)
+%     for i = 1:length(tasks)
+    parfor i = 1:length(tasks)
         switch prec
             case 'single'
                 Eps = 1e-7;
-                PI = pi;
+                PI = pi;b
                 O = 0;
             case 'double'
                 Eps = eps;
                 PI = pi;
                 O = 0;
             case 'sym'
-                Eps = 1e-50;
-                digits(2000);
+                Eps = 1e-40;
+%                 digits(2000);
+                digits(40);
                 PI = vpa('pi');
                 O = vpa('0');
             case 'mp'
-                Eps = 1e-50;
-                mp.Digits(2000);
+                Eps = 1e-40;
+%                 Eps = 1e-30;
+                mp.Digits(40);
+%                 mp.Digits(2000);
                 PI = mp('pi');
                 O = mp('0');
         end
@@ -156,7 +163,11 @@ for useSymbolicPrecision = 0 %[0,1]
 
         switch BC
             case {'ESBC', 'SHBC'}
-                Upsilon = min([R_i./c_s_1(1:end-1), R_i./c_s_2(1:end-1), R_o./c_f]);
+                if isempty(R_i)
+                    Upsilon = R_o./c_f;
+                else
+                    Upsilon = min([R_i./c_s_1(1:end-1), R_i./c_s_2(1:end-1), R_o./c_f]);
+                end
             case 'SSBC'
                 Upsilon = min([R_i./c_s_1, R_i./c_s_2, R_o./c_f]);
             case 'NNBC'
@@ -179,14 +190,15 @@ for useSymbolicPrecision = 0 %[0,1]
                          'omega', omega, ...
                          'P_inc', ones(1,class(O)), ...
                          'prec', prec, ...
+                         'Display','none',...
                          'Eps', Eps);
+%         options.N_max = 2;
         for m = 1:M
             layer{m}.calc_errPresCond = true; 
             layer{m}.calc_errDispCond = true;  
             switch layer{m}.media
                 case 'fluid'
                     layer{m}.calc_errHelm = true;  
-                    layer{m}.calc_p_0 = false;
                 case 'solid'
                     layer{m}.calc_errNav = true;
             end
@@ -247,7 +259,7 @@ for useSymbolicPrecision = 0 %[0,1]
         end
         xlim([double(sc(1)), double(sc(end))])
         drawnow
-%         savefig([filename '.fig'])
+        savefig([filename '.fig'])
         fprintf('Finished a case in %f seconds!\n\n', toc)
     end
 end

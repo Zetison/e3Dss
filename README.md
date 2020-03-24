@@ -10,7 +10,9 @@ The following boundary conditions can be used for the innermost layer:
 ## Loads (Incident wave type)
 The following loads can be used for the outermost layer
 - 'planeWave' simulates a plane incident wave
-- 'pointCharge' simulates an incident wave from a point charge (the location of the point source is given by -options.d_vec*options.r_s)
+- 'pointCharge' simulates an incident wave from a point charge (the location of the point source is given by options.d_vec*options.r_s)
+- 'mechExcitation' simulates a point force mechanical excitation at options.d_vec*options.r_s with amplitude P_inc
+- 'surfExcitation' simulates a surface excitation over the region theta \in options.theta_s and phi \in [0, 2*pi] at r_s with amplitude P_inc
 - 'radialPulsation' simulates a spherical symmetric wave originating from infinity
 
 ## Parameters (with default values)
@@ -38,7 +40,7 @@ layer{m}.calc_errPresCond = false;   % Calculate the errors for the pressure con
 
 % Parameters in layer m for options{i}.media = 'fluid'
 layer{m}.c_f          	= 1500;       % Speed of sound
-layer{m}.calc_p_0       = true;       % Toggle calculation of the far field pattern
+layer{m}.calc_p_0       = false;      % Toggle calculation of the far field pattern
 layer{m}.calc_p       	= false;      % Toggle calculation of the scattered pressure
 layer{m}.calc_dp      	= false(1,3); % Toggle calculation of the three components of the gradient of the pressure
 layer{m}.calc_p_laplace	= false;      % Toggle calculation of the Laplace operator of the scattered pressure fields

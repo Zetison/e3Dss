@@ -17,6 +17,7 @@ X = [sin(theta_arr), zeros(size(theta_arr)), cos(theta_arr)]; % Evaluate physica
 % General parameters in layer i
 layer{1}.media 	= 'fluid'; % Media; % solid or fluid (Navier equation or Helmholtz equation)
 layer{1}.X     	= X;       % Evaluation points
+layer{m}.calc_p_0 = true; % Calculate the far field pattern
 
 layer = e3Dss(layer); % Compute solution
 

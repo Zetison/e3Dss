@@ -1,12 +1,12 @@
-function [tri, X] = mesh2DDonut(R_o,R_i,N)
+function [tri, X] = mesh2DDonut(R_o,R_i,d)
 
 
 dR = R_o-R_i;
-dt = 2*pi/N;
-h = sqrt(3)/2*dt*R_o;
+h = sqrt(3)/2*d;
 Nr = ceil(dR/h)+1;
 dr0 = dR/(Nr-1);
-
+dt = d/R_o;
+N = round(2*pi/dt);
 X = zeros(Nr*N,2);
 counter = 1;
 for i = 1:Nr
@@ -65,19 +65,20 @@ X(removeIndices,:) = [];
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % figure(1)
 % triplot(tri,X(:,1),X(:,2))
-% for i = 1:size(X,1)
-%     text(X(i,1),X(i,2),num2str(i), 'HorizontalAlignment', 'left', 'VerticalAlignment', 'top')
-% end
-% for i = 1:size(tri,1)
-%     x = mean(X(tri(i,:),:));
-%     text(x(1),x(2),num2str(i), 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle','color','red')
-% end
+% % for i = 1:size(X,1)
+% %     text(X(i,1),X(i,2),num2str(i), 'HorizontalAlignment', 'left', 'VerticalAlignment', 'top')
+% % end
+% % for i = 1:size(tri,1)
+% %     x = mean(X(tri(i,:),:));
+% %     text(x(1),x(2),num2str(i), 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle','color','red')
+% % end
 % axis equal
 % hold on
 % theta = linspace(0,2*pi,1000);
 % plot(R_o*cos(theta),R_o*sin(theta),'red')
 % plot(R_i*cos(theta),R_i*sin(theta),'red')
 % hold off
+% keyboard
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 

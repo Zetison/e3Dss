@@ -1,3 +1,7 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% This study correspond to Fig. 1 and Fig. 4 in Sage1979mri
+% Sage1979mri is available at https://doi.org/10.1121/1.382928
+
 close all
 clear all %#ok
 
@@ -9,6 +13,7 @@ layer{1}.media = 'fluid';
 layer{1}.R_i = a;
 layer{1}.rho = 1025;
 layer{1}.c_f = 1531;
+layer{1}.calc_p_0 = true; % Calculate the far field pattern
 
 layer{2}.media = 'fluid';
 layer{2}.R_i = 0;
@@ -29,7 +34,7 @@ d_vec = [0,0,1].';
 options = struct('d_vec', d_vec, ...
                  'omega', omega);
 
-layer{1}.X = [0,0,-1];           % Compute backscattered pressure
+layer{1}.X = [0,0,-1]; % Compute backscattered pressure
 
 if 0
     f = @(k)-objFunc(k,layer,options);

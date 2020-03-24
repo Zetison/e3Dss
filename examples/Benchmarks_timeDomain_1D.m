@@ -5,14 +5,14 @@ clear all %#ok
 pathToResults = '../results';
 set(0,'defaultTextInterpreter','latex');
 startMatlabPool
-plotP_inc = 1;
+plotP_inc = false;
 
 applyLoad = 'pointCharge';
 % applyLoad = 'planeWave';
 % applyLoad = 'radialPulsation';
 
-% model = 'S15';
-model = 'S5';
+model = 'S15';
+% model = 'S5';
 % f_c = 1500; % (300) source pulse center freq.
 f_c = 1500; % (300) source pulse center freq.
 N = 2^11;
@@ -71,14 +71,12 @@ switch model
         layer = setS15Parameters();
         SHBC = 1;
         layer{2}.calc_sigma_s = [1,0,0,0,0,0];
-        layer{1}.calc_p_0 = false;
         layer{1}.calc_p = true;
         layer{3}.calc_p = true;
     case 'S5'
         layer = setS5Parameters();
         SHBC = 0;
         layer{2}.calc_sigma_s = [1,0,0,0,0,0];
-        layer{1}.calc_p_0 = false;
         layer{1}.calc_p = true;
         layer{3}.calc_p = true;
 end
@@ -99,15 +97,19 @@ if ~exist('options','var')
                      'applyLoad',applyLoad);
 end
 options.omega = omega(2:end);
-options.d_vec = d_vec;
 options.N_max = Inf;
-if strcmp(applyLoad,'pointCharge')
-    if false
-        options.r_s = mean([layer{2}.R_i,layer{3}.R_i]);
-        P_inc = P_inc*options.r_s;
-    else
-        options.r_s = 0;
-    end
+switch applyLoad
+    case 'pointCharge'
+        switch model
+            case 'S15'
+                options.r_s = mean([layer{2}.R_i,layer{3}.R_i]);
+                P_inc = P_inc*options.r_s;
+            case 'S5'
+                options.r_s = 0;
+        end
+        options.d_vec = -d_vec;
+    case 'planeWave'
+        options.d_vec = d_vec;
 end
 options.P_inc = @(omega) P_inc_(omega, omega_c,P_inc,type);
 
@@ -137,7 +139,7 @@ for n = 0:N-1
         if strcmp(applyLoad,'pointCharge')
             r_s = options.r_s;
             k = omega/layer{3}.c_f;
-            x_s = -r_s*options.d_vec.';
+            x_s = r_s*options.d_vec.';
             r = @(y) norm2(repmat(x_s,size(y,1),1)-y);
             PincField(:,n-N/2+1) = options.P_inc(omega)*exp(1i*k*r(layer{3}.X))./r(layer{3}.X);
             
@@ -198,6 +200,6 @@ for m = m_arr
     hold off
     titleStr = sprintf('Time step %4d, t = %5.3fs. T = %5.3fs.',m,t,T);
     title(titleStr)
-%     legend show % This is really slow...
+    legend show % This is really slow...
     drawnow
 end

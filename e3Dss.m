@@ -18,7 +18,7 @@ function [layer,N_eps,flag] = e3Dss(newLayers, newOptions)
 % E-mail: JonVegard.Venas@sintef.no
 % Institute: SINTEF Digital
 % Release: 2
-% Release date: ??/??/2020
+% Release date: 21/03/2020
 
 options = struct('d_vec',   [0;0;1],  ... 	% Direction of the incident wave
                 'omega',   2*pi*1e3, ...    % Angular frequency
@@ -26,8 +26,9 @@ options = struct('d_vec',   [0;0;1],  ... 	% Direction of the incident wave
                 'Eps',     eps,  ...        % Small parameter for series truncation
                 'N_max',   inf,  ...        % Upper limit for the number of terms in the series
                 'prec',    'double', ...    % Precision of the calculations
+                'Display', 'none', ...      % Print options during computations
                 'BC',      'SHBC', ...      % Boundary condition on the inermost layer 'SSBC' (Sound soft boundary condition), 'NNBC' (Neumann-Neumann boundary condition) 
-                'applyLoad', 'planeWave');  % Incident wave type: I.e. planeWave, pointCharge, radialPulsation
+                'applyLoad', 'planeWave');  % Incident wave type: I.e. planeWave, pointCharge, mechExcitation, surfExcitation, radialPulsation
 if nargin > 1
     options = updateOptions(options,newOptions);
 end
@@ -35,14 +36,15 @@ layer = getDefaultParameters(newLayers);
 
 layer = updateOptions(layer,newLayers);
 
-startMatlabPool
-
 % Supress warning for ill-conditioned matrices in getCoeffs.m
-% warning('off', 'MATLAB:nearlySingularMatrix')
-% warning('off', 'MATLAB:singularMatrix')
-pctRunOnAll warning('off', 'MATLAB:singularMatrix')
-pctRunOnAll warning('off', 'MATLAB:nearlySingularMatrix')
-
+poolobj = gcp('nocreate');
+if isempty(poolobj)
+    warning('off', 'MATLAB:nearlySingularMatrix')
+    warning('off', 'MATLAB:singularMatrix')
+else
+    pctRunOnAll warning('off', 'MATLAB:singularMatrix')
+    pctRunOnAll warning('off', 'MATLAB:nearlySingularMatrix')
+end
 prec = options.prec;
 
 omega = options.omega;
@@ -115,15 +117,24 @@ options.ESBC = strcmp(options.BC,'ESBC');
 options.SHBC = strcmp(options.BC,'SHBC');
 options.SSBC = strcmp(options.BC,'SSBC');
 
-% if any(omega == 0) && strcmp(options.applyLoad, 'pointCharge')
-%     error('This case has no unique solution')
-% end
+if any(omega == 0) && ( strcmp(options.applyLoad, 'mechExcitation') || ...
+                       (strcmp(options.applyLoad, 'pointCharge') && options.r_s ~= 0) || ...
+                       (strcmp(options.applyLoad, 'surfExcitation') && abs(options.theta_s - pi) > options.Eps))
+    error('This case has no unique solution')
+end
 switch options.applyLoad
     case {'planeWave','radialPulsation'}
         m_s = 1;
-    case 'pointCharge'
+    case {'pointCharge','mechExcitation','surfExcitation'}
         if ~isfield(options,'r_s')
-            options.r_s = 2*layer{1}.R_i;
+            if strcmp(options.applyLoad, 'pointCharge')
+                options.r_s = 2*layer{1}.R_i;
+            elseif strcmp(options.applyLoad, 'surfExcitation')
+                options.r_s = layer{1}.R_i;
+            end
+        end
+        if strcmp(options.applyLoad, 'surfExcitation') && ~isfield(options,'theta_s')
+            options.theta_s = [0,pi];
         end
         r_s = options.r_s;
         m_s = 1;
@@ -658,20 +669,13 @@ function layer = getDefaultParameters(layer)
 
 for m = 1:numel(layer)
     layer{m}.R_i              = 1;       % Inner radius of layer
-    if m == 1
-        layer{m}.X            = [0,0,1]; % Evaluation points
-    end
     layer{m}.rho              = 1000;    % Mass density
     layer{m}.calc_errDispCond = false;   % Calculate the errors for the displacement conditions
     layer{m}.calc_errPresCond = false;   % Calculate the errors for the pressure conditions
     switch layer{m}.media
         case 'fluid'
             layer{m}.c_f          	= 1500;       % Speed of sound
-            if m == 1
-                layer{m}.calc_p_0   = true;        % Toggle calculation of the far field pattern
-            else
-                layer{m}.calc_p_0   = false;       % Toggle calculation of the far field pattern
-            end
+            layer{m}.calc_p_0       = false;      % Toggle calculation of the far field pattern
             layer{m}.calc_p       	= false;      % Toggle calculation of the scattered pressure
             layer{m}.calc_dp      	= false(1,3); % Toggle calculation of the three components of the gradient of the pressure
             layer{m}.calc_p_laplace	= false;      % Toggle calculation of the Laplace operator of the scattered pressure fields
@@ -697,6 +701,7 @@ function [layer,N_eps,flag] = e3Dss_0(layer, options)
 %
 %
 % Note that dpdt, u_t, du_tdr, and du_rdt are scaled by csc(theta)
+displayIter = strcmp(options.Display, 'iter');
 prec = options.prec;
 omega = options.omega;
 nFreqs = length(omega);
@@ -859,6 +864,9 @@ singleModeSolution = (strcmp(options.applyLoad,'pointCharge') && options.r_s == 
 
 while n <= N_max && ~(singleModeSolution && n > 0)
     try % and hope that no spherical Bessel functions are evaluated to be too large
+        if displayIter
+            tic
+        end
         omega_temp = omega(indices);
         R_i = inf;
         for m = 1:M
@@ -932,9 +940,6 @@ while n <= N_max && ~(singleModeSolution && n > 0)
                                     layer{m}.P(2,:),layer{m}.dP(2,:),layer{m}.d2P(2,:), layer{m}.Z_xi, layer{m}.Z_eta, isSphere, layer{m}, omega_temp);
                         fieldNames = solidFieldNames;
                 end
-%                 if n == 35
-%                     keyboard
-%                 end
                 for fieldName = fieldNames
                     if layer{m}.(['calc_' fieldName{1}])
                         [layer,hasCnvrgdTmp2] = updateSum(layer,m,media,fieldName{1},indices,hasCnvrgdTmp2,tiny,Eps);
@@ -953,6 +958,9 @@ while n <= N_max && ~(singleModeSolution && n > 0)
         if isempty(indices) % every element has converged
             break;
         end
+        if displayIter
+            fprintf('Completed calculation of term n = %d using %g seconds.\n', n, toc)
+        end
         n = n + 1;
     catch ME
         flag = -~prod(hasCnvrgd,2);
@@ -963,16 +971,21 @@ while n <= N_max && ~(singleModeSolution && n > 0)
         else
             rethrow(ME)
         end
-        return
+        break
     end
 end
-if singleModeSolution
-    fprintf('Eps precision reached with a N_eps = 1 terms.\n')
-else
-    fprintf('Eps precision reached with N_eps = %g terms.\n', max(N_eps))
+if  n-1 == N_max
+    warning('The summation did not converge using N_max = %d terms.', N_max)
+elseif ~any(flag)
+    if singleModeSolution
+        fprintf('Eps precision reached with a N_eps = 1 terms.\n')
+    else
+        fprintf('Eps precision reached with N_eps = %g terms.\n', max(N_eps))
+    end
 end
 % Scale functions with the amplitude of the incident wave
-if isa(options.P_inc,'function_handle') 
+P_incIsVec = isa(options.P_inc,'function_handle') ;
+if P_incIsVec
     P_inc = options.P_inc(omega);
 else
     P_inc = options.P_inc;
@@ -986,7 +999,11 @@ for m = 1:M
     end
     for fieldName = fieldNames
         if layer{m}.(['calc_' fieldName{1}])
-            layer{m}.(fieldName{1}) = repmat(P_inc,1,size(layer{m}.(fieldName{1}),2)).*layer{m}.(fieldName{1});
+            if P_incIsVec
+                layer{m}.(fieldName{1}) = repmat(P_inc,1,size(layer{m}.(fieldName{1}),2)).*layer{m}.(fieldName{1});
+            else
+                layer{m}.(fieldName{1}) = repmat(P_inc,size(layer{m}.(fieldName{1}))).*layer{m}.(fieldName{1});
+            end
         end
     end
 end
