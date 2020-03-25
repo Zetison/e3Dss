@@ -21,7 +21,7 @@ for m = 1:M
     R_i = layer{m}.R_i;
     isSphere = R_i == 0;
     isOuterDomain = m == 1;
-    supportAtR_i = ~(singleLayerSupport && options.r_s ~= R_i);
+    supportAtR_i = ~(singleLayerSupport && options.r_s ~= R_i) && ~isSphere;
     if m == m_s && supportAtR_i
         rho = layer{m}.rho;
         if singleLayerSupport
@@ -217,8 +217,8 @@ CC = zeros(length(omega),systemSize,prec);
 % The matrix H and vector D should be allocated outside the for-loop if parfor is not used
 % H = zeros(systemSize,prec); % global matrix
 % D = zeros(systemSize,1,prec); % righ hand side
-% for j = 1:length(omega)
-parfor j = 1:length(omega)
+for j = 1:length(omega)
+% parfor j = 1:length(omega)
     H = zeros(systemSize,prec); % global matrix
     D = zeros(systemSize,1,prec); % righ hand side
     I = 1;
@@ -246,6 +246,37 @@ parfor j = 1:length(omega)
     H2 = Pinv2*H2;
     CC(j,:) = diag(Pinv).*(H2\(Pinv2*D));
     
+%     if 1
+%         k_L = layer{2}.k_temp(j);
+%         cL = layer{1}.c_f;
+%         rho = layer{1}.rho;
+%         mu = 0;
+%         lambda=cL^2*rho - 2*mu;
+%         dispScaling = ((2*n+1)*1i^n/(layer{2}.rho*omega(j).^2));
+%         presScaling = ((2*n+1)*1i^n/(layer{1}.k_temp(j)^2*lambda));
+% 
+% 
+% 
+%         G = [H(1,end:-1:1)/dispScaling
+%              H(2,end:-1:1)/presScaling];
+%         G(1,2) = G(1,2)/2;
+%         G(2,1) = 2*G(2,1);
+%         b = [D(1)/dispScaling
+%              D(2)/presScaling];
+%     % 	G\b
+%     %     CC(j,1)/(options.P_inc*rho*omega(j)^2*1i^n*(2*n+1))
+%     % 
+%     %     CC(j,1)/(options.P_inc*lambda*k_L^2*1i^n*(2*n+1))
+%         if j == 2
+%     %         if n == 35
+%     %             keyboard
+%     %         end
+%             x = CC(j,1)/(options.P_inc*1i^n*(2*n+1));
+%             fprintf('n = %d: C = %g + %gi\n', n,real(x),imag(x))
+% %             keyboard
+%         end
+%     %     for n = 1:size(coeffs,1),fprintf('n = %d: C = %g + %gi\n', n-1,real(coeffs(n,end,end)),imag(coeffs(n,end,end))),end
+%     end
     % Uncomment the following to get the spy matrix in the paper
 %     if n == 300
 %         fileName = 'results/spy_H';
@@ -285,10 +316,10 @@ switch options.applyLoad
         D1 = (2*n+1)*1i^n/R*(n*Z{1,1} - zeta.*Z{1,2});
     case 'pointCharge'
         r_s = options.r_s;
-        if r_s < R
-            D1 = (2*n+1)*1i/R*k.*Z_r_s{1,1}.*(n*(Z{1,1}+1i*Z{2,1}) - zeta.*(Z{1,2}+1i*Z{2,2}));
-        else
+        if R < r_s
             D1 = (2*n+1)*1i/R*k.*(n*Z{1,1} - zeta.*Z{1,2}).*(Z_r_s{1,1}+1i*Z_r_s{2,1});
+        else
+            D1 = (2*n+1)*1i/R*k.*Z_r_s{1,1}.*(n*(Z{1,1}+1i*Z{2,1}) - zeta.*(Z{1,2}+1i*Z{2,2}));
         end
     case 'mechExcitation'
         D1 = zeros(size(k));
@@ -310,10 +341,10 @@ switch options.applyLoad
         D2 = (2*n+1)*1i^n.*Z{1,1};
     case 'pointCharge'
         r_s = options.r_s;
-        if r_s < R
-            D2 = (2*n+1)*k.*Z_r_s{1,1}.*(Z{1,1}+1i*Z{2,1});
+        if R < r_s
+            D2 = (2*n+1)*1i*k.*Z{1,1}.*(Z_r_s{1,1}+1i*Z_r_s{2,1});
         else
-            D2 = (2*n+1)*k.*Z{1,1}.*(Z_r_s{1,1}+1i*Z_r_s{2,1});
+            D2 = (2*n+1)*1i*k.*Z_r_s{1,1}.*(Z{1,1}+1i*Z{2,1});
         end
     case 'mechExcitation'
         D2 = (2*n+1)/(4*pi*R^2)*ones(size(k));

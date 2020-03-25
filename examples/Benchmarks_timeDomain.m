@@ -3,9 +3,9 @@
 close all
 clear all %#ok
 
-pathToResults = '../../../../../../hugeFiles/e3Dss/';
+% pathToResults = '../../../../../../hugeFiles/e3Dss/';
 % pathToResults = '../../../results/e3Dss/';
-% pathToResults = '../results/';
+pathToResults = '../results/';
 
 startMatlabPool
 
@@ -31,7 +31,7 @@ switch applyLoad
         T = 120/f_c;
         N = 2^10;
     case 'surfExcitation'
-        SSBC = 1;
+        SHBC = 1;
         T = 120/f_c;
         N = 2^10;
     case 'radialPulsation'  
@@ -60,7 +60,7 @@ if strcmp(applyLoad,'pointCharge')
     P_inc = P_inc*r_s;
 elseif strcmp(applyLoad,'surfExcitation')
     r_s = layer{1}.R_i;
-    theta_s = [0,10]*pi/180+pi/2;
+    theta_s = [40,60]*pi/180;
 else
     d_vec = [1, 0, 0].';  
 end
@@ -82,7 +82,7 @@ options = struct('d_vec', d_vec, ...
                  'T', T,...
                  'computeForSolidDomain', strcmp(model,'S5'));
 
-extraPts = 20;
+extraPts = 80;
 folderName = [pathToResults 'paraviewResults/' model '_' BC '/'];
 if ~exist(folderName, 'dir')
     mkdir(folderName);

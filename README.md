@@ -11,8 +11,8 @@ The following boundary conditions can be used for the innermost layer:
 The following loads can be used for the outermost layer
 - 'planeWave' simulates a plane incident wave
 - 'pointCharge' simulates an incident wave from a point charge (the location of the point source is given by options.d_vec*options.r_s)
-- 'mechExcitation' simulates a point force mechanical excitation at options.d_vec*options.r_s with amplitude P_inc
-- 'surfExcitation' simulates a surface excitation over the region theta \in options.theta_s and phi \in [0, 2*pi] at r_s with amplitude P_inc
+- 'mechExcitation' simulates a point force mechanical excitation at options.d_vec*options.r_s with amplitude P_inc (options.r_s must be at layer{m}.R_i for a given layer m)
+- 'surfExcitation' simulates a surface excitation over the region theta \in options.theta_s and phi \in [0, 2*pi] at r_s with amplitude P_inc (direction of z-axis given by options.d_vec)
 - 'radialPulsation' simulates a spherical symmetric wave originating from infinity
 
 ## Parameters (with default values)

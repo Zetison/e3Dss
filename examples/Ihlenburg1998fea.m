@@ -107,29 +107,8 @@ for i = 1:3
     if ~exist(folderName, 'dir')
         mkdir(folderName);
     end
-%             
-%             elevation = '0';
-%             frequency = 'S';
-%             
-%             varCol.alpha_s = pi;
-%             varCol.beta_s = 0;
-%             scatteringCase = 'Sweep';
-%             model = 'IL';
-%             varCol.scatteringCase = scatteringCase;
-%             
-%             varCol.f_arr = omega/(2*pi);
-%             
-%             saveName = [model '_' BC '_' scatteringCase '_A180_E' elevation '_F' frequency];
-%             varCol.saveName = saveName;
-%             filename = [folderName '/' saveName];
-%             printResultsToFile(filename, k*R_o, TS(1,:).', varCol, 1, 0, 'NTNU_FFI', 'Analytic solution')
-% %             
-%             saveName = [model '_' BC '_' scatteringCase '_A0_E' elevation '_F' frequency];
-%             varCol.saveName = saveName;
-%             filename = [folderName '/' saveName];
-%             printResultsToFile(filename, k*R_o, TS(2,:).', varCol, 1, 0, 'NTNU_FFI', 'Analytic solution')
-% %             
-    if 0
+    
+    if 1
         figure(40+i)
         nFreqs = 500;
         k = linspace(2/nFreqs,2,nFreqs)'; % wave number
@@ -137,7 +116,7 @@ for i = 1:3
         omega = k*layer{1}.c_f;   % Wave number for outer fluid domain
         options.omega = omega;
 
-        createConvergencePlot('3D',options,v,35, [pathToResults 'IhlenburgError_' num2str(i)])
+        createConvergencePlot('3D',layer,options,35, [])
         savefig([pathToResults 'Figure' num2str(9+i)])
     end
 end

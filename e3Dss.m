@@ -120,7 +120,9 @@ options.SSBC = strcmp(options.BC,'SSBC');
 if any(omega == 0) && ( strcmp(options.applyLoad, 'mechExcitation') || ...
                        (strcmp(options.applyLoad, 'pointCharge') && options.r_s ~= 0) || ...
                        (strcmp(options.applyLoad, 'surfExcitation') && abs(options.theta_s - pi) > options.Eps))
-    error('This case has no unique solution')
+    warning('This case has no unique solution for omega=0, these values will be removed from the computation.')
+    omega(omega == 0) = [];
+    options.omega = omega;
 end
 switch options.applyLoad
     case {'planeWave','radialPulsation'}
@@ -965,17 +967,17 @@ while n <= N_max && ~(singleModeSolution && n > 0)
     catch ME
         flag = -~prod(hasCnvrgd,2);
         if strcmp(ME.identifier, 'e3Dss:infBessel')
-            warning(['The summation ended prematurely at n = ' num2str(n) ' because a Bessel function evaluation was too large.'])
+            warning('e3Dss:infBessel','The summation ended prematurely at n = %d because a Bessel function evaluation was too large.', n)
         elseif strcmp(ME.identifier, 'e3Dss:singularK')
-            warning(['The summation ended prematurely at n = ' num2str(n) ' because the global matrix was singular to working precision.'])
+            warning('e3Dss:singularK','The summation ended prematurely at n = %d because the global matrix was singular to working precision.', n)
         else
             rethrow(ME)
         end
         break
     end
 end
-if  n-1 == N_max
-    warning('The summation did not converge using N_max = %d terms.', N_max)
+if n-1 == N_max
+    warning('e3Dss:N_max_reached','The summation did not converge using N_max = %d terms.', N_max)
 elseif ~any(flag)
     if singleModeSolution
         fprintf('Eps precision reached with a N_eps = 1 terms.\n')

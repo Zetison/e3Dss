@@ -1,17 +1,27 @@
 function createConvergencePlot(type,layer,options,noRuns,fileName)
- 
+
+plotFarField = layer{1}.calc_p_0;
+warning('off', 'e3Dss:N_max_reached')
 switch type
     case '2D'
         count = 1;
         Error = zeros(noRuns,2);
         N_arr = 0:noRuns-1;
         layer = e3Dss(layer, options);
-        p = layer{1}.p;
+        if plotFarField
+            p = layer{1}.p_0;
+        else
+            p = layer{1}.p;
+        end
         for N = N_arr
             N
             options.N_max = N;
             layer = e3Dss(layer, options);
-            p_N = layer{1}.p;
+            if plotFarField
+                p_N = layer{1}.p_0;
+            else
+                p_N = layer{1}.p;
+            end
             Error(count,:) = norm2((p - p_N).')./norm2(p.');
             count = count + 1;
         end
@@ -31,18 +41,25 @@ switch type
             
     case '3D'
         %% Create convergence plot
-        R_o = options.R_o;
-        count = 1;
+        R_i = layer{1}.R_i;
         nFreqs = numel(options.omega);
         Error = zeros(noRuns,nFreqs);
         N_arr = 0:noRuns-1;
         layer = e3Dss(layer, options);
-        p = layer(1).p;
+        if plotFarField
+            p = layer{1}.p_0;
+        else
+            p = layer{1}.p;
+        end
         for N = N_arr
             N
             options.N_max = N;
             layer = e3Dss(layer, options);
-            p_N = layer(1).p;
+            if plotFarField
+                p_N = layer{1}.p_0;
+            else
+                p_N = layer{1}.p;
+            end
             Error(N+1,:) = norm2((p - p_N).')./norm2(p.');
         end
 %         keyboard
@@ -50,12 +67,12 @@ switch type
         N_arr = 0:N_max;
         Error = Error(1:N_max+1,:);
         
-        k = options.omega/options.c_f(1);
+        k = options.omega/layer{1}.c_f;
         [NN,kk] = meshgrid(N_arr,k);
         B = log10(Error);
         B(B == -Inf) = Inf;
         B(B == Inf) = min(min(B))+min(min(B))/1000;
-        surf(kk*R_o,NN,B.','EdgeColor','none')
+        surf(kk*R_i,NN,B.','EdgeColor','none')
 %         axis image
         
         set(0,'defaulttextinterpreter','latex')
@@ -67,7 +84,7 @@ switch type
         box on
         
         grid off
-        xlim([0 round(max(k*R_o))])
+        xlim([0 round(max(k*R_i))])
         ylim([min(N_arr) max(N_arr)])
         view(0,90)
         
@@ -90,4 +107,4 @@ switch type
         
 %         title('Error plots')
 end
-        
+warning('on', 'e3Dss:N_max_reached') 
