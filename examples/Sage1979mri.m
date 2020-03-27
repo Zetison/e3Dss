@@ -31,7 +31,8 @@ d_vec = [0,0,1].';
 
 %%%%%%%%%
 %% Run simulation
-options = struct('d_vec', d_vec, ...
+options = struct('BC','NNBC',...
+                 'd_vec', d_vec, ...
                  'omega', omega);
 
 layer{1}.X = [0,0,-1]; % Compute backscattered pressure

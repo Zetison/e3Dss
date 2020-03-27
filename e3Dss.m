@@ -113,9 +113,12 @@ for m = 1:M
         layer{m}.phi = phi.';
     end
 end
-options.ESBC = strcmp(options.BC,'ESBC');
 options.SHBC = strcmp(options.BC,'SHBC');
 options.SSBC = strcmp(options.BC,'SSBC');
+options.IBC = strcmp(options.BC,'IBC');
+if options.IBC && ~isfield(options,'z')
+    options.z = 1;
+end
 
 if any(omega == 0) && ( strcmp(options.applyLoad, 'mechExcitation') || ...
                        (strcmp(options.applyLoad, 'pointCharge') && options.r_s ~= 0) || ...
@@ -123,6 +126,9 @@ if any(omega == 0) && ( strcmp(options.applyLoad, 'mechExcitation') || ...
     warning('This case has no unique solution for omega=0, these values will be removed from the computation.')
     omega(omega == 0) = [];
     options.omega = omega;
+end
+if any([options.SHBC,options.SSBC,options.IBC]) && layer{end}.R_i == 0
+    error('Boundary conditions may not be used at the origin')
 end
 switch options.applyLoad
     case {'planeWave','radialPulsation'}
@@ -396,29 +402,49 @@ for m = 1:M
                     if layer{m}.calc_du(1,1)
                         layer{m}.du_xdx = du_X{1,1};
                     end
-                    if layer{m}.calc_du(2,1)
+                    if layer{m}.calc_du(1,2)
                         layer{m}.du_xdy = du_X{1,2};
                     end
-                    if layer{m}.calc_du(3,1)
+                    if layer{m}.calc_du(1,3)
                         layer{m}.du_xdz = du_X{1,3};
                     end
-                    if layer{m}.calc_du(1,2)
+                    if layer{m}.calc_du(2,1)
                         layer{m}.du_ydx = du_X{2,1};
                     end
                     if layer{m}.calc_du(2,2)
                         layer{m}.du_ydy = du_X{2,2};
                     end
-                    if layer{m}.calc_du(3,2)
+                    if layer{m}.calc_du(2,3)
                         layer{m}.du_ydz = du_X{2,3};
                     end
-                    if layer{m}.calc_du(1,3)
+                    if layer{m}.calc_du(3,1)
                         layer{m}.du_zdx = du_X{3,1};
                     end
-                    if layer{m}.calc_du(2,3)
+                    if layer{m}.calc_du(3,2)
                         layer{m}.du_zdy = du_X{3,2};
                     end
                     if layer{m}.calc_du(3,3)
                         layer{m}.du_zdz = du_X{3,3};
+                    end
+                    if strcmp(layer{m}.media,viscoelastic) && layer{m}.calc_p
+                        Omega = repmat(omega,n_X,1);
+                        E = layer{m}.E;
+                        nu = layer{m}.nu;
+                        rho = layer{m}.rho;
+                        % Compute derived quantities
+                        K = E/(3*(1-2*nu));
+                        G = E/(2*(1+nu));
+
+                        c_s_1 = sqrt((3*K+4*G)/(3*rho)); % longitudinal wave velocity 
+                        c_s_2 = sqrt(G/rho); % shear wave velocity
+                        cL1 = c_s_1;
+                        cT1 = c_s_2; 
+                        kT = wv/cT1;
+                        kL = wv./cL1;
+                        muv = 1i*rho*wv/kT^2;
+                        c = repmat(4*1i*wv*muv/(3*rho) + ev.^2./kL.^2,n_X,1);
+
+                        layer{m}.p = -1i*rho*c^2./Omega.*(du_X{1,1}+du_X{2,2}+du_X{3,3});
                     end
                 end
                 if any(layer{m}.calc_u)
@@ -666,6 +692,17 @@ for m = 1:M
         end
     end
 end
+fieldsToRemove = {'r','theta','phi','P','dP','d2P','Z_zeta','Z_zeta_i','Z_zeta_o','Z_xi_i','Z_eta_i','Z_xi_o','Z_eta_o','a_temp','a','b','b_temp','k','k_temp','Z_r_s','K','G', ...
+                  'calc_sigma_rr','calc_sigma_tt','calc_sigma_pp','calc_sigma_rt','calcStresses','calcCartesianDispDerivatives','calc_errors', ...
+                  'calc_u_r','calc_u_t','calc_du_rdr','calc_du_rdt','calc_du_tdr','calc_du_tdt','calc_navier1','calc_navier2', ...
+                  'calc_dpdr','calc_dpdt','calc_d2pdr2','calc_d2pdt2','calc_farFieldOnly'};
+for m = 1:M
+    for field = fieldsToRemove
+        if isfield(layer{m},field{1})
+            layer{m} = rmfield(layer{m},field{1});
+        end
+    end
+end
 
 function layer = getDefaultParameters(layer)
 
@@ -686,9 +723,9 @@ for m = 1:numel(layer)
             layer{m}.E            = 200e9;      % Youngs modulus for solid layers
             layer{m}.nu           = 0.3;        % Poisson ratio for solid layers
             layer{m}.calc_u       = false(1,3); % Toggle calculation of the three components of the displacement
-            layer{m}.calc_du      = false(3,3); % Toggle calculation of the three cartesian derivatives of the three components of the displacement [du_xdx du_ydx du_zdx; 
-                                                %                                                                                                    du_xdy du_ydy du_zdy; 
-                                                %                                                                                                    du_xdz du_ydz du_zdz]
+            layer{m}.calc_du      = false(3,3); % Toggle calculation of the three cartesian derivatives of the three components of the displacement [du_xdx du_xdy du_xdz; 
+                                                %                                                                                                    du_ydx du_ydy du_ydz; 
+                                                %                                                                                                    du_zdx du_zdy du_zdz]
             layer{m}.calc_sigma   = false(1,6); % Toggle calculation of the six components of the stress field (cartesian coordinates) [sigma_xx sigma_yy sigma_zz sigma_yz sigma_xz sigma_xy]
             layer{m}.calc_sigma_s = false(1,6); % Toggle calculation of the six components of the stress field (spherical coordinates) [sigma_rr sigma_tt sigma_pp sigma_tp sigma_rp sigma_rt]
             layer{m}.calc_errNav  = false;      % Toggle calculation of the errors for the Navier equation

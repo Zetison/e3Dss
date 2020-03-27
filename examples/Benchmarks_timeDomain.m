@@ -3,41 +3,36 @@
 close all
 clear all %#ok
 
-% pathToResults = '../../../../../../hugeFiles/e3Dss/';
+pathToResults = '../../../../../../hugeFiles/e3Dss/';
 % pathToResults = '../../../results/e3Dss/';
-pathToResults = '../results/';
+% pathToResults = '../results/';
 
 startMatlabPool
 
 intermediatePointCharge = true; % Places the point charge in between the S1 layer and S5 layer
-model = 'S15';
-% model = 'S5';
+% model = 'S15';
+model = 'S5';
 SHBC = 0;
 SSBC = 0;
 ESBC = 0; 
 f_c = 1500;
-% applyLoad = 'planeWave';
+T = 120/f_c;
+N = 2^10;
+applyLoad = 'planeWave';
 % applyLoad = 'pointCharge';
-applyLoad = 'surfExcitation';
+% applyLoad = 'surfExcitation';
+% applyLoad = 'mechExcitation';
 % applyLoad = 'radialPulsation';
 switch applyLoad
     case 'pointCharge'
         ESBC = 1;
 %         SHBC = 1;
-        T = 120/f_c;
-        N = 2^10;
     case 'planeWave'
         ESBC = 1;
-        T = 120/f_c;
-        N = 2^10;
     case 'surfExcitation'
         SHBC = 1;
-        T = 120/f_c;
-        N = 2^10;
     case 'radialPulsation'  
         SHBC = 1; 
-        T = 120/f_c;
-        N = 2^11;
 end
 switch model
     case 'S5'
@@ -61,6 +56,8 @@ if strcmp(applyLoad,'pointCharge')
 elseif strcmp(applyLoad,'surfExcitation')
     r_s = layer{1}.R_i;
     theta_s = [40,60]*pi/180;
+elseif strcmp(applyLoad,'mechExcitation')
+    r_s = layer{1}.R_i;
 else
     d_vec = [1, 0, 0].';  
 end
@@ -82,8 +79,8 @@ options = struct('d_vec', d_vec, ...
                  'T', T,...
                  'computeForSolidDomain', strcmp(model,'S5'));
 
-extraPts = 80;
-folderName = [pathToResults 'paraviewResults/' model '_' BC '/'];
+extraPts = 2;
+folderName = [pathToResults 'paraviewResults/' model '_' BC '_' applyLoad '/'];
 if ~exist(folderName, 'dir')
     mkdir(folderName);
 end

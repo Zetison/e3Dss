@@ -18,7 +18,6 @@ if isfield(options, 'computeForSolidDomain')
 else
     computeForSolidDomain = 0;
 end
-% meshRectangle
 s = 1.3;
 h = 2*s*R_a/(round(extraPts*s*R_a)-1);
 tic
@@ -54,7 +53,7 @@ for m = 1:M
                     [visElements{m}, nodes{m}] = mesh2DDisk(R_o,h);
                     nodes{m} = [nodes{m}, zeros(size(nodes{m},1),1)];
                 else
-                    [x,y,z] = sphere(round(R_o*pi*extraPts));
+                    [x,y,z] = sphere(round(2*pi*R_o/h));
                     surfObj = surf2patch(x,y,z,'triangles');
                     visElements{m} = [surfObj.faces, surfObj.faces+size(surfObj.vertices,1)];
                     nodes{m} = [R_i*surfObj.vertices; R_o*surfObj.vertices];
@@ -76,12 +75,9 @@ npts = 0;
 for i = 1:length(nodes)
     npts = npts + size(nodes{i},1);
 end
-% keyboard
-% nodes = nodes(1);
+
 disp(['Time spent building mesh ' num2str(toc) ' seconds.'])
-% keyboard
-% nodes = nodes(1:end-1);
-% nodes = nodes(1);
+
 P_inc = options.P_inc;
 if plotTimeOscillation
     N = 30;
@@ -97,11 +93,8 @@ elseif plotInTimeDomain
     switch options.applyLoad
         case 'planeWave'
             startIdx = 1900; % 900
-        case {'pointCharge','surfExcitation'}
+        case {'pointCharge','mechExcitation','surfExcitation','radialPulsation'}
             startIdx = 2000;
-        case 'radialPulsation'
-%             N = 2*N;
-            startIdx = 2*1900;
     end
     T = options.T; %N/M;
     B = N/T; % bandwidth
@@ -153,7 +146,7 @@ for m = 1:length(nodes)
             toggleJacobianMatrix = layer{m}.calc_du;
             if ESBC && m == M
                 VTKoptions = struct('name',[pathstr '/solid' num2str(m) filename], 'celltype', 'VTK_TRIANGLE', 'plotTimeOscillation', plotTimeOscillation, ...
-                            'plotSphericalRadialDisplacement',0,'plotDisplacementVectors',plotDisplacementVectors,'plotSphericalStress_rr',1,'plotStressXX',0,'plotStressZZ',0,'plotVonMisesStress',1); 
+                            'plotSphericalRadialDisplacement',0,'plotDisplacementVectors',plotDisplacementVectors,'plotSphericalStress_rr',1,'plotVonMisesStress',1); 
             else
                 VTKoptions = struct('name',[pathstr '/solid' num2str(m) filename], 'celltype', 'VTK_WEDGE', 'plotTimeOscillation', plotTimeOscillation, ...
                             'plotSphericalRadialDisplacement',0, 'plotDisplacementVectors',plotDisplacementVectors,'plotSphericalStress_rr',1,'plotVonMisesStress',0); 
@@ -246,7 +239,7 @@ for m = 1:length(nodes)
                                 p_inc = @(v) P_inc_(omega(i),omega_c,P_inc,type)*exp(-1i*k*(norm2(v)-R_i))./norm2(v);
                                 gp_inc = @(v) P_inc_(omega(i),omega_c,P_inc,type)*elementProd(exp(-1i*k*(norm2(v)-R_i))./norm2(v).*(1i*k - 1./norm2(v))./norm2(v), v);
                         end
-                        if strcmp(options.applyLoad,'pointExcitation') || strcmp(options.applyLoad,'surfExcitation')
+                        if strcmp(options.applyLoad,'pointExcitation') || strcmp(options.applyLoad,'surfExcitation') || strcmp(options.applyLoad,'mechExcitation')
                             VTKdata.totField(:,:,i) = layer{m}.p(:,i-1);
                             if VTKoptions.plotDisplacementVectors 
                                 gScalarField = [layer{m}.dpdx(:,i-1) layer{m}.dpdy(:,i-1) layer{m}.dpdz(:,i-1)];
@@ -282,7 +275,7 @@ for m = 1:length(nodes)
                     end
                     VTKdata.P_inc = p_inc(nodes{m});
                     VTKdata.scalarField = layer{m}.p(:,1);
-                    if strcmp(options.applyLoad,'pointExcitation') || strcmp(options.applyLoad,'surfExcitation')
+                    if strcmp(options.applyLoad,'pointExcitation') || strcmp(options.applyLoad,'surfExcitation') || strcmp(options.applyLoad,'mechExcitation')
                         VTKdata.totField = layer{m}.p(:,1);
                         VTKdata.displacement = [layer{m}.dpdx(:,1) layer{m}.dpdy(:,1) layer{m}.dpdz(:,1)]/(rho*omega^2);
                     else
