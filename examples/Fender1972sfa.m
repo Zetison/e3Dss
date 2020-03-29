@@ -24,7 +24,7 @@ options = struct('d_vec', d_vec, ...
                  'BC', 'NNBC', ...
                  'omega', omega);
 
-if false
+if true
     SPL_Fender0 = importdata('../models/Fender1972sfa/Fig2.csv');
     SPL_Fender180 = importdata('../models/Fender1972sfa/Fig3.csv');
     theta = 0;
@@ -78,7 +78,7 @@ if false
 %     savefig([pathToResults 'Figure13b'])
 end
 
-if true
+if false
     keyboard % remember to disable line 30-32 in bessel_s.m
     nFreqs = 2000;
 
@@ -135,6 +135,7 @@ end
 
 function SPL = objFunc(k,layer,options)
 
+options.Display = 'none';
 options.omega = k*layer{1}.c_f;
 layer = e3Dss(layer, options);
 p_inc = @(v) exp(1i*dot3(v,options.d_vec)*k);

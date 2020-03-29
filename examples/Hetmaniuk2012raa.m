@@ -5,9 +5,6 @@
 close all
 clear all %#ok
 
-pathToResults = '../../../results/e3Dss/';
-% pathToResults = '../results';
-
 layer = setHetmaniukParameters();
 BC = 'SHBC';
 layer = layer(1:end-1);

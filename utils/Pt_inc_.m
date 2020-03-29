@@ -33,7 +33,6 @@ switch type
         end
         a = A\b;
         a = [1; a];
-%         keyboard
         if length(z) > 1 && length(t) == 1
             p = zeros(size(z));
             indices = logical((omega_c*t-k_c*z > 0).*(omega_c*t-k_c*z < 2*pi));

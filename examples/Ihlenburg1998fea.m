@@ -79,7 +79,7 @@ for i = 1:3
     plot(k*R_i, TS(1,:),'DisplayName',legendEntry,'color',color)
     set(0,'defaulttextinterpreter','latex')
     hold on
-%     title('Ihlenburg (1998) example, $$\theta = 180^\circ$$')
+    title('Ihlenburg (1998) example, $$\theta = 180^\circ$$')
     xlabel('$$k_1 R_{0,1}$$')
     xlim([0, max(k*R_i)])
     ylim([-50, 35])
@@ -94,7 +94,7 @@ for i = 1:3
     plot(k*R_i, TS(2,:),'DisplayName',legendEntry,'color',color)
     set(0,'defaulttextinterpreter','latex')
     hold on
-%     title('Ihlenburg (1998) example - $$\theta = 0^\circ$$')
+    title('Ihlenburg (1998) example, $$\theta = 0^\circ$$')
     xlabel('$$k_1 R_{0,1}$$')
     xlim([0, max(k*R_i)])
     ylim([-50, 35])
@@ -124,6 +124,7 @@ end
 
 function TS = objFunc(k,layer,options)
 
+options.Display = 'none';
 options.omega = k*layer{1}.c_f;
 layer = e3Dss(layer, options);
 TS = 20*log10(abs(layer{1}.p_0));

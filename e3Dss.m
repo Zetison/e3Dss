@@ -26,7 +26,7 @@ options = struct('d_vec',   [0;0;1],  ... 	% Direction of the incident wave
                 'Eps',     eps,  ...        % Small parameter for series truncation
                 'N_max',   inf,  ...        % Upper limit for the number of terms in the series
                 'prec',    'double', ...    % Precision of the calculations
-                'Display', 'none', ...      % Print options during computations
+                'Display', 'final', ...     % Print status during computations
                 'BC',      'SHBC', ...      % Boundary condition on the inermost layer 'SSBC' (Sound soft boundary condition), 'NNBC' (Neumann-Neumann boundary condition) 
                 'applyLoad', 'planeWave');  % Incident wave type: I.e. planeWave, pointCharge, mechExcitation, surfExcitation, radialPulsation
 if nargin > 1
@@ -1013,13 +1013,15 @@ while n <= N_max && ~(singleModeSolution && n > 0)
         break
     end
 end
-if n-1 == N_max
-    warning('e3Dss:N_max_reached','The summation did not converge using N_max = %d terms.', N_max)
-elseif ~any(flag)
-    if singleModeSolution
-        fprintf('Eps precision reached with a N_eps = 1 terms.\n')
-    else
-        fprintf('Eps precision reached with N_eps = %g terms.\n', max(N_eps))
+if strcmp(options.Display, 'final') || strcmp(options.Display, 'iter')
+    if n-1 == N_max
+        warning('e3Dss:N_max_reached','The summation did not converge using N_max = %d terms.', N_max)
+    elseif ~any(flag)
+        if singleModeSolution
+            fprintf('Eps precision reached with a N_eps = 1 terms.\n')
+        else
+            fprintf('Eps precision reached with N_eps = %g terms.\n', max(N_eps))
+        end
     end
 end
 % Scale functions with the amplitude of the incident wave

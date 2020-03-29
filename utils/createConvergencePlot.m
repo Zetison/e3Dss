@@ -2,6 +2,7 @@ function createConvergencePlot(type,layer,options,noRuns,fileName)
 
 plotFarField = layer{1}.calc_p_0;
 warning('off', 'e3Dss:N_max_reached')
+options.Display = 'none';
 switch type
     case '2D'
         count = 1;
@@ -14,7 +15,6 @@ switch type
             p = layer{1}.p;
         end
         for N = N_arr
-            N
             options.N_max = N;
             layer = e3Dss(layer, options);
             if plotFarField
@@ -27,7 +27,6 @@ switch type
         end
         semilogy(N_arr, Error(:,1), N_arr, Error(:,2))
         set(0,'defaulttextinterpreter','latex')
-%         title('Error plots')
         xlabel('$$N$$')
         ylabel('$$\frac{\|p_1-p_1^{(N)}\|_2}{\|p_1\|_2}$$')
         legend({'$$k_1 = 15\mathrm{m}^{-1}$$', '$$k_1 = 20\mathrm{m}^{-1}$$'},'interpreter','latex')
@@ -52,7 +51,6 @@ switch type
             p = layer{1}.p;
         end
         for N = N_arr
-            N
             options.N_max = N;
             layer = e3Dss(layer, options);
             if plotFarField
@@ -62,7 +60,6 @@ switch type
             end
             Error(N+1,:) = norm2((p - p_N).')./norm2(p.');
         end
-%         keyboard
         N_max = min(find(max(Error,[],2) == 0));
         N_arr = 0:N_max;
         Error = Error(1:N_max+1,:);
@@ -73,7 +70,6 @@ switch type
         B(B == -Inf) = Inf;
         B(B == Inf) = min(min(B))+min(min(B))/1000;
         surf(kk*R_i,NN,B.','EdgeColor','none')
-%         axis image
         
         set(0,'defaulttextinterpreter','latex')
         xlabel('$$k_1R_{0,1}$$')
@@ -104,7 +100,5 @@ switch type
             matlab2tikz([fileName '.tex'], 'height', '3.2094in', 'width', '3.2094in', ...
                 'extraAxisOptions', extraAxisOptions)
         end
-        
-%         title('Error plots')
 end
 warning('on', 'e3Dss:N_max_reached') 

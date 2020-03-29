@@ -90,11 +90,15 @@ elseif plotInTimeDomain
     f_c = options.f_c;
     N = options.N; % 200
     N_fine = 2*N;
-    switch options.applyLoad
-        case 'planeWave'
-            startIdx = 1900; % 900
-        case {'pointCharge','mechExcitation','surfExcitation','radialPulsation'}
-            startIdx = 2000;
+    if N > 2000
+        switch options.applyLoad
+            case 'planeWave'
+                startIdx = 1900; % 900
+            case {'pointCharge','mechExcitation','surfExcitation','radialPulsation'}
+                startIdx = 2000;
+        end
+    else
+        startIdx = 1;
     end
     T = options.T; %N/M;
     B = N/T; % bandwidth

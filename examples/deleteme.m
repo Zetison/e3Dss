@@ -1,54 +1,48 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% This study correspond to Fig. 1 and Fig. 4 in Sage1979mri
+% Sage1979mri is available at https://doi.org/10.1121/1.382928
+
 close all
 clear all %#ok
 
 %% Define parameters
-nFreqs = 1000;
 a = 1;
+z = 0;
+f_c = 1500; % (300) source pulse center freq.
+N = 2^11;
+% N = 2^2;
+npts = 1000;
+% npts = 10;
+T = 120/f_c; %60/f_c
+B = N/T; % bandwidth
+f_L = -B/2;
+f_R = B/2;
+df = 1/T;
+f = linspace(0,f_R-df,N/2);
+% omega = 2*pi*f;
+type = 1;
+d_vec = -[0,0,1].';
+omega_c = 2*pi*f_c;
+c_f = 1500;
+k_c = omega_c/c_f;
+P_inc = 1;
+t = linspace(0,1/f_c,1000);
+t = [-1e-3,t,3e-3];
+P = Pt_inc_(t,z,omega_c,k_c,P_inc,1);
+% plot(t,P)
+% hold on
+% for terms = 1:4
+%     P = Pt_inc_(t,z,omega_c,k_c,P_inc,3,terms);
+% 
+%     plot(t,P)
+%     hold on
+% end
 
-layer{1}.media = 'fluid';
-layer{1}.R_i = a;
-layer{1}.rho = 1025;
-layer{1}.c_f = 1531;
-layer{1}.calc_p_0 = true; % Calculate the far field pattern
 
-%% Calculate dependent parameters
-
-k = 10.^linspace(-2,2,nFreqs)';
-% k = 1;
-c_f = layer{1}.c_f;
-omega = k*c_f;
-
-d_vec = [0,0,1].';
-
-%%%%%%%%%
-%% Run simulation
-options = struct('BC','SHBC',...
-                 'd_vec', d_vec, ...
-                 'omega', omega);
-
-layer{1}.X = [0,0,-1]; % Compute backscattered pressure
-
-options.omega = k*layer{1}.c_f;
-layerSHBC = e3Dss(layer, options);
-options.BC = 'SSBC';
-layerSSBC = e3Dss(layer, options);
-
-%% Plot results
-figure(1)   
-loglog(k*a, abs(layerSHBC{1}.p_0),'DisplayName','SHBC')
+ft = linspace(0,f_R,2000);
+omegat = sort([2*pi*ft,omega_c]);
+P = P_inc_(omegat,omega_c,P_inc,1);
+plot(omegat,abs(P))
+P = P_inc_(omegat,omega_c,P_inc,3);
 hold on
-loglog(k*a, abs(layerSSBC{1}.p_0),'DisplayName','SSBC')
-set(0,'defaulttextinterpreter','latex')
-xlabel('$$k_1 a$$')
-ylabel('$$\frac{\sigma}{\pi a^2}$$')
-xlim(a*[k(1) k(end)])
-% ylim([1e-4,1e4])
-options.BC = 'IBC';
-for i = 10.^linspace(-2,2,10)
-    c_f = layer{1}.c_f;
-    rho = layer{1}.rho;
-    options.z = i*rho*c_f*(1+1i);
-    layerIBC = e3Dss(layer, options);
-    loglog(k*a, abs(layerIBC{1}.p_0),'DisplayName',['z = ' num2str(options.z)])
-end
-legend('show','location','best')
+plot(omegat,abs(P))

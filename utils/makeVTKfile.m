@@ -532,22 +532,19 @@ parfor i = 1:Nq
     end
 end
 
-% uncomment the following to get .pvd collector files
+fid = fopen([vtfFileName '.pvd'],'wt+','b');
+fprintf(fid,'<VTKFile type="Collection" version="0.1" byte_order="LittleEndian">\n');
+fprintf(fid,'\t<Collection>\n');
+for s = 1:noSteps
+%     t = (s-1)/noSteps*2*pi/omega;
+%     fprintf(fid,'\t\t<DataSet timestep="%15.10g" file=''%s\\%s_time_%d.vtu''/>\n',t, cd, vtfFileName, s);
+    fprintf(fid,'\t\t<DataSet timestep="%12.10f" file=''%s\\%s_time_%d.vtu''/>\n',2*(s-1)/noSteps, cd, vtfFileName, s);
+%     fprintf(fid,'\t\t<DataSet timestep="%d" file=''%s\\%s_time_%d.vtu''/>\n',s, cd, vtfFileName, s);
+end
+fprintf(fid,'\t</Collection>\n');
+fprintf(fid,'</VTKFile>');
 
-% fid = fopen([vtfFileName '.pvd'],'wt+','b');
-% 
-% fprintf(fid,'<VTKFile type="Collection" version="0.1" byte_order="LittleEndian">\n');
-% fprintf(fid,'\t<Collection>\n');
-% for s = 1:noSteps
-% %     t = (s-1)/noSteps*2*pi/omega;
-% %     fprintf(fid,'\t\t<DataSet timestep="%15.10g" file=''%s\\%s_time_%d.vtu''/>\n',t, cd, vtfFileName, s);
-%     fprintf(fid,'\t\t<DataSet timestep="%12.10f" file=''%s\\%s_time_%d.vtu''/>\n',2*(s-1)/noSteps, cd, vtfFileName, s);
-% %     fprintf(fid,'\t\t<DataSet timestep="%d" file=''%s\\%s_time_%d.vtu''/>\n',s, cd, vtfFileName, s);
-% end
-% fprintf(fid,'\t</Collection>\n');
-% fprintf(fid,'</VTKFile>');
-% 
-% fclose(fid);
+fclose(fid);
 
 function printField(field, name, fid)
 [m, d] = size(field);

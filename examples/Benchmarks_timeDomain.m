@@ -3,24 +3,25 @@
 close all
 clear all %#ok
 
-pathToResults = '../../../../../../hugeFiles/e3Dss/';
+% pathToResults = '../../../../../../hugeFiles/e3Dss/';
 % pathToResults = '../../../results/e3Dss/';
-% pathToResults = '../results/';
+pathToResults = '../results/';
 
 startMatlabPool
 
 intermediatePointCharge = true; % Places the point charge in between the S1 layer and S5 layer
-% model = 'S15';
-model = 'S5';
+model = 'S15';
+% model = 'S5';
 SHBC = 0;
 SSBC = 0;
 ESBC = 0; 
 f_c = 1500;
 T = 120/f_c;
 N = 2^10;
-applyLoad = 'planeWave';
+% N = 2^2;
+% applyLoad = 'planeWave';
 % applyLoad = 'pointCharge';
-% applyLoad = 'surfExcitation';
+applyLoad = 'surfExcitation';
 % applyLoad = 'mechExcitation';
 % applyLoad = 'radialPulsation';
 switch applyLoad
@@ -79,7 +80,7 @@ options = struct('d_vec', d_vec, ...
                  'T', T,...
                  'computeForSolidDomain', strcmp(model,'S5'));
 
-extraPts = 2;
+extraPts = 40;
 folderName = [pathToResults 'paraviewResults/' model '_' BC '_' applyLoad '/'];
 if ~exist(folderName, 'dir')
     mkdir(folderName);

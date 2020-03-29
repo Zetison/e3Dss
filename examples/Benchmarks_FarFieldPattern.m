@@ -182,6 +182,7 @@ toc
 
 function TS = objFunc(alpha,beta,layer,options)
 
+options.Display = 'none';
 layer{1}.X = [cos(beta)*cos(alpha); cos(beta)*sin(alpha); sin(beta)*ones(size(alpha))]';
 layer = e3Dss(layer, options);
 TS = 20*log10(abs(layer{1}.p_0)).';
