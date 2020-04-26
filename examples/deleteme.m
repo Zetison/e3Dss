@@ -1,48 +1,70 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% This study correspond to Fig. 1 and Fig. 4 in Sage1979mri
-% Sage1979mri is available at https://doi.org/10.1121/1.382928
-
 close all
 clear all %#ok
 
-%% Define parameters
-a = 1;
-z = 0;
-f_c = 1500; % (300) source pulse center freq.
-N = 2^11;
-% N = 2^2;
-npts = 1000;
-% npts = 10;
-T = 120/f_c; %60/f_c
-B = N/T; % bandwidth
-f_L = -B/2;
-f_R = B/2;
-df = 1/T;
-f = linspace(0,f_R-df,N/2);
-% omega = 2*pi*f;
-type = 1;
-d_vec = -[0,0,1].';
-omega_c = 2*pi*f_c;
-c_f = 1500;
-k_c = omega_c/c_f;
-P_inc = 1;
-t = linspace(0,1/f_c,1000);
-t = [-1e-3,t,3e-3];
-P = Pt_inc_(t,z,omega_c,k_c,P_inc,1);
-% plot(t,P)
-% hold on
-% for terms = 1:4
-%     P = Pt_inc_(t,z,omega_c,k_c,P_inc,3,terms);
-% 
-%     plot(t,P)
-%     hold on
-% end
+pathToResults = '../../../../../../hugeFiles/e3Dss/';
+% pathToResults = '../../../results/e3Dss/';
+% pathToResults = '../results';
 
+startMatlabPool
+for extraPts = [2,4,8,16,32]
+    if false
+        alpha_s = 240*pi/180;
+        beta_s = 30*pi/180;
+        beta_f = beta_s;
+        beta_f_arr = beta_s;
+        d_vec = -[cos(beta_s)*cos(alpha_s);
+                  cos(beta_s)*sin(alpha_s);
+                  sin(beta_s)]; 
+    else
+        d_vec = [1, 0, 0]'; 
+    end
+    N_max = inf;
+    ESBC = 1;
+    SSBC = 0;
+    for SHBC = 0 %[0, 1]
+        for modelCell = {'S5'} %{'IL', 'S5', 'S35', 'S135'}
+            model = modelCell{1};
+            switch model
+                case 'S1'
+                    layer = setS1Parameters();
+                case 'S5'
+                    layer = setS5Parameters();
+                case 'S35'
+                    layer = setS35Parameters();
+                case 'S135'
+                    layer = setS135Parameters();
+                case 'IL'
+                    layer = setIhlenburgParameters();
+            end
+            defineBCstring
+            for f = 1000
+                omega = 2*pi*f;
+                R_a = 2*layer{1}.R_i;
 
-ft = linspace(0,f_R,2000);
-omegat = sort([2*pi*ft,omega_c]);
-P = P_inc_(omegat,omega_c,P_inc,1);
-plot(omegat,abs(P))
-P = P_inc_(omegat,omega_c,P_inc,3);
-hold on
-plot(omegat,abs(P))
+                options = struct('BC', BC, ...
+                                 'd_vec', d_vec, ...
+                                 'omega', omega, ...
+                                 'P_inc', 1, ...
+                                 'SHBC', SHBC, ...
+                                 'ESBC', ESBC, ...
+                                 'SSBC', SSBC, ...
+                                 'N_max', N_max, ...
+                                 'computeForSolidDomain', 1, ...
+                                 'plotTimeOscillation', 0, ...
+                                 'plotInTimeDomain', 0, ...
+                                 'applyLoad', 'planeWave', ...
+                                 'R_a', R_a);
+
+                folderName = [pathToResults 'nearfields/paraviewResults/' model '/'];
+                if ~exist(folderName, 'dir')
+                    mkdir(folderName);
+                end
+
+                vtfFileName = [folderName '_' BC '_' num2str(extraPts)];
+                createParaviewFiles_e3Dss(extraPts, vtfFileName, layer, options)
+            end
+        end
+    end
+end
+
+        

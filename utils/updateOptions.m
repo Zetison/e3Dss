@@ -17,7 +17,6 @@ else
             options{i} = updateOptions(options{i},newOptions{i});
         end
     else
-        optionNames = fieldnames(options);
         % count arguments
         nArgs = length(newOptions);
         if round(nArgs/2) ~= nArgs/2
@@ -26,12 +25,7 @@ else
 
         for pair = reshape(newOptions,2,[]) % pair is {propName;propValue}
             inpName = pair{1}; % make case insensitive
-
-            if any(strcmp(inpName,optionNames))
-                options.(inpName) = pair{2};
-            else
-                error('%s is not a recognized parameter name',inpName)
-            end
+            options.(inpName) = pair{2};
         end
     end
 end

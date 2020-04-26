@@ -20,8 +20,8 @@ end
 N_max = inf;
 ESBC = 0;
 SSBC = 0;
-for SHBC = 0 %[0, 1]
-    for modelCell = {'S135'} %{'IL', 'S5', 'S35', 'S135'}
+for SHBC = 1 %[0, 1]
+    for modelCell = {'S35'} %{'IL', 'S5', 'S35', 'S135'}
         model = modelCell{1};
         switch model
             case 'S1'
@@ -49,7 +49,7 @@ for SHBC = 0 %[0, 1]
                              'SSBC', SSBC, ...
                              'N_max', N_max, ...
                              'computeForSolidDomain', 1, ...
-                             'plotTimeOscillation', 0, ...
+                             'plotTimeOscillation', 1, ...
                              'plotInTimeDomain', 0, ...
                              'applyLoad', 'planeWave', ...
                              'R_a', R_a);
@@ -60,7 +60,7 @@ for SHBC = 0 %[0, 1]
             end
             vtfFileName = [folderName '_' BC];
 
-            extraPts = 10;
+            extraPts = 5;
 
             createParaviewFiles_e3Dss(extraPts, vtfFileName, layer, options)
         end

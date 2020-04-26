@@ -133,16 +133,19 @@ end
 switch options.applyLoad
     case {'planeWave','radialPulsation'}
         m_s = 1;
-    case {'pointCharge','mechExcitation','surfExcitation'}
+    case {'pointCharge','mechExcitation','surfExcitation','custom'}
         if ~isfield(options,'r_s')
             if strcmp(options.applyLoad, 'pointCharge')
                 options.r_s = 2*layer{1}.R_i;
-            elseif strcmp(options.applyLoad, 'surfExcitation')
+            elseif strcmp(options.applyLoad, 'surfExcitation') || strcmp(options.applyLoad, 'custom')
                 options.r_s = layer{1}.R_i;
             end
         end
         if strcmp(options.applyLoad, 'surfExcitation') && ~isfield(options,'theta_s')
             options.theta_s = [0,pi];
+        end
+        if strcmp(options.applyLoad, 'custom') && ~isfield(options,'theta_s')
+            options.theta_s = 1;
         end
         r_s = options.r_s;
         m_s = 1;
@@ -426,7 +429,7 @@ for m = 1:M
                     if layer{m}.calc_du(3,3)
                         layer{m}.du_zdz = du_X{3,3};
                     end
-                    if strcmp(layer{m}.media,viscoelastic) && layer{m}.calc_p
+                    if strcmp(layer{m}.media,'viscoelastic') && layer{m}.calc_p
                         Omega = repmat(omega,n_X,1);
                         E = layer{m}.E;
                         nu = layer{m}.nu;
@@ -899,7 +902,8 @@ end
 n = zeros(1,prec);
 N_eps = NaN(nFreqs,1);
 flag = zeros(size(hasCnvrgd,1),1); % Program terminated successfully unless error occurs (for each frequency)
-singleModeSolution = (strcmp(options.applyLoad,'pointCharge') && options.r_s == 0) || strcmp(options.applyLoad,'radialPulsation');
+singleModeSolution = (strcmp(options.applyLoad,'pointCharge') && options.r_s == 0) || strcmp(options.applyLoad,'radialPulsation') ...
+                     || (strcmp(options.applyLoad,'surfExcitation') && options.theta_s(1) == 0 && abs(options.theta_s(2) - pi) < Eps);
 
 while n <= N_max && ~(singleModeSolution && n > 0)
     try % and hope that no spherical Bessel functions are evaluated to be too large

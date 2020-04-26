@@ -10,7 +10,7 @@ m_s = options.m_s;
 %% Calculate submatrices
 H1 = cell(M,1);
 D1 = cell(M,1);
-singleLayerSupport = strcmp(options.applyLoad,'mechExcitation') || strcmp(options.applyLoad,'surfExcitation');
+singleLayerSupport = strcmp(options.applyLoad,'mechExcitation') || strcmp(options.applyLoad,'surfExcitation') || strcmp(options.applyLoad,'custom');
 
 dofs = zeros(M,1);
 if M > 1
@@ -310,6 +310,8 @@ switch options.applyLoad
         else
             D1 = zeros(size(k));
         end
+    case 'custom'
+        D1 = zeros(size(k));
 end
 D1 = 1./(rho*omega.^2).*D1;
 D1 = reshape(D1,1,1,numel(D1));
@@ -337,6 +339,11 @@ switch options.applyLoad
         else
             D2 = zeros(size(k));
         end
+    case 'custom' 
+        theta_s = options.theta_s;
+        Psi = @(theta) exp(-theta.^2/theta_s(1));
+        integrand = @(theta) Psi(theta).*legendre_(n,cos(theta)).*sin(theta);
+        D2 = (2*n+1)/2*integral(integrand,0,pi)*ones(numel(k),1,class(R));
 end
 D2 = reshape(-D2,1,1,numel(D2));
                     
