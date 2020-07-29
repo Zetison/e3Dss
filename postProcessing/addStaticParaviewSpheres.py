@@ -141,7 +141,7 @@ sphere1Display.OpacityTransferFunction.Points = [-0.00206091040046649, 0.0, 0.5,
 sphere1.Radius = 1.0
 
 # Properties modified on sphere1
-sphere1.ThetaResolution = resolution/2
+sphere1.ThetaResolution = int(resolution/2)
 
 # Properties modified on sphere1
 sphere1.PhiResolution = resolution
@@ -180,7 +180,7 @@ sphere2Display.OpacityTransferFunction.Points = [-0.00206091040046649, 0.0, 0.5,
 sphere2.Radius = R2
 
 # Properties modified on sphere2
-sphere2.ThetaResolution = resolution/2
+sphere2.ThetaResolution = int(resolution/2)
 
 # Properties modified on sphere2
 sphere2.PhiResolution = resolution
@@ -263,7 +263,7 @@ sphere3Display.OpacityTransferFunction.Points = [-0.00206091040046649, 0.0, 0.5,
 sphere3.Radius = R1
 
 # Properties modified on sphere3
-sphere3.ThetaResolution = resolution/2
+sphere3.ThetaResolution = int(resolution/2)
 
 # Properties modified on sphere3
 sphere3.PhiResolution = resolution
@@ -307,7 +307,7 @@ clip2Display.OpacityTransferFunction.Points = [-0.00206091040046649, 0.0, 0.5, 0
 Hide(sphere3, renderView1)
 
 # Properties modified on clip2.ClipType
-clip2.ClipType.Normal = [0.0, 0.0, -1.0]
+clip2.ClipType.Normal = [0.0, 0.0, 1.0]0.0, 0.0, -1.0]
 
 # Properties modified on clip2.ClipType
 clip2.ClipType.Origin = [0.0, 0.0, z]

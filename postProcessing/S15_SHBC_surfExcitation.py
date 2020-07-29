@@ -4,6 +4,8 @@ import numpy as np
 #### disable automatic camera reset on 'Show'
 paraview.simple._DisableFirstRenderCameraReset()
 
+# pathToFiles = 'C:/Users/Zetison/hugeFiles/e3Dss/paraviewResults/'
+pathToFiles = '/home/zetison/hugeFiles/e3Dss/paraviewResults/'
 z = 0.7
 R1 = 5
 R2 = 4.992
@@ -15,7 +17,7 @@ model = 'S15_SHBC_surfExcitation'
 N = 2048
 fileName = [''] * N
 for i in range(0,N):
-	fileName[i] = 'C:\\Users\\Zetison\\hugeFiles\\e3Dss\\paraviewResults\\'+model+'\\fluid1_time_'+str(i+1)+'.vtu'
+	fileName[i] = pathToFiles+model+'/fluid1_time_'+str(i+1)+'.vtu'
 fluid1_time_ = XMLUnstructuredGridReader(FileName=fileName)
 fluid1_time_.PointArrayStatus = ['Total scalar field (real)']
 
@@ -64,7 +66,7 @@ renderView1.ResetCamera()
 # create a new 'XML Unstructured Grid Reader'
 fileName = [''] * N
 for i in range(0,N):
-	fileName[i] = 'C:\\Users\\Zetison\\hugeFiles\\e3Dss\\paraviewResults\\'+model+'\\fluid3_time_'+str(i+1)+'.vtu'
+	fileName[i] = pathToFiles+model+'/fluid3_time_'+str(i+1)+'.vtu'
 fluid3_time_ = XMLUnstructuredGridReader(FileName=fileName)
 fluid3_time_.PointArrayStatus = ['Total scalar field (real)']
 
@@ -228,7 +230,7 @@ sphere1Display.OpacityTransferFunction.Points = [-0.00206091040046649, 0.0, 0.5,
 sphere1.Radius = 1.0
 
 # Properties modified on sphere1
-sphere1.ThetaResolution = resolution/2
+sphere1.ThetaResolution = int(resolution/2)
 
 # Properties modified on sphere1
 sphere1.PhiResolution = resolution
@@ -267,7 +269,7 @@ sphere2Display.OpacityTransferFunction.Points = [-0.00206091040046649, 0.0, 0.5,
 sphere2.Radius = R2
 
 # Properties modified on sphere2
-sphere2.ThetaResolution = resolution/2
+sphere2.ThetaResolution = int(resolution/2)
 
 # Properties modified on sphere2
 sphere2.PhiResolution = resolution
@@ -311,7 +313,7 @@ clip1Display.OpacityTransferFunction.Points = [-0.00206091040046649, 0.0, 0.5, 0
 # hide data in view
 Hide(sphere2, renderView1)
 # Properties modified on clip1.ClipType
-clip1.ClipType.Normal = [0.0, 0.0, -1.0]
+clip1.ClipType.Normal = [0.0, 0.0, 1.0]
 
 # Properties modified on clip1.ClipType
 clip1.ClipType.Origin = [0.0, 0.0, z]
@@ -350,7 +352,7 @@ sphere3Display.OpacityTransferFunction.Points = [-0.00206091040046649, 0.0, 0.5,
 sphere3.Radius = R1
 
 # Properties modified on sphere3
-sphere3.ThetaResolution = resolution/2
+sphere3.ThetaResolution = int(resolution/2)
 
 # Properties modified on sphere3
 sphere3.PhiResolution = resolution
@@ -394,7 +396,7 @@ clip2Display.OpacityTransferFunction.Points = [-0.00206091040046649, 0.0, 0.5, 0
 Hide(sphere3, renderView1)
 
 # Properties modified on clip2.ClipType
-clip2.ClipType.Normal = [0.0, 0.0, -1.0]
+clip2.ClipType.Normal = [0.0, 0.0, 1.0]
 
 # Properties modified on clip2.ClipType
 clip2.ClipType.Origin = [0.0, 0.0, z]
@@ -444,6 +446,30 @@ SetActiveSource(fluid1_time_)
 # Properties modified on fluid1_time_Display
 fluid1_time_Display.Opacity = 0.9
 
+# create a new 'Annotate Time Filter'
+annotateTimeFilter1 = AnnotateTimeFilter(Input=fluid1_time_)
+
+# show data in view
+annotateTimeFilter1Display = Show(annotateTimeFilter1, renderView1)
+
+# trace defaults for the display properties.
+annotateTimeFilter1Display.FontFile = ''
+annotateTimeFilter1Display.FontSize = 11
+
+# update the view to ensure updated data information
+renderView1.Update()
+
+# create a new 'Annotate Attribute Data'
+annotateAttributeData1 = AnnotateAttributeData(Input=annotateTimeFilter1)
+annotateAttributeData1.SelectInputArray = ['ROWS', 'Text']
+
+# show data in view
+annotateAttributeData1Display = Show(annotateAttributeData1, renderView1)
+
+# trace defaults for the display properties.
+annotateAttributeData1Display.FontFile = ''
+
+
 # current camera placement for renderView1
 renderView1.CameraPosition = [0.0, -18.0, 15.0]
 renderView1.CameraFocalPoint = [0.0, 0.0, 0.3]
@@ -452,11 +478,20 @@ renderView1.CameraViewAngle = 32.8
 renderView1.CameraParallelScale = 8.66025403784439
 RenderAllViews()
 
-# save screenshot
-# SaveScreenshot('C:\Users\Zetison\OneDrive - SINTEF\work\movies\e3Dss\'+model+'.png', magnification=2, quality=100, view=renderView1)
 
 # Properties modified on renderView1
 renderView1.Background = [0.0, 0.0, 0.0]
 
-# save animation images/movie
-# WriteAnimation('C:\Users\Zetison\OneDrive - SINTEF\work\movies\e3Dss\'+model+'.ogv', Magnification=1, FrameRate=15.0, Compression=True)
+if False:
+	# get animation scene
+	SaveAnimation('/home/zetison/Videos/'+model+'.ogv', renderView1, ImageResolution=[2010,916],
+	    FontScaling='Scale fonts proportionally',
+	    OverrideColorPalette='',
+	    StereoMode='No change',
+	    TransparentBackground=0,
+	    ImageQuality=100,
+	    FrameRate=20,
+			Quality=2)
+	    #FrameWindow=[0, 10])
+
+

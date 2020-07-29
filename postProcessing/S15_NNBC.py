@@ -4,13 +4,15 @@ import numpy as np
 #### disable automatic camera reset on 'Show'
 paraview.simple._DisableFirstRenderCameraReset()
 
+# pathToFiles = 'C:/Users/Zetison/hugeFiles/e3Dss/paraviewResults/'
+pathToFiles = '/home/zetison/hugeFiles/e3Dss/paraviewResults/'
 resolution = 800
 model = 'S15_NNBC'
 N = 2048
 # create a new 'XML Unstructured Grid Reader'
 fileName = [''] * N
 for i in range(0,N):
-	fileName[i] = 'C:\\Users\\Zetison\\hugeFiles\\e3Dss\\paraviewResults\\'+model+'\\fluid1_time_'+str(i+1)+'.vtu'
+	fileName[i] = pathToFiles+model+'/fluid1_time_'+str(i+1)+'.vtu'
 fluid1_time_ = XMLUnstructuredGridReader(FileName=fileName)
 fluid1_time_.PointArrayStatus = ['Total scalar field (real)']
 
@@ -59,7 +61,7 @@ renderView1.ResetCamera()
 # create a new 'XML Unstructured Grid Reader'
 fileName = [''] * N
 for i in range(0,N):
-	fileName[i] = 'C:\\Users\\Zetison\\hugeFiles\\e3Dss\\paraviewResults\\'+model+'\\fluid3_time_'+str(i+1)+'.vtu'
+	fileName[i] = pathToFiles+model+'/fluid3_time_'+str(i+1)+'.vtu'
 fluid3_time_ = XMLUnstructuredGridReader(FileName=fileName)
 fluid3_time_.PointArrayStatus = ['Total scalar field (real)']
 
@@ -97,7 +99,7 @@ renderView1.OrientationAxesVisibility = 0
 # create a new 'XML Unstructured Grid Reader'
 fileName = [''] * N
 for i in range(0,N):
-	fileName[i] = 'C:\\Users\\Zetison\\hugeFiles\\e3Dss\\paraviewResults\\'+model+'\\fluid5_time_'+str(i+1)+'.vtu'
+	fileName[i] = 'C:/Users/Zetison/hugeFiles/e3Dss/paraviewResults/'+model+'/fluid5_time_'+str(i+1)+'.vtu'
 fluid5_time_ = XMLUnstructuredGridReader(FileName=fileName)
 fluid5_time_.PointArrayStatus = ['Total scalar field (real)']
 
@@ -263,7 +265,7 @@ def createCuttedDisk(R1,x1,x2,z,resolution):
 	sphere2.Radius = R2
 
 	# Properties modified on sphere2
-	sphere2.ThetaResolution = resolution/2
+	sphere2.ThetaResolution = int(resolution/2)
 
 	# Properties modified on sphere2
 	sphere2.PhiResolution = resolution
@@ -307,7 +309,7 @@ def createCuttedDisk(R1,x1,x2,z,resolution):
 	# hide data in view
 	Hide(sphere2, renderView1)
 	# Properties modified on clip1.ClipType
-	clip1.ClipType.Normal = [0.0, 0.0, -1.0]
+	clip1.ClipType.Normal = [0.0, 0.0, 1.0]
 
 	# Properties modified on clip1.ClipType
 	clip1.ClipType.Origin = [0.0, 0.0, z]
@@ -346,7 +348,7 @@ def createCuttedDisk(R1,x1,x2,z,resolution):
 	sphere3.Radius = R1
 
 	# Properties modified on sphere3
-	sphere3.ThetaResolution = resolution/2
+	sphere3.ThetaResolution = int(resolution/2)
 
 	# Properties modified on sphere3
 	sphere3.PhiResolution = resolution
@@ -390,7 +392,7 @@ def createCuttedDisk(R1,x1,x2,z,resolution):
 	Hide(sphere3, renderView1)
 
 	# Properties modified on clip2.ClipType
-	clip2.ClipType.Normal = [0.0, 0.0, -1.0]
+	clip2.ClipType.Normal = [0.0, 0.0, 1.0]
 
 	# Properties modified on clip2.ClipType
 	clip2.ClipType.Origin = [0.0, 0.0, z]

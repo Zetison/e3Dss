@@ -31,6 +31,7 @@ options.r_s           = 2;            % Radius to source location for point char
 options.z             = 1;            % Impedance for an impedance boundary condition
 options.P_inc         = 1;            % Amplitude of incident wave at the origin. P_inc can be given as a function handle P_inc(omega) where omega is the angular frequency
 options.BC            = 'SHBC';       % Boundary condition on the inermost layer 'SSBC' (Sound soft boundary condition), 'NNBC' (Neumann-Neumann boundary condition) 
+options.Display       = 'final';      % Print options ('final', 'iter' or 'none')
 
 % General parameters in layer m
 layer{m}.media            = 'fluid'; % Media; % fluid or solid/viscoelastic (Helmholtz equation or Navier equation)

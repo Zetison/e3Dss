@@ -1,4 +1,7 @@
-function layer = setS1Parameters(prec)
+function layer = setS1Parameters(prec,noDomains)
+if nargin < 1
+    noDomains = 3;
+end
 
 if nargin < 1
     prec = 'double';
@@ -34,3 +37,4 @@ switch prec
         R_o = mp('[1, 0]'); % Outer radius of shell
 end
 convertToLayerFormat
+layer = layer(1:noDomains);

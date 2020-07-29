@@ -3,9 +3,9 @@
 close all
 clear all %#ok
 
-% pathToResults = '../../../../../../hugeFiles/e3Dss/';
+pathToResults = '../../../../../../hugeFiles/e3Dss/';
 % pathToResults = '../../../results/e3Dss/';
-pathToResults = '../results/';
+% pathToResults = '../results/';
 
 startMatlabPool
 
@@ -80,7 +80,7 @@ options = struct('d_vec', d_vec, ...
                  'T', T,...
                  'computeForSolidDomain', strcmp(model,'S5'));
 
-extraPts = 40;
+extraPts = 2; %40
 folderName = [pathToResults 'paraviewResults/' model '_' BC '_' applyLoad '/'];
 if ~exist(folderName, 'dir')
     mkdir(folderName);
