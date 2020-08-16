@@ -1,4 +1,4 @@
-function makeVTKfile(data, newOptions)
+function makeVTKfile(varargin)
 
 options = struct('name','untitled',...
                  'celltype','VTK_HEXAHEDRON',...
@@ -58,9 +58,14 @@ options = struct('name','untitled',...
                  'N', NaN, ...
                  'addDynamicScalars', 0);
 
-newOptionFields = fieldnames(newOptions);
-for j = 1:numel(newOptionFields)
-	options.(newOptionFields{j}) = newOptions.(newOptionFields{j});
+data = varargin{1};
+if nargin > 1
+    if numel(varargin) > 2
+        newOptions = varargin(2:end);
+    else
+        newOptions = varargin{2};
+    end
+    options = updateOptions(options,newOptions);
 end
 
 vtfFileName = options.name;
