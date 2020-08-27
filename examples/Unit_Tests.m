@@ -5,9 +5,12 @@ addpath ..
 addpath ../utils
 addpath ../models
 
-% pathToResults = '../../../results/e3Dss/';
-pathToResults = '../results/';
-% mpstartup
+startup
+resultsFolder = [folderName '/Unit_Tests'];
+if ~exist(resultsFolder, 'dir')
+    mkdir(resultsFolder);
+end
+
 startMatlabPool
 mp = NaN;
 %% Calculate errors
@@ -273,7 +276,7 @@ for useSymbolicPrecision = 0 %[0,1]
         end
         leg1 = legend('show','Location','northwest');
         set(leg1,'Interpreter','latex');
-        filename = [pathToResults 'sigmaErrors_' model '_' BC '_Symbolic' num2str(useSymbolicPrecision)];
+        filename = [resultsFolder '/sigmaErrors_' model '_' BC '_Symbolic' num2str(useSymbolicPrecision)];
         
         xlabel('$C f$','interpreter','latex')
         ylabel('Relative error')
@@ -284,7 +287,7 @@ for useSymbolicPrecision = 0 %[0,1]
         end
         xlim([double(sc(1)), double(sc(end))])
         drawnow
-%                     savefig([filename '.fig'])
+        savefig([filename '.fig'])
         fprintf('Finished a case in %f seconds!\n\n', toc)
     end
 end

@@ -5,6 +5,12 @@
 close all
 clear all %#ok
 
+startup
+resultsFolder = [folderName '/Hetmaniuk2012raa'];
+if ~exist(resultsFolder, 'dir')
+    mkdir(resultsFolder);
+end
+
 layer = setHetmaniukParameters();
 BC = 'SHBC';
 layer = layer(1:end-1);
@@ -25,7 +31,7 @@ layer = e3Dss(layer, options);
 figure(8)
 real_p_Hetmaniuk = importdata('../models/Hetmaniuk2012raa/Figure8.csv');
 plot(k, real(layer{1}.p),'DisplayName','Exact')
-title('Figure 17 in Hetmaniuk2012raa')
+title('Figure 8 in Hetmaniuk2012raa')
 hold on
 plot(real_p_Hetmaniuk(:,1), real_p_Hetmaniuk(:,2),'DisplayName','Hetmaniuk2012raa')
 xlabel('Wavenumber')
@@ -33,6 +39,7 @@ xlim([5, 40])
 ylim([-2, 2])
 ylabel('Real part of pressure')  
 legend('show');
+savefig([resultsFolder '/Figure8'])
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 layer = setHetmaniukParameters();
@@ -70,6 +77,7 @@ xlim([f(1), f(end)])
 ylim([-200, 200])
 ylabel('Real part of pressure')  
 legend('show');
+savefig([resultsFolder '/Figure12'])
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -98,3 +106,4 @@ xlim([f(1), f(end)])
 ylim([-15, 15])
 ylabel('Real part of pressure')  
 legend('show');
+savefig([resultsFolder '/Figure17'])

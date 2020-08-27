@@ -1,19 +1,18 @@
 close all
 clear all %#ok
 
-addpath ..
-addpath ../utils
-addpath ../models
-
-% pathToResults = '../../../results/e3Dss/';
-pathToResults = '../results';
+startup
+resultsFolder = [folderName '/Benchmarks_S5_ESBC_timeDomain_1Dplot'];
+if ~exist(resultsFolder, 'dir')
+    mkdir(resultsFolder);
+end
 set(0,'defaultTextInterpreter','latex');
 startMatlabPool
 
 % applyLoad = 'planeWave';
 applyLoad = 'radialPulsation';
 
-if 1
+if 0
     f_c = 300; % (300) source pulse center freq.
     N = 2^9;
     M = 2*N; % corresponds to fs = sampling rate
@@ -34,7 +33,7 @@ if 1
     d_vec = [0,0,1].';
     R_o = 2;
     omega_c = 2*pi*f_c;
-    P_inc = @(omega) P_inc_(omega, omega_c,type);
+    P_inc = @(omega) P_inc_(omega, omega_c,1,type);
     c_f = 1500;
     k_c = omega_c/c_f;
     npts = 400;
@@ -44,8 +43,8 @@ if 1
     % Plots
     figure(1); clf;
     t = linspace(0,30/f_c,1000);
-    subplot(311), plot(t,Pt_inc_(t,0,omega_c,k_c,type))
-    Sw1 = P_inc_(omega,omega_c,type);
+    subplot(311), plot(t,Pt_inc_(t,0,omega_c,k_c,1,type))
+    Sw1 = P_inc_(omega,omega_c,1,type);
     subplot(312), plot(f,abs(Sw1))
     subplot(313), plot(f,atan2(imag(Sw1),real(Sw1)));
     drawnow
@@ -59,7 +58,7 @@ if 1
                      'P_inc', P_inc, ...
                      'applyLoad',applyLoad,...
                      'c_f', c_f);
-    data = e3Dss(vv, options);
+    layer = e3Dss(vv, options);
 else
     f_c = 1500; % (300) source pulse center freq.
     N = 2^10;
@@ -72,70 +71,63 @@ else
     f = linspace(0,f_R-df,N/2);
     omega = 2*pi*f;
     type = 1;
-    d_vec = [0,0,1].';
+    d_vec = -[0,0,1].';
     omega_c = 2*pi*f_c;
     c_f = 1500;
     k_c = omega_c/c_f;
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%
-    % Plots
     figure(1); clf;
-%             t = linspace(-1/f_c,6/f_c,1000);
+%     t = linspace(-1/f_c,6/f_c,1000);
     tt = linspace(0,1/f_c,1000);
     tt = [-1e-3,tt,3e-3];
-    Pt_inc = Pt_inc_(tt,0,omega_c,k_c,type);
+    Pt_inc = Pt_inc_(tt,0,omega_c,k_c,1,type);
     subplot(311), plot(tt,Pt_inc)
     ft = linspace(0,f_R,2000);
     omegat = 2*pi*ft;
-    P_inc = P_inc_(omegat,omega_c,type);
-    subplot(312), plot(ft,abs(P_inc))
-    subplot(313), plot(ft,atan2(imag(P_inc),real(P_inc)));
-    drawnow
-%             printResultsToFile([pathToResults 'Pt_inc'], tt.', Pt_inc.', [], 0, 1)
-%             printResultsToFile([pathToResults 'P_inc'], omegat.', abs(P_inc).', [], 0, 1)
-    figure(2)
-    plot(omegat,abs(P_inc))
-    ylabel('$|P_{\mathrm{inc}}(\omega)|$ [Pa]')
-    xlabel('$\omega$ [$\mathrm{s}^{-1}$]')
-    savefig([pathToResults 'Figure17b'])
-    
-    figure(3)
-    plot(tt,Pt_inc)
-    ylabel('$\breve{P}_{\mathrm{inc}}(t)$ [Pa]')
-    xlabel('$t$ [s]')
-    savefig([pathToResults 'Figure17a'])
-            return
+    P_inc = P_inc_(omegat,omega_c,1,type);
+    if false % Plot
+        subplot(312), plot(ft,abs(P_inc))
+        subplot(313), plot(ft,atan2(imag(P_inc),real(P_inc)));
+        drawnow
+    %     printResultsToFile([pathToResults 'Pt_inc'], tt.', Pt_inc.', [], 0, 1)
+    %     printResultsToFile([pathToResults 'P_inc'], omegat.', abs(P_inc).', [], 0, 1)
+        figure(2)
+        plot(omegat,abs(P_inc))
+        ylabel('$|P_{\mathrm{inc}}(\omega)|$ [Pa]')
+        xlabel('$\omega$ [$\mathrm{s}^{-1}$]')
+        savefig([resultsFolder '/Figure17b'])
+
+        figure(3)
+        plot(tt,Pt_inc)
+        ylabel('$\breve{P}_{\mathrm{inc}}(t)$ [Pa]')
+        xlabel('$t$ [s]')
+        savefig([resultsFolder '/Figure17a'])
+    end
     %%%%%%%%%%%%%%%%%%%%%%%%%%
     % Plot dynamic time domain solution in 1D
-%             setS15Parameters
-    setS5Parameters
+    layer = setS5Parameters();
+
     npts = 1000;
+    R_o = layer{1}.R_i;
     R_a = 1.5*R_o(1);
-%             z = linspace(-1.3*R_a,-R_o(1),npts).';
+%     z = linspace(-1.3*R_a,-R_o(1),npts).';
     z = linspace(R_o(1),20,npts).';
-    R_i = R_o - t;
+%     z = linspace(1,20,npts).';
     ESBC = 1;
     vv = [zeros(npts,1), zeros(npts,1), z];
-    rho_f = rho_f(1:end-1);
-    c_f = c_f(1:end-1);
-    R_i = R_i(1:end-1);
-    P_inc = @(omega) P_inc_(omega, omega_c,type);
-
+    P_inc = @(omega) P_inc_(omega, omega_c, 1, type);
+    layer{1}.X = vv;
+    layer{1}.calc_p = true; % Calculate the far field pattern
     options = struct('d_vec', d_vec, ...
                      'omega', omega(2:end), ...
-                     'R_i', R_i, ...
-                     'R_o', R_o, ...
                      'P_inc', P_inc, ...
-                     'applyLoad',applyLoad,...
-                     'E', E, ...
-                     'nu', nu, ...
-                     'rho_s', rho_s, ...
-                     'rho_f', rho_f, ...
-                     'c_f', c_f);
-    data = e3Dss(vv, options);
+                     'BC', 'NNBC', ...
+                     'applyLoad',applyLoad);
+    layer = e3Dss(layer, options);
 end
 startIdx = 2000;
-startIdx = 1;
+startIdx = 830;
 totField = zeros(npts,N/2);
 PincField = zeros(npts,N/2);
 
@@ -145,8 +137,8 @@ for n = 0:N-1
     k = omega/c_f(1);
     k_vec = d_vec*k;
     if n >= N/2+1
-        PincField(:,n-N/2+1) = P_inc_(omega,omega_c,type).*exp(1i*dot3(vv, k_vec));
-        totField(:,n-N/2+1) = PincField(:,n-N/2+1) + data(1).p(:,n-N/2);
+        PincField(:,n-N/2+1) = P_inc_(omega,omega_c,1,type).*exp(1i*dot3(vv, k_vec));
+        totField(:,n-N/2+1) = PincField(:,n-N/2+1) + layer{1}.p(:,n-N/2);
     end
 end
 dt = T/M;
@@ -170,10 +162,10 @@ for m = m_arr
     ylim([-1.3,1.3])
     legend('p_{tot}', 'p_{inc}')
     drawnow
-    pause(0.1)
-    if m == 120
-        pause
-    end
+%     pause(0.1)
+%     if m == 120
+%         pause
+%     end
 end
 figure(3)
 plot(dt*m_arr,real(totFieldTime(1,:)),dt*m_arr,real(PincFieldTime(1,:)));

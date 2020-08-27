@@ -2,8 +2,11 @@ close all
 clear all %#ok
 
 
-pathToResults = '../../../results/e3Dss/';
-% pathToResults = '../results';
+startup
+resultsFolder = [folderName '/Benchmark_FarFieldPattern'];
+if ~exist(resultsFolder, 'dir')
+    mkdir(resultsFolder);
+end
 
 % Calculate Far-Field pattern (BI and Sweep)
 tic
@@ -82,10 +85,6 @@ for scatteringCase = {'BI'} %,'Sweep'}
                         layer{1}.X = X;
 
 
-                        % Create folders
-                        if ~exist(pathToResults, 'dir')
-                            mkdir(pathToResults);
-                        end
 
                         if length(alpha_s) > 1
                             aspect = 'S';
@@ -120,10 +119,10 @@ for scatteringCase = {'BI'} %,'Sweep'}
                         task.comments = 'Exact solution';
                         if strcmp(scatteringCase{1}, 'Sweep')
                             saveName = [model '_' BC '_' scatteringCase{1} '_A'  aspect '_E' elevation '_F' frequency];
-                            resultsFolderName = [pathToResults '/' saveName];
+                            resultsFolderName = [resultsFolder '/' saveName];
                             legendArr = {saveName};
                             TS = 20*log10(abs(layer{1}.p_0)).'; 
-                            filename = [pathToResults '/' saveName];
+                            filename = [resultsFolder '/' saveName];
                             task.saveName = saveName;
                             task.f_arr = f;
                             if any(~flag)
@@ -143,7 +142,7 @@ for scatteringCase = {'BI'} %,'Sweep'}
 
                                 figure(i)
                                 saveName = [model '_' BC '_' scatteringCase{1} '_A'  aspect '_E' elevation '_F' num2str(f(i)/1000)];
-                                filename = [pathToResults '/' saveName];
+                                filename = [resultsFolder '/' saveName];
                                 task.f = f(i);
                                 task.saveName = saveName;
                                 TS = 20*log10(abs(layer{1}.p_0(:,i))); 
@@ -165,14 +164,14 @@ for scatteringCase = {'BI'} %,'Sweep'}
         end
         if strcmp(scatteringCase{1}, 'Sweep')
             saveName = [model '_' scatteringCase{1} '_A'  aspect '_E' elevation '_F' frequency];
-            filename = [pathToResults '/' saveName];
+            filename = [resultsFolder '/' saveName];
             savefig([filename '.fig'])
         elseif strcmp(scatteringCase{1}, 'BI')
             for i = 1:length(f)
                 figure(i)
                 saveName = [model '_' scatteringCase{1} '_A'  aspect '_E' elevation '_F' num2str(f(i)/1000)];
                 title([saveName(1:end-2) num2str(f(i)/1000)], 'interpreter', 'none')
-                filename = [pathToResults '/' saveName];
+                filename = [resultsFolder '/' saveName];
                 savefig([filename(1:end-2) num2str(f(i)/1000) '.fig'])
             end
         end

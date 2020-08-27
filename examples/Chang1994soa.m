@@ -7,8 +7,11 @@
 close all
 clear all %#ok
 
-pathToResults = '../../../results/e3Dss/';
-% pathToResults = '../results';
+startup
+resultsFolder = [folderName '/Chang1994soa'];
+if ~exist(resultsFolder, 'dir')
+    mkdir(resultsFolder);
+end
 
 %% Chang and Demkowiz (1994) example
 P_inc = 1; % Amplitude of incident wave
@@ -47,7 +50,7 @@ ylim([-2 2])
 legend({'Present work', 'Reference Solution from Chang (1994)'},'Location','northwest')
 xlim([0 180])
 xtickformat('degrees')
-% savefig([pathToResults 'Figure7a'])
+savefig([resultsFolder '/Figure7a'])
 
 figure(17)
 plot(theta*180/pi, real(p_tot(:,2)), p_tot_Chang20(:,1), p_tot_Chang20(:,2))
@@ -59,7 +62,7 @@ ylim([-2 2])
 legend({'Present work', 'Reference Solution from Chang (1994)'})
 xlim([0 180])
 xtickformat('degrees')
-% savefig([pathToResults 'Figure7b'])
+savefig([resultsFolder '/Figure7b'])
 
 
 folderName = '../results';
@@ -85,4 +88,4 @@ filename = [folderName '/' saveName];
 filename = [];
 figure(42)
 createConvergencePlot('2D',layer,options,60,filename)
-% savefig([pathToResults 'Figure8'])
+savefig([resultsFolder '/Figure8'])

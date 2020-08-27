@@ -1,13 +1,11 @@
 close all
 clear all %#ok
 
-addpath ..
-addpath ../utils
-addpath ../models
-
-pathToResults = '../../../../../../hugeFiles/e3Dss/ihlenburg_sweep/';
-% pathToResults = '../../../results/e3Dss/';
-% pathToResults = '../results';
+startup
+resultsFolder = [folderName '/Ihlenburg1998fea'];
+if ~exist(resultsFolder, 'dir')
+    mkdir(resultsFolder);
+end
 
 startMatlabPool
 applyLoad = 'planeWave';
@@ -35,6 +33,7 @@ specialValues = [0.250621182794531 %
                1.892808062465205 %
                ];
 k_arr = unique(sort([k_arr;specialValues]));
+% k_arr = [1, 2];
 for SHBC = 0 %[0, 1]
     for modelCell = {'IL'} %{'IL', 'S5', 'S35', 'S135'}
         model = modelCell{1};
@@ -52,7 +51,10 @@ for SHBC = 0 %[0, 1]
         end
         
         defineBCstring
-%         k_arr = [1.892808062465205, 1.8929];
+        resultsFolderParaview = [resultsFolder '/paraviewResults/' model '/'];
+        if ~exist(resultsFolderParaview, 'dir')
+            mkdir(resultsFolderParaview);
+        end
 %         for i = 1:length(k_arr)
         parfor i = 1:length(k_arr)
             k = k_arr(i);
@@ -80,11 +82,7 @@ for SHBC = 0 %[0, 1]
                              'applyLoad', applyLoad, ...
                              'R_a', R_a);
 
-            folderName = [pathToResults 'paraviewResults/' model '/'];
-            if ~exist(folderName, 'dir')
-                mkdir(folderName);
-            end
-            vtfFileName = [folderName BC '_' num2str(i)];
+            vtfFileName = [resultsFolderParaview '/' BC '_' num2str(i)];
 
             extraPts = 15;
 

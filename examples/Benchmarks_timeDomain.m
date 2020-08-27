@@ -3,9 +3,11 @@
 close all
 clear all %#ok
 
-pathToResults = '../../../../../../hugeFiles/e3Dss/';
-% pathToResults = '../../../results/e3Dss/';
-% pathToResults = '../results/';
+startup
+resultsFolder = [folderName '/Benchmarks_timeDomain'];
+if ~exist(resultsFolder, 'dir')
+    mkdir(resultsFolder);
+end
 
 startMatlabPool
 
@@ -81,7 +83,7 @@ options = struct('d_vec', d_vec, ...
                  'computeForSolidDomain', strcmp(model,'S5'));
 
 extraPts = 2; %40
-folderName = [pathToResults 'paraviewResults/' model '_' BC '_' applyLoad '/'];
+folderName = [resultsFolder '/paraviewResults/' model '_' BC '_' applyLoad '/'];
 if ~exist(folderName, 'dir')
     mkdir(folderName);
 end

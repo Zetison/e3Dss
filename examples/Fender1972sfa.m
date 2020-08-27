@@ -7,8 +7,11 @@
 close all
 clear all %#ok
 
-pathToResults = '../../../results/e3Dss/';
-% pathToResults = '../results';
+startup
+resultsFolder = [folderName '/Fender1972sfa'];
+if ~exist(resultsFolder, 'dir')
+    mkdir(resultsFolder);
+end
 
 %% Fender (1972) example
 layer = setFenderParameters();
@@ -63,7 +66,7 @@ if true
     ylim([-80 120])
     legend({'Present work', 'Reference Solution from Fender (1972)'})
     xlim(R_o*[k(1) k(end)])
-%     savefig([pathToResults 'Figure13a'])
+    savefig([resultsFolder '/Figure13a'])
 
     %%%%%%%%
     figure(3)
@@ -75,11 +78,11 @@ if true
     ylim([-60 120])
     legend({'Present work', 'Reference Solution from Fender (1972)'})
     xlim(R_o*[k(1) k(end)])
-%     savefig([pathToResults 'Figure13b'])
+    savefig([resultsFolder '/Figure13b'])
 end
 
 if false
-    keyboard % remember to disable line 30-32 in bessel_s.m
+    keyboard % disable line 30-32 in bessel_s.m (by commenting out these lines, undone later on...)
     nFreqs = 2000;
 
     k_max = 450;
@@ -114,7 +117,7 @@ if false
     set(0,'defaulttextinterpreter','latex')
     plot(x, N, 'DisplayName','$N=\lceil\upsilon\rceil$ as a function of $k_1 R_{0,1}$ for when $\mathrm{y}_\upsilon(\omega\Upsilon)=10^{290}$','color',[0,70,147]/255)
 
-    keyboard %remember to enable line 30-32 in bessel_s.m
+    keyboard %enable line 30-32 in bessel_s.m
     k_max = 1000;
     k = linspace(k_max/nFreqs,k_max,nFreqs);
     omega = k*c_f(1);   % Wave number for outer fluid domain
@@ -130,7 +133,7 @@ if false
     leg1 = legend('show','Location','northwest');
     set(leg1,'Interpreter','latex');
 
-%     savefig([pathToResults 'Figure14'])
+    savefig([resultsFolder '/Figure14'])
 end
 
 function SPL = objFunc(k,layer,options)

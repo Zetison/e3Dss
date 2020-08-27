@@ -5,6 +5,12 @@
 close all
 clear all %#ok
 
+startup
+resultsFolder = [folderName '/Sage1979mri'];
+if ~exist(resultsFolder, 'dir')
+    mkdir(resultsFolder);
+end
+
 %% Define parameters
 nFreqs = 5000;
 a = 1;
@@ -88,11 +94,14 @@ figure(1)
 sigma_s = 4*pi*abs(layer{1}.p_0).^2;
 loglog(k*a, sigma_s/(pi*a^2)/pi,'--','color','black','DisplayName','SSBC')
 legend show
+savefig([resultsFolder '/figure1.fig'])
 
 figure(4) 
 sigma_s = 4*pi*abs(layer{1}.p_0).^2;
 semilogy(k*a, sigma_s/(pi*a^2)/pi,'--','color','black','DisplayName','SSBC')
+legend off
 legend show
+savefig([resultsFolder '/figure4.fig'])
 
 function sigma_s = objFunc(k,layer,options)
 

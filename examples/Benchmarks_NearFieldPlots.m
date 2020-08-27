@@ -1,9 +1,11 @@
 close all
 clear all %#ok
 
-pathToResults = '../../../../../../hugeFiles/e3Dss/';
-% pathToResults = '../../../results/e3Dss/';
-% pathToResults = '../results';
+startup
+resultsFolder = [folderName '/Benchmarks_NearFieldPlots'];
+if ~exist(resultsFolder, 'dir')
+    mkdir(resultsFolder);
+end
 
 startMatlabPool
 if false
@@ -54,7 +56,7 @@ for SHBC = 1 %[0, 1]
                              'applyLoad', 'planeWave', ...
                              'R_a', R_a);
 
-            folderName = [pathToResults 'nearfields/paraviewResults/' model '/'];
+            folderName = [resultsFolder '/nearfields/paraviewResults/' model '/'];
             if ~exist(folderName, 'dir')
                 mkdir(folderName);
             end

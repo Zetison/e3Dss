@@ -1,5 +1,5 @@
 function layer = setS1Parameters(prec,noDomains)
-if nargin < 1
+if nargin < 2
     noDomains = 3;
 end
 

@@ -5,6 +5,12 @@
 close all
 clear all %#ok
 
+startup
+resultsFolder = [folderName '/Ihlenburg1998fea'];
+if ~exist(resultsFolder, 'dir')
+    mkdir(resultsFolder);
+end
+
 %% Ihlenburg (1998) example
 layer = setIhlenburgParameters();
 nFreqs = 100000;
@@ -49,6 +55,7 @@ xlabel('$$k_1 R_{0,1}$$')
 xlim([0, max(k*R_i)])
 ylim([0, 30])
 ylabel('$$|F(k)|$$')  
+savefig([resultsFolder '/Figure5'])
 
 
 function F = objFunc(k,layer,options)

@@ -272,13 +272,13 @@ for j = 1:length(omega)
 %             'colorbar style={ylabel={$H_{ij,300}$}, ytick={-300,-200,...,200}, yticklabels={$10^{-300}$, $10^{-200}$, $10^{-100}$, $10^{0}$, $10^{100}$, $10^{200}$}}'};
 %         
 % %         matlab2tikz([fileName '_1.tex'], 'height', '3.2094in', ...
-% %             'extraAxisOptions', extraAxisOptions, 'relativeDataPath', '../../../matlab/otherFunctions/e3Dss/results/') % , 'imagesAsPng', false
+% %             'extraAxisOptions', extraAxisOptions, 'relativeDataPath', '../../../results/S135') % , 'imagesAsPng', false
 %         figure(2)
 %         spy2(Pinv2*H*Pinv)
 %         cond(full(Pinv2*H*Pinv))
 %         extraAxisOptions{7} = 'colorbar style={ylabel={$\tilde{H}_{ij,300}$}, ytick={-10,-8,...,0}, yticklabels={$10^{-10}$, $10^{-8}$, $10^{-6}$, $10^{-4}$, $10^{-2}$, $10^0$}}';
 % %         matlab2tikz([fileName '_2.tex'], 'height', '3.2094in', ...
-% %             'extraAxisOptions', extraAxisOptions, 'relativeDataPath', '../../../matlab/otherFunctions/e3Dss/results/')
+% %             'extraAxisOptions', extraAxisOptions, 'relativeDataPath', '../../../results/S135')
 %         keyboard
 %     end
 end

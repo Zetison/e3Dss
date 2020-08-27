@@ -5,6 +5,12 @@
 close all
 clear all %#ok
 
+startup
+resultsFolder = [folderName '/Skelton1997tao'];
+if ~exist(resultsFolder, 'dir')
+    mkdir(resultsFolder);
+end
+
 %% Define parameters
 R = 1;
 t_steel = 0.02;
@@ -85,6 +91,7 @@ plot(TS_SSBC(:,1),TS_SSBC(:,2),'DisplayName','Ref SSBC')
 TS_Coating = importdata('../models/Skelton1997tao/Figure10.5.csv');
 plot(TS_Coating(:,1),TS_Coating(:,2),'DisplayName','Ref Coating')
 legend show
+savefig([resultsFolder '/figure1.fig'])
 
 
 figure(2)
@@ -109,6 +116,7 @@ title('Figure 10.6')
 xlabel('Frequency (Hz)')
 ylabel('Target strength')
 legend show
+savefig([resultsFolder '/figure2.fig'])
 
 % this case is not perfectly reproducable due to lacking parameters
 figure(3)
@@ -161,6 +169,7 @@ title('Figure 10.7')
 xlabel('Time (ms)')
 ylabel('Pressure (mPa)')
 legend show
+savefig([resultsFolder '/figure3.fig'])
 
 
 

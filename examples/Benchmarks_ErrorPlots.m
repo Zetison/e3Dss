@@ -1,10 +1,10 @@
 close all
 clear all %#ok
 
-% pathToResults = '../../../results/e3Dss/';
-pathToResults = '../results/';
-if ~exist(pathToResults, 'dir')
-    mkdir(pathToResults);
+startup
+resultsFolder = [folderName '/Benchmarks_NearFieldPlots'];
+if ~exist(resultsFolder, 'dir')
+    mkdir(resultsFolder);
 end
 
 mpstartup
@@ -247,7 +247,7 @@ for useSymbolicPrecision = 1 %[0,1]
         end
         leg1 = legend('show','Location','northwest');
         set(leg1,'Interpreter','latex');
-        filename = [pathToResults 'errors_' model '_' BC '_Symbolic' num2str(useSymbolicPrecision)];
+        filename = [resultsFolder '/errors_' model '_' BC '_Symbolic' num2str(useSymbolicPrecision)];
 
 %         printResultsToFile(filename, {'x',double(sc.'), 'y', double(err.')})
         xlabel('$C f$','interpreter','latex')

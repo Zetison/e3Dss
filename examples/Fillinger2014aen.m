@@ -5,6 +5,12 @@
 close all
 clear all %#ok
 
+startup
+resultsFolder = [folderName '/Fillinger2014aen'];
+if ~exist(resultsFolder, 'dir')
+    mkdir(resultsFolder);
+end
+
 P_inc = 1; % Amplitude of incident wave
 c_f = 1500;
 k = 10.^linspace(-1,2,3000);
@@ -56,3 +62,5 @@ semilogx(k, TS-TS_inf,'green','DisplayName','Asymptotic')
 
 xlabel('$$k\cdot a$$','interpreter','latex')
 ylabel('$$\mathrm{TS}-\mathrm{TS}_{\infty}$$','interpreter','latex')
+
+savefig([resultsFolder '/Figure1'])

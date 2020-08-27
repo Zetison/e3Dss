@@ -1,12 +1,11 @@
 close all
 clear all %#ok
 
-addpath ..
-addpath ../utils
-addpath ../models
-
-pathToResults = '../../../results/e3Dss/';
-% pathToResults = pathToResults '';
+startup
+resultsFolder = [folderName '/BesselFunctionsForLargN'];
+if ~exist(resultsFolder, 'dir')
+    mkdir(resultsFolder);
+end
 
 startMatlabPool
 
@@ -36,20 +35,20 @@ ylabel('Magnitude of Bessel functions')
 switch type
     case 1
         ylim([2e-10,5e3])
-        savefig([pathToResults 'Figure4a'])
+        savefig([resultsFolder '/Figure4a'])
     case 2
         ylim([1e-223,1e223])
-        savefig([pathToResults 'Figure4b'])
+        savefig([resultsFolder '/Figure4b'])
 end
 legend({'$$|\mathrm{j}_n(500)|$$','$$|\mathrm{y}_n(500)|$$'},'interpreter','latex','location','northwest')
 
-% switch type
-%     case 1
-%         ylim([1e-10 1e4])
-%         printResultsToFile(pathToResults 'besseljForLargeN1', N_arr, abs(B1), [], 0, 1)
-%         printResultsToFile(pathToResults 'besselyForLargeN1', N_arr, abs(B2), [], 0, 1)
-%     case 2
-%         ylim([1e-220 1e220])
-%         printResultsToFile(pathToResults 'besseljForLargeN2', N_arr, abs(B1), [], 0, 1)
-%         printResultsToFile(pathToResults 'besselyForLargeN2', N_arr, abs(B2), [], 0, 1)
-% end
+switch type
+    case 1
+        ylim([1e-10 1e4])
+        printResultsToFile([resultsFolder '/besseljForLargeN1'], {'x', N_arr, 'y', abs(B1)})
+        printResultsToFile([resultsFolder '/besselyForLargeN1'], {'x', N_arr, 'y', abs(B2)})
+    case 2
+        ylim([1e-220 1e220])
+        printResultsToFile([resultsFolder '/besseljForLargeN2'], {'x', N_arr, 'y', abs(B1)})
+        printResultsToFile([resultsFolder '/besselyForLargeN2'], {'x', N_arr, 'y', abs(B2)})
+end

@@ -7,8 +7,11 @@
 close all
 clear all %#ok
 
-% pathToResults = '../../../results/e3Dss/';
-pathToResults = '../results/';
+startup
+resultsFolder = [folderName '/Ihlenburg1998fea'];
+if ~exist(resultsFolder, 'dir')
+    mkdir(resultsFolder);
+end
 
 %% Ihlenburg (1998) example
 Ieye = [1, 0;
@@ -86,7 +89,7 @@ for i = 1:3
     ylabel('TS [dB]')  
     legend('off');
     legend('show','location','southeast');
-%     savefig([pathToResults 'Figure9a'])
+    savefig([resultsFolder '/Figure9a'])
 
     figure(4)
     F = layer{1}.p_0;
@@ -101,12 +104,8 @@ for i = 1:3
     ylabel('TS [dB]')  
     legend('off');
     legend('show','location','southeast');
-%     savefig([pathToResults 'Figure9b'])
+    savefig([resultsFolder '/Figure9b'])
     
-    folderName = '../results';
-    if ~exist(folderName, 'dir')
-        mkdir(folderName);
-    end
     
     if 1
         figure(40+i)
@@ -117,7 +116,7 @@ for i = 1:3
         options.omega = omega;
 
         createConvergencePlot('3D',layer,options,35, [])
-        savefig([pathToResults 'Figure' num2str(9+i)])
+        savefig([resultsFolder '/Figure' num2str(9+i)])
     end
 end
 
