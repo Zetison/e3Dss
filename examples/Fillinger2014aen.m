@@ -13,7 +13,9 @@ end
 
 P_inc = 1; % Amplitude of incident wave
 c_f = 1500;
-k = 10.^linspace(-1,2,3000);
+k10start = -1;
+k10end = 2;
+k = 10.^linspace(k10start,k10end,3000);
 R = 1; % Outer radius of shell
 
 alpha_s = 0;
@@ -49,18 +51,19 @@ figure(1)
 semilogx(k, TS-TS_inf,'DisplayName','Analytic')
 ylim([-30,10])
 hold on
-k = 10.^linspace(-1,-0.35,2);
+k = 10.^linspace(k10start,-0.35,2);
 TS = 20*log10(5/6*k.^2*R^3);
-semilogx(k, TS-TS_inf,'green','DisplayName','Asymptotic')
-legend('off');
-legend('show');
+semilogx(k, TS-TS_inf,'green','DisplayName','Asymptotic as $k \to 0$')
 
-k = 10.^linspace(0.2,2,2);
+k = 10.^linspace(0.2,k10end,2);
 TS = 10*log10(R^2/4)*ones(size(k));
-semilogx(k, TS-TS_inf,'green','DisplayName','Asymptotic')
+semilogx(k, TS-TS_inf,'red','DisplayName','Asymptotic as $k \to \infty$')
 
 
 xlabel('$$k\cdot a$$','interpreter','latex')
 ylabel('$$\mathrm{TS}-\mathrm{TS}_{\infty}$$','interpreter','latex')
+
+legend('off');
+legend('show','interpreter','latex');
 
 savefig([resultsFolder '/Figure1'])

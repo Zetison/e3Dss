@@ -1,34 +1,29 @@
 function [layer,N_eps,flag] = e3Dss(newLayers, newOptions)
 
 % The function e3Dss (exact 3D scattering solutions) computes the solution
-% to scattering problems on multilayered spherical shells impinged by a 
-% plane wave, a wave due to a point source or a radially pulsating wave.
+% to scattering problems on multilayered (elastic of fluid) spherical
+% shells.
 %
-% The function handles the case in which both X and omega are vectors.
+% The function handles the case in which both X and omega are vectors. 
+%
+% See README.md for details.
 % 
-% The following improvement will be implemented in the future:
-%   - Implement a scaling in the linear system of equations such that
-%   evaluations of the spherical bessel functions j_n(x) and y_n(x) are
-%   replaced by j_n(x)*y_{n-1}(x) and y_n(x)*j_{n+1}(x), respectively. This will in
-%   turn solve the problem of evaluations extending the range of the given
-%   precision (10^290 is implemented for double), and thus enable
-%   evaluations at even higher frequencies.
-%
 % Author: Jon Vegard Venås
 % E-mail: JonVegard.Venas@sintef.no
 % Institute: SINTEF Digital
 % Release: 2
 % Release date: 21/03/2020
 
-options = struct('d_vec',   [0;0;1],  ... 	% Direction of the incident wave
-                'omega',   2*pi*1e3, ...    % Angular frequency
-                'P_inc',   1,    ...     	% Amplitude of incident wave
-                'Eps',     eps,  ...        % Small parameter for series truncation
-                'N_max',   inf,  ...        % Upper limit for the number of terms in the series
-                'prec',    'double', ...    % Precision of the calculations
-                'Display', 'final', ...     % Print status during computations
-                'BC',      'SHBC', ...      % Boundary condition on the inermost layer 'SSBC' (Sound soft boundary condition), 'NNBC' (Neumann-Neumann boundary condition) 
-                'applyLoad', 'planeWave');  % Incident wave type: I.e. planeWave, pointCharge, mechExcitation, surfExcitation, radialPulsation
+options = struct('d_vec',    [0;0;1],  ... 	  % Direction of the incident wave
+                'omega',     2*pi*1e3, ...    % Angular frequency
+                'P_inc',     1,    ...     	  % Amplitude of incident wave
+                'N_max',     inf,  ...        % Upper limit for the number of terms in the series
+                'prec',      'double', ...    % Precision of the calculations
+                'Display',   'final', ...     % Print options ('final', 'iter' or 'none')
+                'BC',        'SHBC', ...      % Boundary condition at the innermost layer: 'IBC', 'SHBC', 'SSBC' or 'NNBC'
+                'applyLoad', 'planeWave', ... % Incident wave type: I.e. 'planeWave', 'pointCharge', 'mechExcitation', 'surfExcitation', 'radialPulsation'
+                'Eps',       eps,  ...        % Small parameter for series truncation
+                'prec',      'double');       % Precision of the calculations
 if nargin > 1
     options = updateOptions(options,newOptions);
 end
@@ -55,6 +50,7 @@ if strcmp(layer{1}.media,'solid') % the outermost unbounded domain is solid
     error('This case is not implemented')
 end
 M = numel(layer);
+noEvaluationPts = true;
 for m = 1:M
     calc_errPresCond = layer{m}.calc_errPresCond;
     calc_errDispCond = layer{m}.calc_errDispCond;
@@ -107,11 +103,15 @@ for m = 1:M
         %% Coordinate transformation
         % Due to symmetry, we can do a coordinate transformation such that we only
         % need to compute the solution for the special case k_vec = k*[0, 0, 1].
+        noEvaluationPts = false;
         [r, theta, phi, A] = coordTransform(layer{m}.X, options.d_vec);
         layer{m}.r = r.';
         layer{m}.theta = theta.';
         layer{m}.phi = phi.';
     end
+end
+if noEvaluationPts
+    error('No evaluation point (layer{m}.X) was provided')
 end
 options.SHBC = strcmp(options.BC,'SHBC');
 options.SSBC = strcmp(options.BC,'SSBC');
@@ -142,7 +142,7 @@ switch options.applyLoad
             end
         end
         if strcmp(options.applyLoad, 'surfExcitation') && ~isfield(options,'theta_s')
-            options.theta_s = [0,pi];
+            options.theta_s = [0,pi/2];
         end
         if strcmp(options.applyLoad, 'custom') && ~isfield(options,'theta_s')
             options.theta_s = 1;

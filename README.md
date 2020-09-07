@@ -1,15 +1,15 @@
 # Exact 3D scattering solutions
-Exact 3D scattering solutions for spherical symmetric scatterers computes the solution to scattering problems on multilayered spherical (elastic) shells impinged by a plane wave or a wave due to a point source. The code is written in MATLAB and may for that reason be improved compuationally.
+Exact 3D scattering solutions for spherical symmetric scatterers computes the solution to scattering problems on multilayered spherical (elastic or fluid) shells impinged by a plane wave or a wave due to a point source. The code is written in MATLAB and may for that reason be improved compuationally.
 
 ## Boundary conditions
 The following boundary conditions can be used for the innermost layer:
 - 'IBC' (Impedance Boundary Condition) simulates a impedance boundary condition (Robin boundary condition)
 - 'SHBC' (Sound Hard Boundary Condition) simulates a rigid boundary
-- 'SSBC' (Sound Soft Boundary Condition) simulates the innermost layer having p=0
+- 'SSBC' (Sound Soft Boundary Condition) simulates the innermost layer having zero pressure
 - 'NNBC' (Neumann-Neumann boundary condition) simulates full acoustic structure interaction
 
 ## Loads (Incident wave type)
-The following loads can be used for the outermost layer
+The following loads can be used
 - 'planeWave' simulates a plane incident wave
 - 'pointCharge' simulates an incident wave from a point charge (the location of the point source is given by options.d_vec*options.r_s)
 - 'mechExcitation' simulates a point force mechanical excitation at options.d_vec*options.r_s with amplitude P_inc (options.r_s must be at layer{m}.R_i for a given layer m)
@@ -20,18 +20,19 @@ The following loads can be used for the outermost layer
 Global parameters and options
 ```Matlab
 options.d_vec         = [0;0;1];      % Direction of the incident wave
-options.omega         = 2*pi*1e3;     % Angular frequency (can be a vector)
-options.Eps           = eps;          % Parameter for series truncation. The summation are terminated whenever the relative contribution of the given term is less then Eps. 
-                                      % If vector input is given for either X or omega, the maximal relative contribution of the given term is compared with Eps
+options.omega         = 2*pi*1e3;     % Angular frequency (can be an array of angular frequencies)
 options.N_max         = inf;          % Upper limit for the number of terms in the series
-options.prec          = 'double';     % Precision of the calculations (default: 'double'). 
-                                      % Both 'sym' and 'mp' are supported, with arbitrary precision altered by Digits and mp.Digits respectively
 options.applyLoad     = 'planeWave';  % Incident wave type
 options.r_s           = 2;            % Radius to source location for point charge incident waves
 options.z             = 1;            % Impedance for an impedance boundary condition
 options.P_inc         = 1;            % Amplitude of incident wave at the origin. P_inc can be given as a function handle P_inc(omega) where omega is the angular frequency
 options.BC            = 'SHBC';       % Boundary condition on the inermost layer 'SSBC' (Sound soft boundary condition), 'NNBC' (Neumann-Neumann boundary condition) 
 options.Display       = 'final';      % Print options ('final', 'iter' or 'none')
+options.Eps           = eps;          % Parameter for series truncation. The summation are terminated whenever the relative contribution of the given term is less then Eps. 
+                                      % If vector input is given for either X or omega, the maximal relative contribution of the given term is compared with Eps
+options.prec          = 'double';     % Precision of the calculations (default: 'double'). 
+                                      % Both 'sym' (requires Symbolic Math Toolbox in MATLAB) and 'mp' (requires Advanpix toolbox: https://www.advanpix.com/) are supported, 
+                                      % with arbitrary precision altered by Digits and mp.Digits respectively
 
 % General parameters in layer m
 layer{m}.media            = 'fluid'; % Media; % fluid or solid/viscoelastic (Helmholtz equation or Navier equation)
