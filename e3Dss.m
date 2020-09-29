@@ -18,7 +18,6 @@ options = struct('d_vec',    [0;0;1],  ... 	  % Direction of the incident wave
                 'omega',     2*pi*1e3, ...    % Angular frequency
                 'P_inc',     1,    ...     	  % Amplitude of incident wave
                 'N_max',     inf,  ...        % Upper limit for the number of terms in the series
-                'prec',      'double', ...    % Precision of the calculations
                 'Display',   'final', ...     % Print options ('final', 'iter' or 'none')
                 'BC',        'SHBC', ...      % Boundary condition at the innermost layer: 'IBC', 'SHBC', 'SSBC' or 'NNBC'
                 'applyLoad', 'planeWave', ... % Incident wave type: I.e. 'planeWave', 'pointCharge', 'mechExcitation', 'surfExcitation', 'radialPulsation'

@@ -1,6 +1,6 @@
 function dp = gAnalyticPulsation_(v,C_n,y,k)
-error('Depricated use functions in getAnalyticSolutions.m')
 
+error('Depricated')
 Phi_k = @(r) exp(1i*k(1)*r)./(4*pi*r);
 dp = zeros(size(v,1),1);
 for i = 1:size(y,1)

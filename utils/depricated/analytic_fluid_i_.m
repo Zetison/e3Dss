@@ -1,5 +1,5 @@
 function p = analytic_fluid_i_(v,options)
-error('Depricated, use e3Dss directly instead')
+error('Depricated')
 d_vec = options.d_vec;
 if size(d_vec,2) > 1
     nPts = size(v,1);

@@ -1,5 +1,6 @@
 function dp = dAnalyticPulsation_(v,C_n,y,k,n)
 
+error('Depricated')
 Phi_k = @(r) exp(1i*k(1)*r)./(4*pi*r);
 dPhi_kdnx = @(xmy,r,ny) Phi_k(r)./r.^2.*(1i*k(1)*r - 1).*sum(xmy.*ny,2);
 dp = zeros(size(v,1),1);
