@@ -40,6 +40,7 @@ ylim([-2, 2])
 ylabel('Real part of pressure')  
 legend('show');
 savefig([resultsFolder '/Figure8'])
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 layer = setHetmaniukParameters();
