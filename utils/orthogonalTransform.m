@@ -25,4 +25,8 @@ e_y_m = cross(n_vec,e_x_m);
 A = [e_x_m, e_y_m, n_vec];
 
 %% Do transformations
-X_m = (A\X.').';
+if isempty(X)
+    X_m = [];
+else
+    X_m = (A\X.').';
+end

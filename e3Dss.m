@@ -767,20 +767,16 @@ for m = 1:M
     else
         n_X = 0;
     end
-    if n_X > 0
-        layer{m}.P = zeros(2,n_X,prec); 
-        layer{m}.dP = zeros(2,n_X,prec); 
-        layer{m}.d2P = zeros(2,n_X,prec);
-    end
+    layer{m}.P = zeros(2,n_X,prec); 
+    layer{m}.dP = zeros(2,n_X,prec); 
+    layer{m}.d2P = zeros(2,n_X,prec);
     switch layer{m}.media
         case 'fluid'
             layer{m}.k = omega*(1./layer{m}.c_f);
 
             for i = 1:2
                 for j = 1:2
-                    if n_X > 0
-                        layer{m}.Z_zeta{i,j} = zeros(nFreqs-computeForStaticCase,n_X,prec);
-                    end
+                    layer{m}.Z_zeta{i,j} = zeros(nFreqs-computeForStaticCase,n_X,prec);
                     if ~isSphere
                         layer{m}.Z_zeta_i{i,j} = zeros(nFreqs,1,prec);
                     end
@@ -792,11 +788,9 @@ for m = 1:M
                     end
                 end
             end
-            if n_X > 0
-                for fieldName = fluidFieldNames
-                    if layer{m}.(['calc_' fieldName{1}])
-                        layer{m}.(fieldName{1}) = zeros(nFreqs,n_X,prec);
-                    end
+            for fieldName = fluidFieldNames
+                if layer{m}.(['calc_' fieldName{1}])
+                    layer{m}.(fieldName{1}) = zeros(nFreqs,n_X,prec);
                 end
             end
         case {'solid','viscoelastic'}
@@ -817,10 +811,8 @@ for m = 1:M
 
             for i = 1:2
                 for j = 1:2
-                    if n_X > 0
-                        layer{m}.Z_xi{i,j} = zeros(nFreqs-computeForStaticCase,n_X,prec);
-                        layer{m}.Z_eta{i,j} = zeros(nFreqs-computeForStaticCase,n_X,prec);
-                    end
+                    layer{m}.Z_xi{i,j} = zeros(nFreqs-computeForStaticCase,n_X,prec);
+                    layer{m}.Z_eta{i,j} = zeros(nFreqs-computeForStaticCase,n_X,prec);
                     if ~isSphere
                         layer{m}.Z_xi_i{i,j} = zeros(nFreqs,1,prec);
                         layer{m}.Z_eta_i{i,j} = zeros(nFreqs,1,prec);
@@ -831,11 +823,9 @@ for m = 1:M
                     end
                 end
             end
-            if n_X > 0
-                for fieldName = solidFieldNames
-                    if layer{m}.(['calc_' fieldName{1}])
-                        layer{m}.(fieldName{1}) = zeros(nFreqs,n_X,prec);
-                    end
+            for fieldName = solidFieldNames
+                if layer{m}.(['calc_' fieldName{1}])
+                    layer{m}.(fieldName{1}) = zeros(nFreqs,n_X,prec);
                 end
             end
     end
@@ -856,27 +846,25 @@ if computeForStaticCase
         else
             n_X = 0;
         end
-        if n_X > 0
-            switch layer{m}.media
-                case 'fluid'
-                    if m > 1
-                        layer{m}.p(staticIdx,:) = P_inc*ones(1,n_X,prec);
-                    end
-                case {'solid','viscoelastic'}
-                    A = -P_inc/(3*layer{m}.K);
-                    if layer{m}.calc_u_r
-                        layer{m}.u_r(staticIdx,:) = A*repmat(layer{m}.r,nFreqs,1);
-                    end
-                    if layer{m}.calc_sigma_rr
-                        layer{m}.sigma_rr(staticIdx,:) = A*ones(1,n_X,prec);
-                    end
-                    if layer{m}.calc_sigma_tt
-                        layer{m}.sigma_tt(staticIdx,:) = A*ones(1,n_X,prec);
-                    end
-                    if layer{m}.calc_sigma_pp
-                        layer{m}.sigma_pp(staticIdx,:) = A*ones(1,n_X,prec);
-                    end
-            end
+        switch layer{m}.media
+            case 'fluid'
+                if m > 1
+                    layer{m}.p(staticIdx,:) = P_inc*ones(1,n_X,prec);
+                end
+            case {'solid','viscoelastic'}
+                A = -P_inc/(3*layer{m}.K);
+                if layer{m}.calc_u_r
+                    layer{m}.u_r(staticIdx,:) = A*repmat(layer{m}.r,nFreqs,1);
+                end
+                if layer{m}.calc_sigma_rr
+                    layer{m}.sigma_rr(staticIdx,:) = A*ones(1,n_X,prec);
+                end
+                if layer{m}.calc_sigma_tt
+                    layer{m}.sigma_tt(staticIdx,:) = A*ones(1,n_X,prec);
+                end
+                if layer{m}.calc_sigma_pp
+                    layer{m}.sigma_pp(staticIdx,:) = A*ones(1,n_X,prec);
+                end
         end
     end
     indices(staticIdx) = [];
@@ -947,7 +935,7 @@ while n <= N_max && ~(singleModeSolution && n > 0)
         for m = 1:M
             isSphere = layer{m}.R_i == 0;
             hasCnvrgdTmp2 = ones(size(indices)); % temporary hasCnvrgd vector    
-            if isfield(layer{m},'r')
+            if isfield(layer{m},'r') && ~isempty(layer{m}.r)
                 [layer{m}.P, layer{m}.dP, layer{m}.d2P] = legendreDerivs(n, cos(layer{m}.theta), layer{m}.P, layer{m}.dP, layer{m}.d2P);
                 switch layer{m}.media
                     case 'fluid'

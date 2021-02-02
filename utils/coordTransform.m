@@ -5,10 +5,15 @@ function [r_m, theta_m, phi_m, A] = coordTransform(X, d_vec)
 % coordinate system.
 
 [X_m, A] = orthogonalTransform(X, d_vec);
-
-x_m = X_m(:,1);
-y_m = X_m(:,2);
-z_m = X_m(:,3);
+if isempty(X_m)
+    x_m = [];
+    y_m = [];
+    z_m = [];
+else
+    x_m = X_m(:,1);
+    y_m = X_m(:,2);
+    z_m = X_m(:,3);
+end
 
 %% Transform Cartesian coordinates to spherical coordinates
 r_m = sqrt(x_m.^2 + y_m.^2 + z_m.^2);
