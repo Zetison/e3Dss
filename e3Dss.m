@@ -26,6 +26,20 @@ options = struct('d_vec',    [0;0;1],  ... 	  % Direction of the incident wave
 if nargin > 1
     options = updateOptions(options,newOptions);
 end
+fieldsToRemove = {'r','theta','phi','P','dP','d2P','Z_zeta','Z_zeta_i','Z_zeta_o','Z_xi_i','Z_eta_i','Z_xi_o','Z_eta_o','a_temp','a','b','b_temp','k','k_temp','Z_r_s','K','G', ...
+                  'calc_sigma_rr','calc_sigma_tt','calc_sigma_pp','calc_sigma_rt','calcStresses','calcCartesianDispDerivatives','calc_errors', ...
+                  'calc_u_r','calc_u_t','calc_du_rdr','calc_du_rdt','calc_du_tdr','calc_du_tdt','calc_navier1','calc_navier2', ...
+                  'calc_dpdr','calc_dpdt','calc_d2pdr2','calc_d2pdt2','calc_dp_incdr','calc_dp_incdt','calc_farFieldOnly'};
+M = numel(newLayers);
+fieldExist = cell(1,M);
+for m = 1:M
+    fieldExist{m} = false(size(fieldsToRemove));
+    for i = 1:numel(fieldsToRemove)
+        if isfield(newLayers{m},fieldsToRemove{i})
+            fieldExist{m}(i) = true;
+        end
+    end
+end
 layer = getDefaultParameters(newLayers);
 
 layer = updateOptions(layer,newLayers);
@@ -62,9 +76,11 @@ for m = 1:M
 
             layer{m}.calc_p = layer{m}.calc_p || calc_errPresCond;
             layer{m}.calc_dpdr = any(calc_dp) || calc_p_laplace;
+            layer{m}.calc_dp_incdr = any(layer{m}.calc_dp_inc);
             layer{m}.calc_dp = calc_dp;
             layer{m}.calc_p_laplace = calc_p_laplace || calc_errHelm;
             layer{m}.calc_dpdt = layer{m}.calc_dpdr;
+            layer{m}.calc_dp_incdt = layer{m}.calc_dp_incdr;
             layer{m}.calc_d2pdr2 = calc_p_laplace || calc_errHelm;
             layer{m}.calc_d2pdt2 = calc_p_laplace || calc_errHelm;
             layer{m}.calc_errors = calc_errDispCond || calc_errPresCond || calc_errHelm;
@@ -207,6 +223,7 @@ for m = 1:M
                     if layer{m}.calc_dp(3)
                         layer{m}.dpdz = dpdX{3};
                     end
+                    
                     dpdt = layer{m}.dpdt; % use scaled version of dpdt for the laplace operator
                     if layer{m}.calc_p_laplace
                         d2pdr2 = layer{m}.d2pdr2;
@@ -217,6 +234,78 @@ for m = 1:M
                         layer{m}.p_laplace = d2pdr2 + temp;
                         layer{m}.p_laplace = layer{m}.p_laplace.';
                     end
+                end
+                P_incIsVec = isa(options.P_inc,'function_handle') ;
+                if P_incIsVec
+                    P_inc = options.P_inc(omega);
+                else
+                    P_inc = options.P_inc;
+                end
+                switch options.applyLoad
+                    case 'planeWave'
+                        if any(layer{m}.calc_dp_inc)
+                            dp_incdr = layer{m}.dp_incdr;
+                            dp_incdt = sin(Theta).*layer{m}.dp_incdt; % rescale dp_incdt
+                            dpdX_m = cell(3,1);
+
+                            dpdX_m{1} = dp_incdr.*sin(Theta).*cos(Phi) + dp_incdt.*cos(Theta).*cos(Phi)./R;
+                            dpdX_m{1}(indices) = 0;
+
+                            dpdX_m{2} = dp_incdr.*sin(Theta).*sin(Phi) + dp_incdt.*cos(Theta).*sin(Phi)./R;
+                            dpdX_m{2}(indices) = 0;
+
+                            dpdX_m{3} = dp_incdr.*cos(Theta) - dp_incdt.*sin(Theta)./R;
+                            dpdX_m{3}(indices) = dp_incdr(indices);
+                            dp_incdX = cell(3,1);
+                            dp_incdX{1} = zeros(n_X,nFreqs);
+                            dp_incdX{2} = zeros(n_X,nFreqs);
+                            dp_incdX{3} = zeros(n_X,nFreqs);
+                            for ii = 1:3
+                                for jj = 1:3
+                                    dp_incdX{ii} = dp_incdX{ii} + A(ii,jj)*dpdX_m{jj}.';
+                                end
+                            end
+                            if layer{m}.calc_dp_inc(1)
+                                layer{m}.dp_incdx = dp_incdX{1};
+                            end
+                            if layer{m}.calc_dp_inc(2)
+                                layer{m}.dp_incdy = dp_incdX{2};
+                            end
+                            if layer{m}.calc_dp_inc(3)
+                                layer{m}.dp_incdz = dp_incdX{3};
+                            end
+                        end
+                        if layer{m}.calc_p_inc
+                            layer{m}.p_inc = layer{m}.p_inc.';
+                        end
+                    case 'pointCharge'
+                        if ~isinf(options.N_max)
+                            error('not implemented')
+                        end
+                        k = omega/layer{1}.c_f;
+                        x_s = r_s*options.d_vec.';
+                        Xxms = layer{m}.X-x_s;
+                        nXxms = norm2(Xxms);
+                        p_inc = P_inc*r_s.*exp(1i*k.*nXxms)./nXxms;
+                        if layer{m}.calc_p_inc
+                            layer{m}.p_inc = p_inc;
+                        end
+                        if layer{m}.calc_dp_inc(1)
+                            layer{m}.dp_incdx = p_inc.*(1i*k - 1./nXxms).*Xxms(:,1)./nXxms;
+                        end
+                        if layer{m}.calc_dp_inc(2)
+                            layer{m}.dp_incdy = p_inc.*(1i*k - 1./nXxms).*Xxms(:,2)./nXxms;
+                        end
+                        if layer{m}.calc_dp_inc(3)
+                            layer{m}.dp_incdz = p_inc.*(1i*k - 1./nXxms).*Xxms(:,3)./nXxms;
+                        end
+                    case 'radialPulsation' 
+                        if layer{m}.calc_p_inc
+                            k = omega/layer{1}.c_f;
+                            layer{m}.p_inc = P_inc*exp(1i*k.*(R-layer{1}.R_i))./R;
+                        end
+                    otherwise
+                        error('Not valid')
                 end
                 if layer{m}.calc_p
                     layer{m}.p = layer{m}.p.';
@@ -694,14 +783,10 @@ for m = 1:M
         end
     end
 end
-fieldsToRemove = {'r','theta','phi','P','dP','d2P','Z_zeta','Z_zeta_i','Z_zeta_o','Z_xi_i','Z_eta_i','Z_xi_o','Z_eta_o','a_temp','a','b','b_temp','k','k_temp','Z_r_s','K','G', ...
-                  'calc_sigma_rr','calc_sigma_tt','calc_sigma_pp','calc_sigma_rt','calcStresses','calcCartesianDispDerivatives','calc_errors', ...
-                  'calc_u_r','calc_u_t','calc_du_rdr','calc_du_rdt','calc_du_tdr','calc_du_tdt','calc_navier1','calc_navier2', ...
-                  'calc_dpdr','calc_dpdt','calc_d2pdr2','calc_d2pdt2','calc_farFieldOnly'};
 for m = 1:M
-    for field = fieldsToRemove
-        if isfield(layer{m},field{1})
-            layer{m} = rmfield(layer{m},field{1});
+    for i = 1:numel(fieldsToRemove)
+        if isfield(layer{m},fieldsToRemove{i}) && ~fieldExist{m}(i)
+            layer{m} = rmfield(layer{m},fieldsToRemove{i});
         end
     end
 end
@@ -721,6 +806,8 @@ for m = 1:numel(layer)
             layer{m}.calc_dp      	= false(1,3); % Toggle calculation of the three components of the gradient of the pressure
             layer{m}.calc_p_laplace	= false;      % Toggle calculation of the Laplace operator of the scattered pressure fields
             layer{m}.calc_errHelm	= false;      % Toggle calculation of the errors for the Helmholtz equation
+            layer{m}.calc_p_inc     = false;      % Toggle calculation of the incident pressure
+            layer{m}.calc_dp_inc    = false(1,3); % Toggle calculation of the three components of the gradient of the incident pressure
         case {'solid','viscoelastic'}
             layer{m}.E            = 200e9;      % Youngs modulus for solid layers
             layer{m}.nu           = 0.3;        % Poisson ratio for solid layers
@@ -742,15 +829,16 @@ function [layer,N_eps,flag] = e3Dss_0(layer, options)
 %
 %
 % Note that dpdt, u_t, du_tdr, and du_rdt are scaled by csc(theta)
+fluidFieldNames = {'p_0','p','dpdr','dpdt','d2pdr2','d2pdt2','p_inc','dp_incdr','dp_incdt'};
+solidFieldNames = {'u_r','u_t','du_rdr','du_rdt','du_tdr','du_tdt','sigma_rr','sigma_tt','sigma_pp','sigma_rt','navier1','navier2'};
+
+M = numel(layer);
 displayIter = strcmp(options.Display, 'iter');
 prec = options.prec;
 omega = options.omega;
 nFreqs = length(omega);
-M = numel(layer);
 Eps = options.Eps;
 N_max = options.N_max;
-fluidFieldNames = {'p_0','p','dpdr','dpdt','d2pdr2','d2pdt2'};
-solidFieldNames = {'u_r','u_t','du_rdr','du_rdt','du_tdr','du_tdt','sigma_rr','sigma_tt','sigma_pp','sigma_rt','navier1','navier2'};
 if any(omega == 0)
     computeForStaticCase = true;
 else
@@ -944,7 +1032,7 @@ while n <= N_max && ~(singleModeSolution && n > 0)
                             layer{m}.Z_zeta = iterateZ(n,zeta,layer{m}.Z_zeta,Zindices,~isSphere);
                         end
                         media = p_(m,n,zeta,layer{m}.theta,C{m},layer{m}.k_temp,layer{m}.P(2,:), layer{m}.dP(2,:), layer{m}.d2P(2,:), ...
-                                    layer{m}.Z_zeta, layer{m},isSphere);
+                                    layer{m}.Z_zeta, layer{m},isSphere,options.applyLoad);
                         fieldNames = fluidFieldNames;
                     case {'solid','viscoelastic'}
                         xi = layer{m}.a_temp*layer{m}.r;
@@ -1062,14 +1150,15 @@ function [layer,hasCnvrgd] = updateSum(layer,m,media,fieldName,indices,hasCnvrgd
 layer{m}.(fieldName)(indices,:) = layer{m}.(fieldName)(indices,:) + media.(fieldName);
 hasCnvrgd = hasCnvrgd.*prod(abs(media.(fieldName))./(abs(layer{m}.(fieldName)(indices,:))+tiny) < Eps, 2);
 
-function fluid = p_(m,n,zeta,theta,C,k,P,dP,d2P,Z,layer,isSphere)
+function fluid = p_(m,n,zeta,theta,C,k,P,dP,d2P,Z,layer,isSphere,applyLoad)
 % Note that in the case of isSphere and zeta = 0: 
-% --- dpdz =: dpdr and dpdx = dpdy = dpdt = 0
+% --- dpdz =: dpdr and dpdx = dpdy = dpdt = 0, with same convention for p_inc
 % --- nabla p =: d2pdr2, d2pdt2 := 0
 % Also note that dpdt is scaled by csc(theta)
 
 Q0 = P;
-if layer.calc_p || layer.calc_dpdr || layer.calc_dpdt || layer.calc_d2pdr2 || layer.calc_d2pdr2
+if layer.calc_p || layer.calc_dpdr || layer.calc_dpdt || layer.calc_d2pdr2 || layer.calc_d2pdr2 ...
+        || layer.calc_p_inc || layer.calc_dp_incdr || layer.calc_dp_incdt
     j_n = Z{1,1};
     if layer.calc_dpdr
         dj_n = dbessel_s(n,zeta,1,Z);
@@ -1105,6 +1194,30 @@ if layer.calc_dpdt
 end
 if layer.calc_d2pdt2
     Q2 = Q_(2,theta,P,dP,d2P);
+end
+if layer.calc_p_inc
+    switch applyLoad
+        case 'planeWave'
+            fluid.p_inc = (2*n+1)*1i^n*Q0.*j_n;
+        otherwise
+            fluid.p_inc = zeros(size(j_n));
+    end
+end
+if layer.calc_dp_incdr
+    switch applyLoad
+        case 'planeWave'
+            fluid.dp_incdr = (2*n+1)*1i^n*Q0.*dj_n;
+        otherwise
+            fluid.dp_incdr = zeros(size(j_n));
+    end
+end
+if layer.calc_dp_incdt
+    switch applyLoad
+        case 'planeWave'
+            fluid.dp_incdt = (2*n+1)*1i^n*Q1.*j_n;
+        otherwise
+            fluid.dp_incdt = zeros(size(j_n));
+    end
 end
 
 if m == 1

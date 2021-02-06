@@ -11,7 +11,7 @@ end
 
 startMatlabPool
 
-intermediatePointCharge = true; % Places the point charge in between the S1 layer and S5 layer
+intermediatePointCharge = 1; % Places the point charge in between the S1 layer and S5 layer
 model = 'S15';
 % model = 'S5';
 SHBC = 0;
@@ -22,8 +22,8 @@ T = 120/f_c;
 N = 2^10;
 % N = 2^2;
 % applyLoad = 'planeWave';
-% applyLoad = 'pointCharge';
-applyLoad = 'surfExcitation';
+applyLoad = 'pointCharge';
+% applyLoad = 'surfExcitation';
 % applyLoad = 'mechExcitation';
 % applyLoad = 'radialPulsation';
 switch applyLoad
@@ -47,23 +47,27 @@ R_i = layer{1}.R_i;
 defineBCstring
 R_a = 1.5*R_i;
 P_inc = 1;
-r_s = 2*R_i; 
 theta_s = NaN(1,2);
-d_vec = -[-sqrt(r_s^2-R_a^2), R_a, 0].';  
-d_vec = d_vec/norm(d_vec);
+r_s = 2*R_i; 
 if strcmp(applyLoad,'pointCharge')
     if intermediatePointCharge
+        d_vec = -[-sqrt(r_s^2-R_a^2), R_a, 0].';  
         r_s = layer{2}.R_i*1/3 + layer{3}.R_i*2/3;
+    else
+        d_vec = [-sqrt(r_s^2-R_a^2), R_a, 0].'; 
     end
     P_inc = P_inc*r_s;
 elseif strcmp(applyLoad,'surfExcitation')
+    d_vec = -[-sqrt(r_s^2-R_a^2), R_a, 0].';  
     r_s = layer{1}.R_i;
     theta_s = [40,60]*pi/180;
 elseif strcmp(applyLoad,'mechExcitation')
+    d_vec = -[-sqrt(r_s^2-R_a^2), R_a, 0].';  
     r_s = layer{1}.R_i;
 else
     d_vec = [1, 0, 0].';  
 end
+d_vec = d_vec/norm(d_vec);
 
 options = struct('d_vec', d_vec, ...
                  'P_inc', P_inc, ...
@@ -82,7 +86,7 @@ options = struct('d_vec', d_vec, ...
                  'T', T,...
                  'computeForSolidDomain', strcmp(model,'S5'));
 
-extraPts = 2; %40
+extraPts = 8; %40
 folderName = [resultsFolder '/paraviewResults/' model '_' BC '_' applyLoad '/'];
 if ~exist(folderName, 'dir')
     mkdir(folderName);

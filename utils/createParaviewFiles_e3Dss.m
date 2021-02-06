@@ -3,12 +3,11 @@ function createParaviewFiles_e3Dss(extraPts, vtfFileName, layer, options)
 ESBC = options.ESBC;
 SSBC = options.SSBC;
 R_a = options.R_a;
-d_vec = options.d_vec;
 
 M = length(layer);
 plotTimeOscillation = options.plotTimeOscillation;
 plotInTimeDomain = options.plotInTimeDomain;
-plotDisplacementVectors = 0;
+plotDisplacementVectors = 1;
 compDisplacementDers = 0;
 if ~plotInTimeDomain
     omega = options.omega;
@@ -32,6 +31,8 @@ for m = 1:M
         case 'fluid'
             layer{m}.calc_p = true;
             layer{m}.calc_dp = plotDisplacementVectors*[1,1,1];
+            layer{m}.calc_p_inc = true;
+            layer{m}.calc_dp_inc = plotDisplacementVectors*[1,1,1];
             if m == 1
                 [visElements{m}, nodes{m}] = meshRectangleWcircHole([-s*R_a, -R_a],[s*R_a, R_a],R_i,h);
                 nodes{m} = [nodes{m}, zeros(size(nodes{m},1),1)];
@@ -163,58 +164,15 @@ for m = 1:length(nodes)
             if ESBC && m == M
                 VTKoptions.celltype = 'VTK_TRIANGLE';
             end
-                    
             if VTKoptions.plotDisplacementVectors || VTKoptions.plotSphericalRadialDisplacement
-                displacement = zeros(size(nodes{m},1),3,length(omega));
-                for i = 2:length(omega)
-                    displacement(:,:,i) = [layer{m}.u_x(:,i-1) layer{m}.u_y(:,i-1) layer{m}.u_z(:,i-1)];
-                end
-                if ~plotInTimeDomain
-                    VTKdata.displacement = [layer{m}.u_x layer{m}.u_y layer{m}.u_z];
-                    
-                    temp = VTKdata.displacement;
-                    VTKdata.displacement = zeros([size(VTKdata.displacement), N]);
-                    for i = 1:N
-                        t = (i-1)/N*2*pi/omega;
-                        VTKdata.displacement(:,:,i) = real(temp*exp(-1i*omega*t));
-                    end
-                end
+                VTKdata.displacement = transferFields(layer{m},{'u_x','u_y','u_z'});
             end
             if any(toggleJacobianMatrix)
-                VTKdata.jacobian = zeros(size(nodes{m},1),6,length(omega));
-                
-                if ~plotInTimeDomain
-                    VTKdata.jacobian = [layer{m}.du_xdx layer{m}.du_xdy layer{m}.du_xdz layer{m}.du_ydx layer{m}.du_ydy layer{m}.du_ydz layer{m}.du_zdx layer{m}.du_zdy layer{m}.du_zdz];
-                    
-                    temp = VTKdata.jacobian;
-                    VTKdata.jacobian = zeros([size(VTKdata.jacobian), N]);
-                    for i = 1:N
-                        t = (i-1)/N*2*pi/omega;
-                        VTKdata.jacobian(:,:,i) = real(temp*exp(-1i*omega*t));
-                    end
-                end
+                VTKdata.jacobian = transferFields(layer{m},{'du_xdx','du_xdy','du_xdz','du_ydx','du_ydy','du_ydz','du_zdx','du_zdy','du_zdz'});
             end
             if VTKoptions.plotVonMisesStress || VTKoptions.plotSphericalStress_rr 
+                VTKdata.stress = transferFields(layer{m},{'sigma_xx','sigma_yy','sigma_zz','sigma_yz','sigma_xz','sigma_xy'});
                 VTKdata.stress = zeros(size(nodes{m},1),6,length(omega));
-                
-                if plotInTimeDomain
-                    for i = 2:length(omega)
-                        VTKdata.stress(:,:,i) = [layer{m}.sigma_xx(:,i-1) layer{m}.sigma_yy(:,i-1) layer{m}.sigma_zz(:,i-1) layer{m}.sigma_yz(:,i-1) layer{m}.sigma_xz(:,i-1) layer{m}.sigma_xy(:,i-1)];
-                    end
-                    VTKdata.stress = 2/T*real(fft(VTKdata.stress,N_fine,3));
-                    temp = VTKdata.stress;
-                    VTKdata.stress(:,:,1:N_fine-startIdx+1) = temp(:,:,startIdx:end);
-                    VTKdata.stress(:,:,N_fine-startIdx+2:end) = temp(:,:,1:startIdx-1);
-                else
-                    VTKdata.stress = [layer{m}.sigma_xx layer{m}.sigma_yy layer{m}.sigma_zz layer{m}.sigma_yz layer{m}.sigma_xz layer{m}.sigma_xy];
-                    
-                    temp = VTKdata.stress;
-                    VTKdata.stress = zeros([size(VTKdata.stress), N]);
-                    for i = 1:N
-                        t = (i-1)/N*2*pi/omega;
-                        VTKdata.stress(:,:,i) = real(temp*exp(-1i*omega*t));
-                    end
-                end
             end
         elseif strcmp(layer{m}.media,'fluid')
             VTKoptions = struct('name',[pathstr '/fluid' num2str(m) filename], 'celltype', 'VTK_TRIANGLE', 'plotTimeOscillation', plotTimeOscillation, ...
@@ -223,116 +181,29 @@ for m = 1:length(nodes)
                 VTKoptions.plotTotFieldAbs = 1;
             end
             if VTKoptions.plotDisplacementVectors 
-                displacement = zeros(size(nodes{m},1),3,length(omega));
+                rho = layer{m}.rho;
+                VTKdata.displacement = transferFields(layer{m},{'dpdx','dpdy','dpdz'},rho*omega.^2);
             end
-            VTKdata.totField = zeros(size(nodes{m},1),1,length(omega));
-            rho = layer{m}.rho;
+            VTKdata.totField = transferFields(layer{m},{'p'});
             if m == m_s     
-                c_f = layer{m}.c_f;
-                if plotInTimeDomain
-                    VTKdata.P_inc = zeros(size(nodes{m},1),1,length(omega));
-                    for i = 2:length(omega)     
-                        k = omega(i)/c_f;   
-                        switch options.applyLoad
-                            case 'pointCharge'
-                                r_s = options.r_s;
-                                x_s = r_s*d_vec.';
-                                r = @(v) norm2(repmat(x_s,size(v,1),1)-v);
-                                Phi_k = @(v) exp(1i*k*r(v))./(4*pi*r(v));     
-                                p_inc = @(v) 4*pi*P_inc_(omega(i),omega_c,P_inc,type)*Phi_k(v);
-                                gp_inc = @(v) 4*pi*P_inc_(omega(i),omega_c,P_inc,type)*elementProd(Phi_k(v).*(1i*k - 1./r(v))./r(v), repmat(-r_s*d_vec.',size(v,1),1)-v);
-                            case 'planeWave'
-                                k_vec = options.d_vec*k;
-                                p_inc = @(v) P_inc_(omega(i),omega_c,P_inc,type)*exp(1i*dot3(v, k_vec));
-                                gp_inc = @(v) P_inc_(omega(i),omega_c,P_inc,type)*exp(1i*dot3(v, k_vec))*1i*k_vec';
-                            case 'radialPulsation'
-                                R_i = layer{m}.R_i;
-                                p_inc = @(v) P_inc_(omega(i),omega_c,P_inc,type)*exp(-1i*k*(norm2(v)-R_i))./norm2(v);
-                                gp_inc = @(v) P_inc_(omega(i),omega_c,P_inc,type)*elementProd(exp(-1i*k*(norm2(v)-R_i))./norm2(v).*(1i*k - 1./norm2(v))./norm2(v), v);
-                        end
-                        if strcmp(options.applyLoad,'pointExcitation') || strcmp(options.applyLoad,'surfExcitation') || strcmp(options.applyLoad,'mechExcitation')
-                            VTKdata.totField(:,:,i) = layer{m}.p(:,i-1);
-                            if VTKoptions.plotDisplacementVectors 
-                                gScalarField = [layer{m}.dpdx(:,i-1) layer{m}.dpdy(:,i-1) layer{m}.dpdz(:,i-1)];
-                                displacement(:,:,i) = gScalarField/(rho*omega(i)^2);
-                            end
-                        else
-                            VTKdata.P_inc(:,:,i) = p_inc(nodes{m});
-                            VTKdata.totField(:,:,i) = layer{m}.p(:,i-1) + VTKdata.P_inc(:,:,i);
-                            if VTKoptions.plotDisplacementVectors 
-                                gScalarField = [layer{m}.dpdx(:,i-1) layer{m}.dpdy(:,i-1) layer{m}.dpdz(:,i-1)];
-                                displacement(:,:,i) = (gScalarField+gp_inc(nodes{m}))/(rho*omega(i)^2);
-                            end
-                        end
+                VTKdata.P_inc = transferFields(layer{m},{'p_inc'});
+                if ~(strcmp(options.applyLoad,'pointExcitation') || strcmp(options.applyLoad,'surfExcitation') || strcmp(options.applyLoad,'mechExcitation'))
+                    if VTKoptions.plotDisplacementVectors 
+                        VTKdata.displacement = VTKdata.displacement + transferFields(layer{m},{'dp_incdx','dp_incdy','dp_incdz'},rho*omega.^2);
                     end
-                else
-                    k = omega/c_f; 
-                    switch options.applyLoad
-                        case 'pointCharge'
-                            r_s = options.r_s;
-                            x_s = r_s*d_vec.';
-                            r = @(v) norm2(repmat(x_s,size(y,1),1)-v);
-                            Phi_k = @(v) exp(1i*k*r(v))./(4*pi*r(v));     
-                            p_inc = @(v) 4*pi*P_inc*Phi_k(v);
-                            gp_inc = @(v) 4*pi*P_inc*elementProd(Phi_k(v).*(1i*k - 1./r(v))./r(v), repmat(-r_s*d_vec.',size(v,1),1)-v);
-                        case 'planeWave'
-                            k_vec = options.d_vec*k;
-                            p_inc = @(v) P_inc*exp(1i*dot3(v, k_vec));
-                            gp_inc = @(v) P_inc*exp(1i*dot3(v, k_vec))*1i*k_vec';
-                        case 'radialPulsation'
-                            R_i = layer{m}.R_i;
-                            p_inc = @(v) P_inc*exp(-1i*k*(norm2(v)-R_i))./norm2(v);
-                            gp_inc = @(v) P_inc*elementProd(exp(-1i*k*(norm2(v)-R_i))./norm2(v).*(1i*k - 1./norm2(v))./norm2(v), v);
-                    end
-                    VTKdata.P_inc = makeDynamic(p_inc(nodes{m}), VTKoptions, omega);
-                    VTKdata.scalarField = makeDynamic(layer{m}.p(:,1), VTKoptions, omega);
-                    if strcmp(options.applyLoad,'pointExcitation') || strcmp(options.applyLoad,'surfExcitation') || strcmp(options.applyLoad,'mechExcitation')
-                        VTKdata.totField = makeDynamic(layer{m}.p(:,1), VTKoptions, omega);
-                        if VTKoptions.plotDisplacementVectors 
-                            VTKdata.displacement = makeDynamic([layer{m}.dpdx(:,1) layer{m}.dpdy(:,1) layer{m}.dpdz(:,1)]/(rho*omega^2), VTKoptions, omega);
-                        end
-                    else
-                        VTKdata.totField = makeDynamic(layer{m}.p(:,1), VTKoptions, omega) + VTKdata.P_inc;
-                        if VTKoptions.plotDisplacementVectors 
-                            VTKdata.displacement = makeDynamic(([layer{m}.dpdx(:,1) layer{m}.dpdy(:,1) layer{m}.dpdz(:,1)]+gp_inc(nodes{m}))/(rho*omega^2), VTKoptions, omega);
-                        end
-                    end
+                    VTKdata.scalarField = VTKdata.totField;
+                    VTKdata.totField = VTKdata.totField + VTKdata.P_inc;
                 end
-                VTKdata = rmfield(VTKdata,'P_inc');
             else
                 VTKoptions.plotScalarField = false;
                 VTKoptions.plotP_inc = false;
-                if plotInTimeDomain
-                    for i = 2:length(omega)
-                        if VTKoptions.plotDisplacementVectors 
-                            gScalarField = [layer{m}.dpdx(:,i-1) layer{m}.dpdy(:,i-1) layer{m}.dpdz(:,i-1)];
-                            displacement(:,:,i) = gScalarField/(rho*omega(i)^2);
-                        end
-                        VTKdata.totField(:,:,i) = layer{m}.p(:,i-1);
-                    end
-                else
-                    VTKdata.totField = makeDynamic(layer{m}.p, VTKoptions, omega);
-                    if VTKoptions.plotDisplacementVectors 
-                        VTKdata.displacement = makeDynamic([layer{m}.dpdx(:,1) layer{m}.dpdy(:,1) layer{m}.dpdz(:,1)]/(rho*omega^2), VTKoptions, omega);
-                    end
-                end
             end
             if plotInTimeDomain
                 VTKoptions.plotScalarField = false;
                 VTKoptions.plotSPL = false;
-                VTKdata.totField = 2/T*real(fft(VTKdata.totField,N_fine,3));
-                temp = VTKdata.totField;
-                VTKdata.totField(:,:,1:N_fine-startIdx+1) = temp(:,:,startIdx:end);
-                VTKdata.totField(:,:,N_fine-startIdx+2:end) = temp(:,:,1:startIdx-1);
             elseif ~plotTimeOscillation
                 VTKdata.totFieldAbs = abs(VTKdata.totField);
             end
-        end
-        if plotInTimeDomain && VTKoptions.plotDisplacementVectors 
-            VTKdata.displacement = 2/T*real(fft(displacement,N_fine,3));
-            temp = VTKdata.displacement;
-            VTKdata.displacement(:,:,1:N_fine-startIdx+1) = temp(:,:,startIdx:end);
-            VTKdata.displacement(:,:,N_fine-startIdx+2:end) = temp(:,:,1:startIdx-1);
         end
         VTKdata.nodes = nodes{m};
         VTKdata.visElements = visElements{m};
@@ -349,4 +220,39 @@ for m = 1:length(nodes)
         disp(['Time spent on making VTK file ' num2str(toc) ' seconds.'])
     end
 end
-       
+
+
+function VTKfield = transferFields(layer_m,fieldsToTransfer,scale)
+if plotInTimeDomain
+    temp = layer_m.(fieldsToTransfer{1});
+    VTKfield = zeros(size(temp,1),1,numel(omega));
+    for ii = 1:numel(fieldsToTransfer)
+        temp = layer_m.(fieldsToTransfer{ii});
+        if nargin > 2
+            temp = temp./scale(2:end);
+        end
+        VTKfield(:,ii,2:end) = reshape(temp,size(temp,1),1,size(temp,2));
+    end
+    VTKfield = fftField(VTKfield);
+else
+    temp = layer_m.(fieldsToTransfer{1});
+    VTKfield = zeros(size(temp,1),numel(fieldsToTransfer));
+    for ii = 1:numel(fieldsToTransfer)
+        VTKfield(:,ii) = layer_m.(fieldsToTransfer{ii});
+    end
+    if nargin > 2
+        VTKfield = VTKfield./scale;
+    end
+    VTKfield = makeDynamic(VTKfield, VTKoptions, omega);
+end
+end
+     
+function VTKfield = fftField(VTKfield)
+VTKfield = 2/T*real(fft(VTKfield,N_fine,3));
+temp = VTKfield;
+VTKfield(:,:,1:N_fine-startIdx+1) = temp(:,:,startIdx:end);
+VTKfield(:,:,N_fine-startIdx+2:end) = temp(:,:,1:startIdx-1);
+end
+
+
+end

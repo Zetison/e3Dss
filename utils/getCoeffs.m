@@ -296,9 +296,9 @@ switch options.applyLoad
     case 'pointCharge'
         r_s = options.r_s;
         if R < r_s
-            D1 = (2*n+1)*1i/R*k.*(n*Z{1,1} - zeta.*Z{1,2}).*(Z_r_s{1,1}+1i*Z_r_s{2,1});
+            D1 = (2*n+1)*1i/R*k*r_s.*(n*Z{1,1} - zeta.*Z{1,2}).*(Z_r_s{1,1}+1i*Z_r_s{2,1});
         else
-            D1 = (2*n+1)*1i/R*k.*Z_r_s{1,1}.*(n*(Z{1,1}+1i*Z{2,1}) - zeta.*(Z{1,2}+1i*Z{2,2}));
+            D1 = (2*n+1)*1i/R*k*r_s.*Z_r_s{1,1}.*(n*(Z{1,1}+1i*Z{2,1}) - zeta.*(Z{1,2}+1i*Z{2,2}));
         end
     case 'mechExcitation'
         D1 = zeros(size(k));
@@ -312,6 +312,8 @@ switch options.applyLoad
         end
     case 'custom'
         D1 = zeros(size(k));
+    otherwise
+        error('Not implemented')
 end
 D1 = 1./(rho*omega.^2).*D1;
 D1 = reshape(D1,1,1,numel(D1));
@@ -319,13 +321,13 @@ D1 = reshape(D1,1,1,numel(D1));
 function D2 = D2_(n,k,R,Z,Z_r_s,options)
 switch options.applyLoad
     case 'planeWave'  
-        D2 = (2*n+1)*1i^n.*Z{1,1};
+        D2 = (2*n+1)*1i^n*Z{1,1};
     case 'pointCharge'
         r_s = options.r_s;
         if R < r_s
-            D2 = (2*n+1)*1i*k.*Z{1,1}.*(Z_r_s{1,1}+1i*Z_r_s{2,1});
+            D2 = (2*n+1)*1i*k*r_s.*Z{1,1}.*(Z_r_s{1,1}+1i*Z_r_s{2,1});
         else
-            D2 = (2*n+1)*1i*k.*Z_r_s{1,1}.*(Z{1,1}+1i*Z{2,1});
+            D2 = (2*n+1)*1i*k*r_s.*Z_r_s{1,1}.*(Z{1,1}+1i*Z{2,1});
         end
     case 'mechExcitation'
         D2 = (2*n+1)/(4*pi*R^2)*ones(size(k));
@@ -344,6 +346,8 @@ switch options.applyLoad
         Psi = @(theta) exp(-theta.^2/theta_s(1));
         integrand = @(theta) Psi(theta).*legendre_(n,cos(theta)).*sin(theta);
         D2 = (2*n+1)/2*integral(integrand,0,pi)*ones(numel(k),1,class(R));
+    otherwise
+        error('Not implemented')
 end
 D2 = reshape(-D2,1,1,numel(D2));
                     
