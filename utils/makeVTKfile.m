@@ -5,6 +5,7 @@ options = struct('name','untitled',...
                  'noSteps',30,...
                  'plotDisplacementVectors',0,...
                  'plotScalarField',0,...
+                 'plotScalarFieldAbs',0,...
                  'plotDensity',0,...
                  'plotFarField',0,...
                  'plotFarFieldError',0,...
@@ -105,6 +106,11 @@ if length(omega) > 1
         data.scalarField = interp1_new(t_arr, data.scalarField, tq_arr);
     end
 
+    %% Scalar field abs
+    if options.plotScalarFieldAbs && timeStepMult > 1
+        data.scalarFieldAbs = interp1_new(t_arr, data.scalarFieldAbs, tq_arr);
+    end
+
     %% Density
     if options.plotDensity && timeStepMult > 1
         data.density = interp1_new(t_arr, data.density, tq_arr);
@@ -197,8 +203,8 @@ if Nq > 1
     delete([vtfFileName '_time_*.vtu'])
 end
 
-parfor i = 1:Nq
-% for i = 1:Nq
+% parfor i = 1:Nq
+for i = 1:Nq
     [noVisElems, noCorners] = size(visElements);
     if Nq == 1
         fid = fopen([vtfFileName '.vtu'],'wt+','b');
@@ -319,6 +325,11 @@ parfor i = 1:Nq
     %% Scalar field
     if options.plotScalarField
         printField(data.scalarField(:,:,i), 'Scalar field', fid)
+    end
+
+    %% Scalar field abs
+    if options.plotScalarFieldAbs
+        printField(data.scalarFieldAbs(:,:,i), 'Scalar field abs', fid)
     end
 
     %% Density field

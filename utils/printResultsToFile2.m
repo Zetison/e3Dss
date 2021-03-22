@@ -1,4 +1,4 @@
-function printResultsToFile2(filename, newOptions)
+function printResultsToFile2(varargin)
 options = struct('fileEnding','.txt',...
                  'appendLabel',false,...
                  'task',[],...
@@ -10,9 +10,20 @@ options = struct('fileEnding','.txt',...
                  'xlabel','x',...
                  'format','plain',...
                  'ylabel','y');
-if nargin > 1
+% if nargin > 0
+%     newOptions = varargin;
+%     options = updateOptions(options,newOptions);
+% end
+if nargin > 0
+    if numel(varargin) > 1
+        newOptions = varargin;
+    else
+        newOptions = varargin{1};
+    end
     options = updateOptions(options,newOptions);
 end
+
+
 x = options.x;
 y = options.y;
 if isempty(y)
@@ -36,38 +47,55 @@ else
     labels = [xlabel, ylabel];
 end
 if options.appendLabel
-    filename = [filename '_' ylabel{1} 'VS' xlabel{1}];
+    filename = [options.filename '_' ylabel{1} 'VS' xlabel{1}];
 end
-filename = [filename, options.fileEnding];
+filename = [options.filename, options.fileEnding];
 fid = fopen(filename, 'w+','b');
 switch format  
     case 'LaTeX'
         %% Create file in 'LaTeX format'
         fprintf(fid, [repmat('%%',1,30) ' Meta data ' repmat('%%',1,30) '\n']);
-        fprintf(fid, '%% Boundary condition: %s\n', task.BC);
-        if numel(task.f) == 1
-            fprintf(fid, '%% f: %0.5gHz\n', task.f);
+        fprintf(fid, '%% Boundary condition: %s\n', task.misc.BC);
+        f = task.misc.omega/(2*pi);
+        if numel(f) == 1
+            fprintf(fid, '%% f: %0.5gHz\n', f);
         end
-        fprintf(fid, '%% Incident wave direction: alpha_s = %0.5gDeg, beta_s = %0.5gDeg\n', task.alpha_s*180/pi, task.beta_s*180/pi);
+        fprintf(fid, '%% Incident wave direction: alpha_s = %0.5gDeg, beta_s = %0.5gDeg\n', task.ffp.alpha_s*180/pi, task.ffp.beta_s*180/pi);
         if isfield(task,'formulation')
-            fprintf(fid, '%% Formulation: %s\n', task.formulation);
+            fprintf(fid, '%% Formulation: %s\n', task.misc.formulation);
         end
-        fprintf(fid, '%% Core method: %s\n', task.coreMethod);
-        fprintf(fid, '%% Method: %s\n', task.method);
-        if ~strcmp(xLoopName,task.degree)
-            fprintf(fid, '%% Degree: %d\n', task.degree);
+        fprintf(fid, '%% Core method: %s\n', task.misc.coreMethod);
+        fprintf(fid, '%% Method: %s\n', task.misc.method);
+        if ~strcmp(xLoopName,task.msh.degree)
+            fprintf(fid, '%% Degree: %d\n', task.msh.degree);
         end
-        if ~strcmp(xLoopName,task.M)
-            fprintf(fid, '%% mesh: %d\n', task.M);
+        if ~strcmp(xLoopName,task.msh.M)
+            fprintf(fid, '%% mesh: %d\n', task.msh.M);
         end
 
         if isfield(task,'IEbasis')
-            fprintf(fid, '%% Infinite element basis (in radial shape functions): %s\n', task.IEbasis);
+            fprintf(fid, '%% Infinite element basis (in radial shape functions): %s\n', task.ie.IEbasis);
         end
-        if isfield(task,'N') && (nargin < 7 || ~strcmp(xLoopName,task.N))
-            fprintf(fid, '%% N: %d\n', task.N);
+        if isfield(task,'N') && ~strcmp(xLoopName,task.ie.N)
+            fprintf(fid, '%% N: %d\n', task.ie.N);
         end
-        fprintf(fid, '%% Basis for x-data: variation in %s\n', xLoopName);
+        if isfield(task.varCol{1},'totNoElems')
+            fprintf(fid, '%% Total number of elements: %d\n', task.varCol{1}.totNoElems);
+        end
+        if isfield(task.varCol{1},'dofs')
+            fprintf(fid, '%% Degrees of freedom: %d\n', task.varCol{1}.dofs);
+        end
+        if isfield(task.varCol{1},'timeBuildSystem')
+            totTimeString = convertTimeToString(task.varCol{1}.timeBuildSystem);
+            fprintf(fid, '%% Time spent building system: %s\n', totTimeString);
+        end
+        if isfield(task.varCol{1},'timeSolveSystem')
+            totTimeString = convertTimeToString(task.varCol{1}.timeSolveSystem);
+            fprintf(fid, '%% Time spent solving system: %s\n', totTimeString);
+        end
+        if ~isnan(xLoopName)
+            fprintf(fid, '%% Basis for x-data: variation in %s\n', xLoopName);
+        end
 
         fprintf(fid, ['%%\n' repmat('%%',1,32) ' Data ' repmat('%%',1,32) '%%\n']);
     case 'BeTSSi'
@@ -80,24 +108,16 @@ switch format
         if externalProvider
             fprintf(fid, '%s\n', comments); % Line 3: Comments, Computer specs. and calculation times   
         elseif isfield(task,'actualNoDofs')
-            totTime = task.timeBuildSystem;
-            if totTime < 60
-                totTimeString = [num2str(totTime) ' seconds.'];
-            elseif totTime/60 < 60
-                totTimeString = [num2str(totTime/60) ' minutes.'];
-            else
-                totTimeString = [num2str(totTime/3600) ' hours.'];
-            end
-
+            totTimeString = convertTimeToString(task.varCol{1}.timeBuildSystem);
             fprintf(fid, 'Method: %s%s %s with %d elements (%d degrees of freedom) and NURBS degree %d. Computational time for system assembly (4x6-core Xeon 2.67 GHz): %s\n', ...
-                task.coreMethod, task.method, task.formulation, task.totNoElems, task.actualNoDofs, max(task.nurbs.degree), totTimeString); % Line 3: Comments, Computer specs. and calculation times
+                task.misc.coreMethod, task.misc.method, task.misc.formulation, task.varCol{1}.totNoElems, task.varCol{1}.dofs, max(task.varCol{1}.nurbs{1}.degree), totTimeString); % Line 3: Comments, Computer specs. and calculation times
         else
             fprintf(fid, 'No info\n');
         end
         if isfield(task,'line4')
             fprintf(fid, '%s\n',task.line4); % Line 4: source aspect angle in degree
         else
-            alpha_s = round(task.alpha_s*180/pi, 15, 'significant');
+            alpha_s = round(task.ffp.alpha_s*180/pi, 15, 'significant');
             if length(alpha_s) > 1
                 fprintf(fid, '%.15g, %.15g\n',alpha_s(1),alpha_s(end)); % Line 4: source aspect angle in degree
             else
@@ -107,7 +127,7 @@ switch format
         if isfield(task,'line5')
             fprintf(fid, '%s\n',task.line5); % Line 4: source aspect angle in degree
         else
-            beta_s = round(task.beta_s*180/pi, 15, 'significant');
+            beta_s = round(task.ffp.beta_s*180/pi, 15, 'significant');
             if length(beta_s) > 1
                 fprintf(fid, '%.15g, %.15g\n',beta_s(1),beta_s(end)); % Line 5: source elevation angle in degree
             else
@@ -117,11 +137,10 @@ switch format
         if isfield(task,'line6')
             fprintf(fid, '%s\n',task.line6); % Line 4: source aspect angle in degree
         else
-            if strcmp(task.scatteringCase, 'Sweep')
-                f_arr = task.f_arr;
-                fprintf(fid, '%.15g, %.15g\n',f_arr(1),f_arr(end)); % Line 6:  frequency in Hz (NOT in kHz)
+            f = task.misc.omega/(2*pi);
+            if strcmp(task.misc.scatteringCase, 'Sweep')
+                fprintf(fid, '%.15g, %.15g\n',f(1),f(end)); % Line 6:  frequency in Hz (NOT in kHz)
             else
-                f = task.f;
                 fprintf(fid, '%.15g\n',f); % Line 6:  frequency in Hz (NOT in kHz)
             end
         end
@@ -138,3 +157,11 @@ for i = 1:size(x,1)
 end
 fclose(fid); 
 
+function totTimeString = convertTimeToString(totTime)
+if totTime < 60
+    totTimeString = [num2str(totTime) ' seconds.'];
+elseif totTime/60 < 60
+    totTimeString = [num2str(totTime/60) ' minutes.'];
+else
+    totTimeString = [num2str(totTime/3600) ' hours.'];
+end
