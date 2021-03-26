@@ -246,23 +246,23 @@ for m = 1:M
                         if any(layer{m}.calc_dp_inc)
                             dp_incdr = layer{m}.dp_incdr;
                             dp_incdt = sin(Theta).*layer{m}.dp_incdt; % rescale dp_incdt
-                            dpdX_m = cell(3,1);
+                            dp_incdX_m = cell(3,1);
 
-                            dpdX_m{1} = dp_incdr.*sin(Theta).*cos(Phi) + dp_incdt.*cos(Theta).*cos(Phi)./R;
-                            dpdX_m{1}(indices) = 0;
+                            dp_incdX_m{1} = dp_incdr.*sin(Theta).*cos(Phi) + dp_incdt.*cos(Theta).*cos(Phi)./R;
+                            dp_incdX_m{1}(indices) = 0;
 
-                            dpdX_m{2} = dp_incdr.*sin(Theta).*sin(Phi) + dp_incdt.*cos(Theta).*sin(Phi)./R;
-                            dpdX_m{2}(indices) = 0;
+                            dp_incdX_m{2} = dp_incdr.*sin(Theta).*sin(Phi) + dp_incdt.*cos(Theta).*sin(Phi)./R;
+                            dp_incdX_m{2}(indices) = 0;
 
-                            dpdX_m{3} = dp_incdr.*cos(Theta) - dp_incdt.*sin(Theta)./R;
-                            dpdX_m{3}(indices) = dp_incdr(indices);
+                            dp_incdX_m{3} = dp_incdr.*cos(Theta) - dp_incdt.*sin(Theta)./R;
+                            dp_incdX_m{3}(indices) = dp_incdr(indices);
                             dp_incdX = cell(3,1);
                             dp_incdX{1} = zeros(n_X,nFreqs);
                             dp_incdX{2} = zeros(n_X,nFreqs);
                             dp_incdX{3} = zeros(n_X,nFreqs);
                             for ii = 1:3
                                 for jj = 1:3
-                                    dp_incdX{ii} = dp_incdX{ii} + A(ii,jj)*dpdX_m{jj}.';
+                                    dp_incdX{ii} = dp_incdX{ii} + A(ii,jj)*dp_incdX_m{jj}.';
                                 end
                             end
                             if layer{m}.calc_dp_inc(1)
@@ -1154,7 +1154,7 @@ function fluid = p_(m,n,zeta,theta,C,k,P,dP,d2P,Z,layer,isSphere,applyLoad)
 % Note that in the case of isSphere and zeta = 0: 
 % --- dpdz =: dpdr and dpdx = dpdy = dpdt = 0, with same convention for p_inc
 % --- nabla p =: d2pdr2, d2pdt2 := 0
-% Also note that dpdt is scaled by csc(theta)
+% Also note that dpdt and dp_incdt are scaled by csc(theta)
 
 Q0 = P;
 if layer.calc_p || layer.calc_dpdr || layer.calc_dpdt || layer.calc_d2pdr2 || layer.calc_d2pdr2 ...
@@ -1206,7 +1206,7 @@ end
 if layer.calc_dp_incdr
     switch applyLoad
         case 'planeWave'
-            fluid.dp_incdr = (2*n+1)*1i^n*Q0.*dj_n;
+            fluid.dp_incdr = (2*n+1)*1i^n*k*Q0.*dj_n;
         otherwise
             fluid.dp_incdr = zeros(size(j_n));
     end
