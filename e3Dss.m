@@ -305,7 +305,9 @@ for m = 1:M
                             layer{m}.p_inc = P_inc*exp(1i*k.*(R-layer{1}.R_i))./R;
                         end
                     otherwise
-                        error('Not valid')
+                        if any(layer{m}.calc_dp_inc) || layer{m}.calc_p_inc
+                            error('Not valid')
+                        end
                 end
                 if layer{m}.calc_p
                     layer{m}.p = layer{m}.p.';
