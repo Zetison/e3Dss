@@ -8,7 +8,7 @@ switch type
         count = 1;
         Error = zeros(noRuns,2);
         N_arr = 0:noRuns-1;
-        layer = e3Dss(layer, options);
+        [layer,~,~,relTermMaxArr] = e3Dss(layer, options);
         if plotFarField
             p = layer{1}.p_0;
         else
@@ -25,11 +25,12 @@ switch type
             Error(count,:) = norm2((p - p_N).')./norm2(p.');
             count = count + 1;
         end
-        semilogy(N_arr, Error(:,1), N_arr, Error(:,2))
+        relTermMaxArr = [relTermMaxArr, zeros(size(relTermMaxArr,1),noRuns-size(relTermMaxArr,2),1)];
+        semilogy(N_arr, Error(:,1), N_arr, Error(:,2), N_arr, relTermMaxArr(1,:), N_arr, relTermMaxArr(2,:))
         set(0,'defaulttextinterpreter','latex')
         xlabel('$$N$$')
         ylabel('$$\frac{\|p_1-p_1^{(N)}\|_2}{\|p_1\|_2}$$')
-        legend({'$$k_1 = 15\mathrm{m}^{-1}$$', '$$k_1 = 20\mathrm{m}^{-1}$$'},'interpreter','latex')
+        legend({'$$k_1 = 15\mathrm{m}^{-1}$$', '$$k_1 = 20\mathrm{m}^{-1}$$', 'Relative term max $$k_1 = 15\mathrm{m}^{-1}$$', 'Relative term max $$k_1 = 20\mathrm{m}^{-1}$$'},'interpreter','latex')
         yLim = ylim;
         ylim([yLim(1),1e1])
         if ~isempty(fileName)
@@ -37,7 +38,6 @@ switch type
                 printResultsToFile([fileName '_Errors_' num2str(i)], {'x',N_arr.', 'y', Error(:,i)})
             end
         end
-            
     case '3D'
         %% Create convergence plot
         R_i = layer{1}.R_i;

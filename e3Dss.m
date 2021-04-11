@@ -1,4 +1,4 @@
-function [layer,N_eps,flag] = e3Dss(newLayers, newOptions)
+function [layer,N_eps,flag,relTermMaxArr] = e3Dss(newLayers, newOptions)
 
 % The function e3Dss (exact 3D scattering solutions) computes the solution
 % to scattering problems on multilayered (elastic of fluid) spherical
@@ -17,7 +17,7 @@ function [layer,N_eps,flag] = e3Dss(newLayers, newOptions)
 options = struct('d_vec',    [0;0;1],  ... 	  % Direction of the incident wave
                 'omega',     2*pi*1e3, ...    % Angular frequency
                 'P_inc',     1,    ...     	  % Amplitude of incident wave
-                'N_max',     inf,  ...        % Upper limit for the number of terms in the series
+                'N_max',     Inf,  ...        % Upper limit for the number of terms in the series
                 'Display',   'final', ...     % Print options ('final', 'iter' or 'none')
                 'BC',        'SHBC', ...      % Boundary condition at the innermost layer: 'IBC', 'SHBC', 'SSBC' or 'NNBC'
                 'applyLoad', 'planeWave', ... % Incident wave type: I.e. 'planeWave', 'pointCharge', 'mechExcitation', 'surfExcitation', 'radialPulsation'
@@ -175,7 +175,7 @@ end
 options.m_s = m_s;
 
 %% Compute the solution with d_vec = [0, 0, 1]
-[layer,N_eps,flag] = e3Dss_0(layer, options);
+[layer,N_eps,flag,relTermMaxArr] = e3Dss_0(layer, options);
 
 %% Coordinate transformation (Transform back to original Cartesian coordinate system)
 
@@ -825,7 +825,7 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function [layer,N_eps,flag] = e3Dss_0(layer, options)
+function [layer,N_eps,flag,relTermMaxArr] = e3Dss_0(layer, options)
 % This function computes exact 3D scattering solutions when the axis of
 % symmetry is the z-axis
 %
@@ -979,6 +979,11 @@ end
 n = zeros(1,prec);
 N_eps = NaN(nFreqs,1);
 flag = zeros(size(hasCnvrgd,1),1); % Program terminated successfully unless error occurs (for each frequency)
+if isinf(N_max) % Track the relative term magnitude
+    relTermMaxArr = zeros(nFreqs,1000);
+else
+    relTermMaxArr = zeros(nFreqs,N_max);
+end
 singleModeSolution = (strcmp(options.applyLoad,'pointCharge') && options.r_s == 0) || strcmp(options.applyLoad,'radialPulsation') ...
                      || (strcmp(options.applyLoad,'surfExcitation') && options.theta_s(1) == 0 && abs(options.theta_s(2) - pi) < Eps);
 
@@ -1022,6 +1027,7 @@ while n <= N_max && ~(singleModeSolution && n > 0)
         C = getCoeffs(n, omega_temp, layer, options);
 
         hasCnvrgdTmp = zeros(length(indices),M); % temporary hasCnvrgd matrix
+        relTermMax = -Inf(nFreqs,1);
         for m = 1:M
             isSphere = layer{m}.R_i == 0;
             hasCnvrgdTmp2 = ones(size(indices)); % temporary hasCnvrgd vector    
@@ -1062,12 +1068,13 @@ while n <= N_max && ~(singleModeSolution && n > 0)
                 end
                 for fieldName = fieldNames
                     if layer{m}.(['calc_' fieldName{1}])
-                        [layer,hasCnvrgdTmp2] = updateSum(layer,m,media,fieldName{1},indices,hasCnvrgdTmp2,tiny,Eps);
+                        [layer,hasCnvrgdTmp2,relTermMax] = updateSum(layer,m,media,fieldName{1},indices,hasCnvrgdTmp2,relTermMax,tiny,Eps);
                     end
                 end
             end
             hasCnvrgdTmp(logical(hasCnvrgdTmp2),m) = 1;
         end
+        relTermMaxArr(:,n+1) = relTermMax;
         hasCnvrgd(indices,:) = [hasCnvrgd(indices,2:end), prod(hasCnvrgdTmp,2)];
         indicesPrev = indices;
         indices = find(~prod(hasCnvrgd,2));
@@ -1085,18 +1092,19 @@ while n <= N_max && ~(singleModeSolution && n > 0)
     catch ME
         flag = -~prod(hasCnvrgd,2);
         if strcmp(ME.identifier, 'e3Dss:infBessel')
-            warning('e3Dss:infBessel','The summation ended prematurely at n = %d because a Bessel function evaluation was too large.', n)
+            warning('e3Dss:infBessel','The summation ended prematurely at n = %d because a Bessel function evaluation was too large (relTermMax = %f).', n, max(relTermMax))
         elseif strcmp(ME.identifier, 'e3Dss:singularK')
-            warning('e3Dss:singularK','The summation ended prematurely at n = %d because the global matrix was singular to working precision.', n)
+            warning('e3Dss:singularK','The summation ended prematurely at n = %d because the global matrix was singular to working precision (relTermMax = %f).', n, max(relTermMax))
         else
             rethrow(ME)
         end
         break
     end
 end
+relTermMaxArr = relTermMaxArr(:,1:n-1);
 if strcmp(options.Display, 'final') || strcmp(options.Display, 'iter')
     if n-1 == N_max
-        warning('e3Dss:N_max_reached','The summation did not converge using N_max = %d terms.', N_max)
+        warning('e3Dss:N_max_reached','The summation did not converge using N_max = %d terms (relTermMax = %f).', N_max, max(relTermMax))
     elseif ~any(flag)
         if singleModeSolution
             fprintf('Eps precision reached with a N_eps = 1 terms.\n')
@@ -1147,10 +1155,17 @@ if evalBessely
     Z{2,2} = bessel_s(n+1,x,2);    
 end
 
-function [layer,hasCnvrgd] = updateSum(layer,m,media,fieldName,indices,hasCnvrgd,tiny,Eps)
+function [layer,hasCnvrgd,relTermMax] = updateSum(layer,m,media,fieldName,indices,hasCnvrgd,relTermMax,tiny,Eps)
 
 layer{m}.(fieldName)(indices,:) = layer{m}.(fieldName)(indices,:) + media.(fieldName);
-hasCnvrgd = hasCnvrgd.*prod(abs(media.(fieldName))./(abs(layer{m}.(fieldName)(indices,:))+tiny) < Eps, 2);
+relTerm = abs(media.(fieldName))./(abs(layer{m}.(fieldName)(indices,:))+tiny);
+hasCnvrgd = hasCnvrgd.*prod(relTerm < Eps, 2);
+temp = false(size(relTermMax,1),1);
+temp(indices) = true;
+maxRelTerm = -Inf(size(relTermMax,1),1);
+maxRelTerm(temp) = max(relTerm,[],2);
+indices2 = maxRelTerm > relTermMax;
+relTermMax(indices2) = maxRelTerm(indices2);
 
 function fluid = p_(m,n,zeta,theta,C,k,P,dP,d2P,Z,layer,isSphere,applyLoad)
 % Note that in the case of isSphere and zeta = 0: 

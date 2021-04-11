@@ -65,7 +65,7 @@ options = struct('applyLoad', 'mechExcitation', ...
 
 layer{1}.X = layer{1}.R_i*[0,0,1];
 layer{1}.calc_p = true;
-layer = e3Dss(layer, options);
+[layer,~,~,relTermMaxArr] = e3Dss(layer, options);
 
 figure(12)
 plot(f, real(layer{1}.p),'DisplayName','Exact')
@@ -79,6 +79,16 @@ ylim([-200, 200])
 ylabel('Real part of pressure')  
 legend('show');
 savefig([resultsFolder '/Figure12'])
+
+
+figure(42)
+for i = 1:24
+    semilogy(relTermMaxArr(10*i,:).','DisplayName',['\omega = ' num2str(omega(10*i))])
+    hold on
+end
+hold off
+legend('show');
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -94,7 +104,7 @@ options = struct('applyLoad', 'planeWave', ...
 
 layer{1}.X = layer{1}.R_i*[0,0,-1];
 layer{1}.calc_p = true;
-layer = e3Dss(layer, options);
+[layer,~,~,relTermMaxArr] = e3Dss(layer, options);
 
 figure(17)
 real_p_Hetmaniuk = importdata('../models/Hetmaniuk2012raa/Figure17.csv');
@@ -108,3 +118,12 @@ ylim([-15, 15])
 ylabel('Real part of pressure')  
 legend('show');
 savefig([resultsFolder '/Figure17'])
+
+
+figure(43)
+for i = 1:24
+    semilogy(relTermMaxArr(10*i,:).','DisplayName',['\omega = ' num2str(omega(10*i))])
+    hold on
+end
+hold off
+legend('show');
