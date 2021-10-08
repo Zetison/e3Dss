@@ -26,6 +26,9 @@ end
 % bessel_j_asy(n,xi)
 % bessel_s(n,xi,1)
 
+g = @(n) exp((n+0.5).*(log(n+0.5+sqrt((n+0.5).^2-xi.^2)./xi)-sqrt(1-(xi./(n+0.5)).^2)) ...
+             - (n+1.5).*(log(n+0.5+sqrt((n+1.5).^2-xi.^2)./xi)-sqrt(1-(xi./(n+1.5)).^2)));
+
 type = 2;
 switch type
     case 1
@@ -33,10 +36,11 @@ switch type
     case 2
         N = 1050;
 end
-% N = 150;
 npts = N;
 B = zeros(npts,1);
 N_arr = linspace(1,N,npts).';
+semilogy(N_arr,abs(g(N_arr)));
+return
 B1 = bessel_s(N_arr,xi,1);
 B2 = bessel_s(N_arr,xi,2);
 % semilogy(N_arr,1./abs(B1),N_arr,abs(B2),N_arr,j_asm)
