@@ -1,24 +1,17 @@
 function f = bessel_c(nu,z,type)
-
+indices = nu > z;
+f = zeros(size(z));
 if type == 1 % besselj
-    f = besselj(nu,z);
+    f(~indices) = besselj(nu,z(~indices));
+    if any(indices)
+        f(indices) = bessel_J_asy(nu,z(indices));
+    end
 else % bessely
-    f = bessely(nu,z);
+    f(~indices) = bessely(nu,z(~indices));
+    if any(indices)
+        f(indices) = bessel_Y_asy(nu,z(indices));
+    end
 end
-% 
-% indices = nu > z;
-% f = zeros(size(z));
-% if type == 1 % besselj
-%     f(~indices) = besselj(nu,z(~indices));
-%     if any(indices)
-%         f(indices) = bessel_J_asy(nu,z(indices));
-%     end
-% else % bessely
-%     f(~indices) = bessely(nu,z(~indices));
-%     if any(indices)
-%         f(indices) = bessel_Y_asy(nu,z(indices));
-%     end
-% end
 
 end
 function J = bessel_J_asy(nu,z)

@@ -20,18 +20,9 @@ if false
 else
     load('../miscellaneous/U_pol.mat')
 end
-x = linspace(0,1,100000);
-v_k(2)
-% plot(x, zeta(x))
-% return
-for k = 0:1 %numel(U_pol)-1
-%     plot(x, polyval(U_pol{k+1},x))
-%     plot(x, polyval(U_pol{k+1},(1-x.^2).^(-1/2)))
-%     plot(x, polyval(U_pol{k+1},(1-x.^2).^(-1/2)))
-    plot(x, A_k(k,x,U_pol))
-    
-    ylim([-10,10])
-    hold on
+for k = 0:numel(U_pol)-1
+    x = linspace(-1,2,10000);
+    plot(x, polyval(U_pol{k+1},x))
 end
 return
 % U_p(1,U_pol)-[-5,0,3,0]/24
@@ -101,8 +92,8 @@ K = 0;
 sum1 = 0;
 sum2 = 0;
 for k = 0:K
-    sum1 = sum1 + A_k(k,z./nu,U_pol)./nu.^(2*k);
-    sum2 = sum2 + B_k(k,z./nu,U_pol)./nu.^(2*k);
+    sum1 = sum1 + A_k(k,zeta(z./nu),U_pol)./nu.^(2*k);
+    sum2 = sum2 + B_k(k,zeta(z./nu),U_pol)./nu.^(2*k);
 end
 sum1 = airy(nu.^(2/3).*zeta(z./nu))./nu.^(1/3).*sum1;
 sum2 = airy(1,nu.^(2/3).*zeta(z./nu))./nu.^(5/3).*sum2;
@@ -117,6 +108,7 @@ function A = A_k(k,z,U_pol)
 A = 0;
 for j = 0:2*k
     A = A + (3/2)^j*v_k(j)*zeta(z).^(-3*j/2).*U_k(2*k-j,(1-z.^2).^(-1/2),U_pol);
+%     A = A + (3/2)^j*v_k(j)*1i^(3*j).*(-zeta(z)).^(-3*j/2).*U_k(2*k-j,(z.^2-1).^(-1/2),U_pol);
 end
 end
 
@@ -175,15 +167,12 @@ end
 
 end
 
-% function zeta = zeta(z)
-% zeta = zeros(size(z));
-% z_i = z(z < 1);
-% zeta(z < 1) = (3/2*(log((1+sqrt(1-z_i.^2))./z_i)-sqrt(1-z_i.^2))).^(2/3);
-% z_i = z(z >= 1);
-% zeta(z >= 1) = -(3/2*(sqrt(z_i.^2-1)-asec(z_i))).^(2/3);
-% end
 function zeta = zeta(z)
-zeta = (3/2*(log((1+sqrt(1-z.^2))./z)-sqrt(1-z.^2))).^(2/3);
+zeta = zeros(size(z));
+z_i = z(z < 1);
+zeta(z < 1) = (3/2*(log((1+sqrt(1-z_i.^2))./z_i)-sqrt(1-z_i.^2))).^(2/3);
+z_i = z(z >= 1);
+zeta(z >= 1) = -(3/2*(sqrt(z_i.^2-1)-asec(z_i))).^(2/3);
 end
 
 function A = Ai(z)
