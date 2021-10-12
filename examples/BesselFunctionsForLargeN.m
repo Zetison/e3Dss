@@ -21,27 +21,31 @@ else
     load('../miscellaneous/U_pol.mat')
 end
 x = linspace(0,1,100000);
-v_k(2)
-% plot(x, zeta(x))
+% v_k(2)
+% plot(x, zeta(x), x, 1-2^(-1/3)*x+3/10*2^(-1/3)*x.^2+1/700*x.^3)
+% plot(x, x-zeta(1-2^(-1/3)*x+3/10*2^(-1/3)*x.^2+1/700*x.^3))
+% k_arr = 0:100;
+% semilogy(k_arr,u_k(k_arr),k_arr,abs(v_k(k_arr)))
 % return
-for k = 0:1 %numel(U_pol)-1
-%     plot(x, polyval(U_pol{k+1},x))
-%     plot(x, polyval(U_pol{k+1},(1-x.^2).^(-1/2)))
-%     plot(x, polyval(U_pol{k+1},(1-x.^2).^(-1/2)))
-    plot(x, A_k(k,x,U_pol))
-    
-    ylim([-10,10])
-    hold on
-end
-return
+% for k = 0:1 %numel(U_pol)-1
+% %     plot(x, polyval(U_pol{k+1},x))
+% %     plot(x, polyval(U_pol{k+1},(1-x.^2).^(-1/2)))
+% %     plot(x, polyval(U_pol{k+1},(1-x.^2).^(-1/2)))
+% %     plot(x, A_k(k,x,U_pol))
+%     A_k(k,0,U_pol)
+%     
+%     ylim([-10,10])
+%     hold on
+% end
+% return
 % U_p(1,U_pol)-[-5,0,3,0]/24
 % U_p(2,U_pol)-[385,0,-462,0,81,0,0]/1152
 % U_p(3,U_pol)-[-425425,0,765765,0,-369603,0,30375,0,0,0]/414720
 % bessel_j_asy(n,xi)
 % bessel_s(n,xi,1)
 
-g = @(n) exp((n+0.5).*(log(n+0.5+sqrt((n+0.5).^2-xi.^2)./xi)-sqrt(1-(xi./(n+0.5)).^2)) ...
-             - (n+1.5).*(log(n+0.5+sqrt((n+1.5).^2-xi.^2)./xi)-sqrt(1-(xi./(n+1.5)).^2)));
+% g = @(n) exp((n+0.5).*(log(n+0.5+sqrt((n+0.5).^2-xi.^2)./xi)-sqrt(1-(xi./(n+0.5)).^2)) ...
+%              - (n+1.5).*(log(n+0.5+sqrt((n+1.5).^2-xi.^2)./xi)-sqrt(1-(xi./(n+1.5)).^2)));
 
 type = 2;
 switch type
@@ -53,7 +57,34 @@ end
 npts = N;
 B = zeros(npts,1);
 N_arr = linspace(1,N,npts).';
-semilogy(N_arr,abs(g(N_arr)));
+% semilogy(N_arr,abs(g(N_arr)));
+% semilogy(k_arr,u_k(k_arr),k_arr,abs(v_k(k_arr)))
+% semilogy(N_arr,abs(bessel_c(N_arr,xi,1)),N_arr,abs(besselj(N_arr,xi)))
+% semilogy(N_arr,abs(bessel_c(N_arr,xi,2)),N_arr,abs(bessely(N_arr,xi)))
+% semilogy(N_arr,abs(bessel_c(N_arr,xi,2)),N_arr,abs(bessely(N_arr,xi)))
+% figure
+semilogy(N_arr,abs(bessel_c(N_arr,xi,2)-bessely(N_arr,xi))./abs(bessely(N_arr,xi)))
+hold on
+semilogy(N_arr,abs(bessel_c(N_arr,xi,1)-besselj(N_arr,xi))./abs(besselj(N_arr,xi)))
+if false
+    xi_arr = linspace(1,1000,1000);
+    C = zeros(numel(N_arr),numel(xi_arr));
+    for n = N_arr.'
+        n
+        for j = 1:numel(xi_arr)
+            xi = xi_arr(j);
+            if n > (xi+32)/0.97 %xi < n
+                C(n,j) = log10(abs(bessel_c(n,xi,2)-bessely(n,xi))./abs(bessely(n,xi)));
+            end
+        end
+    end
+    imagesc(xi_arr,N_arr,C)
+    hold on
+    plot(10:1000,((10:1000)+32)/0.97,'magenta') % n > (xi+30)/0.97
+    xlabel('xi')
+    ylabel('n')
+    colorbar
+end
 return
 B1 = bessel_s(N_arr,xi,1);
 B2 = bessel_s(N_arr,xi,2);
@@ -156,23 +187,12 @@ y = -sqrt(pi./(2*z)).*sqrt(2./(pi*(n+0.5))).*(exp(1)*z./(2*(n+0.5))).^(-n-0.5);
 
 end
 
-function u = u_k(K)
-
-u = 1;
-for k = 1:K
-    u = (6*k-5)*(6*k-3)*(6*k-1)/(2*k-1)/216/k*u;
+function u = u_k(k)
+u = prod((2*k+1):2:(6*k-1))./216.^k./factorial(k);
 end
 
-end
-
-function v = v_k(K)
-
-if K == 0
-    v = 1;
-else
-    v = (6*K+1)/(1-6*K)*u_k(K);
-end
-
+function v = v_k(k)
+v = (6*k+1)./(1-6*k).*u_k(k);
 end
 
 % function zeta = zeta(z)

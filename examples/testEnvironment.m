@@ -12,7 +12,7 @@ c_f = 1500;
 k10start = -1;
 k10end = 4;
 k = 10.^linspace(k10start,k10end,3000);
-k = 1;
+k = 100;
 R = 1; % Outer radius of shell
 
 alpha_s = 0;

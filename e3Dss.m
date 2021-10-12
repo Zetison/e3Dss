@@ -988,7 +988,7 @@ singleModeSolution = (strcmp(options.applyLoad,'pointCharge') && options.r_s == 
                      || (strcmp(options.applyLoad,'surfExcitation') && options.theta_s(1) == 0 && abs(options.theta_s(2) - pi) < Eps);
 
 while n <= N_max && ~(singleModeSolution && n > 0)
-%     try % and hope that no spherical Bessel functions are evaluated to be too large
+    try % and hope that no spherical Bessel functions are evaluated to be too large
         if displayIter
             tic
         end
@@ -1089,17 +1089,19 @@ while n <= N_max && ~(singleModeSolution && n > 0)
             fprintf('Completed calculation of term n = %d using %g seconds.\n', n, toc)
         end
         n = n + 1;
-%     catch ME
-%         flag = -~prod(hasCnvrgd,2);
-%         if strcmp(ME.identifier, 'e3Dss:infBessel')
-%             warning('e3Dss:infBessel','The summation ended prematurely at n = %d because a Bessel function evaluation was too large (relTermMax = %f).', n, max(relTermMax))
-%         elseif strcmp(ME.identifier, 'e3Dss:singularK')
-%             warning('e3Dss:singularK','The summation ended prematurely at n = %d because the global matrix was singular to working precision (relTermMax = %f).', n, max(relTermMax))
-%         else
-%             rethrow(ME)
-%         end
-%         break
-%     end
+    catch ME
+        flag = -~prod(hasCnvrgd,2);
+        if strcmp(ME.identifier, 'e3Dss:infBessel')
+            warning('e3Dss:infBessel','The summation ended prematurely at n = %d because a Bessel function evaluation was too large (relTermMax = %g).', n, max(relTermMax))
+        elseif strcmp(ME.identifier, 'e3Dss:divergeBessel')
+            warning('e3Dss:infBessel','The asymptotic Bessel function approximation diverged at n = %d (relTermMax = %g).', n, max(relTermMax))
+        elseif strcmp(ME.identifier, 'e3Dss:singularK')
+            warning('e3Dss:singularK','The summation ended prematurely at n = %d because the global matrix was singular to working precision (relTermMax = %g).', n, max(relTermMax))
+        else
+            rethrow(ME)
+        end
+        break
+    end
 end
 relTermMaxArr = relTermMaxArr(:,1:n-1);
 if strcmp(options.Display, 'final') || strcmp(options.Display, 'iter')
