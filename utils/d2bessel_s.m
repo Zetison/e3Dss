@@ -1,4 +1,4 @@
-function d2Z = d2bessel_s(n,z,i,Z)
+function d2Z = d2bessel_s(n,z,i,Z,nu_a)
 % Returns the second derivative of the n'th spherical bessel function of kind i
 % evaluated at every element in z
 
@@ -11,7 +11,7 @@ if i == 1
     indices = logical(abs(z) < tiny);
     z(indices) = 1; % Avoid symbolic division by zero. These values will be replaced anyways
 end
-d2Z = (n*(n-1)./z.^2-1).*Z{i,1} + 2./z.*Z{i,2};
+d2Z = (n*(n-1)./z.^2-1).*Z{i,1} + 2./z.*g_(n,i,z,nu_a).*Z{i,2};
 if i == 1
     if n == 0
         d2Z(indices) = -ones(1,class(z))/3;

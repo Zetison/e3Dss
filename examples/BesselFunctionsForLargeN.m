@@ -10,16 +10,6 @@ end
 %% Create plot of bessel functinos for large n
 xi = 500;
 n = 900;
-if false
-    i_max = 10000;
-    U_pol = cell(i_max,1);
-    for i = 1:i_max
-        U_pol{i} = U_p(i-1,U_pol);
-    end
-    save('../miscellaneous/U_pol.mat','U_pol')
-else
-    load('../miscellaneous/U_pol.mat')
-end
 x = linspace(0,1,100000);
 % v_k(2)
 % plot(x, zeta(x), x, 1-2^(-1/3)*x+3/10*2^(-1/3)*x.^2+1/700*x.^3)
@@ -82,6 +72,24 @@ if false
     hold on
     plot(10:1000,((10:1000)+32)/0.97,'magenta') % n > (xi+30)/0.97
     xlabel('xi')
+    ylabel('n')
+    colorbar
+    
+    npts = 1000;
+    z = linspace(1,1000,npts);
+    N_arr = linspace(1,1000,npts).';
+    nu = N_arr+0.5;
+    C = zeros(numel(N_arr),numel(z));
+    indices = z < nu;
+    C(indices) = 1;
+    indices = abs(nu.*zeta23_(z./nu)) > log(sqrt(realmax(class(z))));
+    C(indices) = 2;
+    indices = and(indices, z < nu);
+    C(indices) = 3;
+    imagesc(z,N_arr,C)
+    hold on
+%     plot(10:1000,((10:1000)+32)/0.97,'magenta') % n > (xi+30)/0.97
+    xlabel('z')
     ylabel('n')
     colorbar
 end

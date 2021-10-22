@@ -17,9 +17,15 @@ model = 'S15';
 SHBC = 0;
 SSBC = 0;
 ESBC = 0; 
-f_c = 1500;
+f_c = 3000;
 T = 120/f_c;
 N = 2^10;
+B = N/T; % bandwidth
+f_L = -B/2;
+f_R = B/2;
+df = 1/T;
+f = linspace(0,f_R-df,N/2);
+f(end)
 % N = 2^2;
 % applyLoad = 'planeWave';
 applyLoad = 'pointCharge';

@@ -77,8 +77,8 @@ if playP_inc
     p_inc = P_inc_(omega, omega_c,P_inc,type);
     plot(f,abs(p_inc))
     
-%     sound(Pt_inc,Fs);
-    return
+    sound(Pt_inc,Fs);
+%     return
 end
 %             return
 %%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -113,7 +113,6 @@ layer{3}.X = [zeros(npts,1), zeros(npts,1), z3];
 if ~exist('options','var')
     options = struct('BC', BC,...
                      'd_vec', d_vec, ...
-                     'Display', 'iter', ...
                      'applyLoad',applyLoad);
 end
 options.omega = omega(2:end);
@@ -233,6 +232,6 @@ end
 audiowrite(filename,ys,Fs);
 % [ys,Fs] = audioread(filename);
 sound(ys,Fs);
-% plot(psd(spectrum.periodogram,ys,'Fs',Fs,'NFFT',length(signal)));
+
 
 

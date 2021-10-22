@@ -83,7 +83,8 @@ savefig([resultsFolder '/Figure12'])
 
 figure(42)
 for i = 1:24
-    semilogy(relTermMaxArr(10*i,:).','DisplayName',['\omega = ' num2str(omega(10*i))])
+    semilogy(0:(size(relTermMaxArr,2)-1),relTermMaxArr(10*i,:).','DisplayName',['\omega = ' num2str(omega(10*i))])
+    xlabel('n')
     hold on
 end
 hold off

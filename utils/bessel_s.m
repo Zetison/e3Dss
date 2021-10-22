@@ -1,4 +1,4 @@
-function Z = bessel_s(n,z,type)
+function Z = bessel_s(n,z,type,nu_a)
 %Returns the n'th spherical bessel function of kind "type" evaluated at
 %every element in z
 
@@ -17,7 +17,7 @@ if type == 1
     z(indices) = 1; % Avoid symbolic division by zero. These values will be replaced anyways
 end
 
-Z = sqrt(PI/2)./sqrt(z).*bessel_c(n+0.5,z,type);
+Z = sqrt(PI/2)./sqrt(z).*bessel_c(n+0.5,z,type,nu_a);
 
 if type == 1
     if n == 0
@@ -27,7 +27,7 @@ if type == 1
     end
 end
 if ~(isa(z,'sym') || isa(z,'mp'))
-    if any(any(abs(Z) > 1e290))
+    if any(isinf(Z(:)))
         error('e3Dss:infBessel','A Bessel function evaluation was too large')
     end
 end

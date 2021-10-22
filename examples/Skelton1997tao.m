@@ -62,39 +62,40 @@ layerSSBC{1}.R_i = R;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Run simulation
-figure(1)
-layerCoating = e3Dss(layer, options);
-TS = 20*log10(abs(layerCoating{1}.p_0));
-plot(f,TS,'DisplayName','e3Dss Coating')
-hold on
-
-layerSSBC = e3Dss(layerSSBC, options);
-TS = 20*log10(abs(layerSSBC{1}.p_0));
-plot(f,TS,'DisplayName','e3Dss SSBC')
-
-options.BC = 'SHBC';
-layerSHBC = e3Dss(layerSSBC(1), options);
-TS = 20*log10(abs(layerSHBC{1}.p_0));
-
-plot(f,TS,'DisplayName','e3Dss Hard')
-set(0,'defaulttextinterpreter','latex')
-xlabel('Frequency (Hz)')
-ylabel('Target strength')
-xlim([0 f_max])
-ylim([-30,20])
-title('Figure 10.4 and Figure 10.5')
-
-TS_SHBC = importdata('../models/Skelton1997tao/Figure10.4_SHBC.csv');
-plot(TS_SHBC(:,1),TS_SHBC(:,2),'DisplayName','Ref SHBC')
-TS_SSBC = importdata('../models/Skelton1997tao/Figure10.4_SSBC.csv');
-plot(TS_SSBC(:,1),TS_SSBC(:,2),'DisplayName','Ref SSBC')
-TS_Coating = importdata('../models/Skelton1997tao/Figure10.5.csv');
-plot(TS_Coating(:,1),TS_Coating(:,2),'DisplayName','Ref Coating')
-legend show
-savefig([resultsFolder '/figure1.fig'])
+% figure(1)
+% layerCoating = e3Dss(layer, options);
+% TS = 20*log10(abs(layerCoating{1}.p_0));
+% plot(f,TS,'DisplayName','e3Dss Coating')
+% hold on
+% 
+% layerSSBC = e3Dss(layerSSBC, options);
+% TS = 20*log10(abs(layerSSBC{1}.p_0));
+% plot(f,TS,'DisplayName','e3Dss SSBC')
+% 
+% options.BC = 'SHBC';
+% layerSHBC = e3Dss(layerSSBC(1), options);
+% TS = 20*log10(abs(layerSHBC{1}.p_0));
+% 
+% plot(f,TS,'DisplayName','e3Dss Hard')
+% set(0,'defaulttextinterpreter','latex')
+% xlabel('Frequency (Hz)')
+% ylabel('Target strength')
+% xlim([0 f_max])
+% ylim([-30,20])
+% title('Figure 10.4 and Figure 10.5')
+% 
+% TS_SHBC = importdata('../models/Skelton1997tao/Figure10.4_SHBC.csv');
+% plot(TS_SHBC(:,1),TS_SHBC(:,2),'DisplayName','Ref SHBC')
+% TS_SSBC = importdata('../models/Skelton1997tao/Figure10.4_SSBC.csv');
+% plot(TS_SSBC(:,1),TS_SSBC(:,2),'DisplayName','Ref SSBC')
+% TS_Coating = importdata('../models/Skelton1997tao/Figure10.5.csv');
+% plot(TS_Coating(:,1),TS_Coating(:,2),'DisplayName','Ref Coating')
+% legend show
+% savefig([resultsFolder '/figure1.fig'])
 
 
 figure(2)
+npts = 2;
 npts = 2000;
 f_max = 25e3;
 f = linspace(f_max/npts,f_max,npts);
@@ -119,57 +120,57 @@ legend show
 savefig([resultsFolder '/figure2.fig'])
 
 % this case is not perfectly reproducable due to lacking parameters
-figure(3)
-f_c = 15e3; % pulse center freq.
-N = 2^12;       % **NOTE** it is not clear what Skelton uses for this parameter
-T = 10*5e-3;    % **NOTE** it is not clear what Skelton uses for this parameter
-B = N/T; % bandwidth
-f_L = -B/2;
-f_R = B/2;
-df = 1/T;
-f = linspace(0,f_R-df,N/2);
-omega = 2*pi*f;
-omega_c = 2*pi*f_c;
-P_inc = 1;
-layerSSBC{1}.X = -d_vec.'; % Compute backscattered pressure
-plotP_inc = 1;
-
-options = struct('BC', 'SSBC', ...
-                 'd_vec', d_vec, ...
-                 'omega', omega(2:end));
-options.P_inc = @(omega) P_inc_(omega, omega_c,P_inc,3);
-
-layerSSBC = e3Dss(layerSSBC, options);
-
-npts = 1;
-p_0 = zeros(npts,N/2);
-for n = 0:N-1
-    f_n = f_L + (f_R-f_L)/N*n;
-    omega_n = 2*pi*f_n;
-    if n >= N/2+1
-        k = omega_n/layer{1}.c_f;
-        k_vec = options.d_vec*k;
-        p_0(:,n-N/2+1) = layerSSBC{1}.p_0(:,n-N/2);
-    end
-end
-startIdx = round(0.9668*N);       % **NOTE** it is not clear what Skelton uses for this parameter
-p_0_t = 2/T*fft(p_0,N,2);
-temp = p_0_t;
-p_0_t(:,1:N-startIdx+1) = temp(:,startIdx:end);
-p_0_t(:,N-startIdx+2:end) = temp(:,1:startIdx-1);
-dt = T/N;
-t = dt*(0:N-1);
-plot(1000*t,1000*real(p_0_t),'DisplayName','e3Dss')
-p_ref = importdata('../models/Skelton1997tao/Figure10.7.csv');
-hold on
-plot(1000*p_ref(:,1),1000*p_ref(:,2),'DisplayName','Ref')
-ylim([-600,600])
-xlim([0,5])
-title('Figure 10.7')
-xlabel('Time (ms)')
-ylabel('Pressure (mPa)')
-legend show
-savefig([resultsFolder '/figure3.fig'])
-
+% figure(3)
+% f_c = 15e3; % pulse center freq.
+% N = 2^12;       % **NOTE** it is not clear what Skelton uses for this parameter ("The time scale, in milliseconds, has an arbitrary origin.")
+% T = 10*5e-3;    % **NOTE** it is not clear what Skelton uses for this parameter ("The time scale, in milliseconds, has an arbitrary origin.")
+% B = N/T; % bandwidth
+% f_L = -B/2;
+% f_R = B/2;
+% df = 1/T;
+% f = linspace(0,f_R-df,N/2);
+% omega = 2*pi*f;
+% omega_c = 2*pi*f_c;
+% P_inc = 1;
+% layerSSBC{1}.X = -d_vec.'; % Compute backscattered pressure
+% plotP_inc = 1;
+% 
+% options = struct('BC', 'SSBC', ...
+%                  'd_vec', d_vec, ...
+%                  'omega', omega(2:end));
+% options.P_inc = @(omega) P_inc_(omega, omega_c,P_inc,3);
+% 
+% layerSSBC = e3Dss(layerSSBC, options);
+% 
+% npts = 1;
+% p_0 = zeros(npts,N/2);
+% for n = 0:N-1
+%     f_n = f_L + (f_R-f_L)/N*n;
+%     omega_n = 2*pi*f_n;
+%     if n >= N/2+1
+%         k = omega_n/layer{1}.c_f;
+%         k_vec = options.d_vec*k;
+%         p_0(:,n-N/2+1) = layerSSBC{1}.p_0(:,n-N/2);
+%     end
+% end
+% startIdx = round(0.9668*N);       % **NOTE** it is not clear what Skelton uses for this parameter
+% p_0_t = 2/T*fft(p_0,N,2);
+% temp = p_0_t;
+% p_0_t(:,1:N-startIdx+1) = temp(:,startIdx:end);
+% p_0_t(:,N-startIdx+2:end) = temp(:,1:startIdx-1);
+% dt = T/N;
+% t = dt*(0:N-1);
+% plot(1000*t,1000*real(p_0_t),'DisplayName','e3Dss')
+% p_ref = importdata('../models/Skelton1997tao/Figure10.7.csv');
+% hold on
+% plot(1000*p_ref(:,1),1000*p_ref(:,2),'DisplayName','Ref')
+% ylim([-600,600])
+% xlim([0,5])
+% title('Figure 10.7')
+% xlabel('Time (ms)')
+% ylabel('Pressure (mPa)')
+% legend show
+% savefig([resultsFolder '/figure3.fig'])
+% 
 
 
