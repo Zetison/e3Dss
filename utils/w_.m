@@ -22,5 +22,5 @@ w(indices_y) = w(indices_y) - (-1)^(i+1)*nu*zeta23_(y(indices_y)/nu);
 
 w = exp(w);
 if any(isinf(w))
-	error('e3Dss:infWeight','A weight evaluation was too large')
+	warning('e3Dss:infWeight','A weight evaluation was too large')
 end

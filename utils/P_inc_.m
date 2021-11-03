@@ -29,8 +29,11 @@ switch type
         Fs = 44100;
         N = T*Fs;
         p = ifft(pt,N);
-        p = p(end:-1:(numel(p)/2+1));
+        p = p(1:(numel(p)/2));
         p = p(2:end);
+        if isrow(omega)
+            p = p.';
+        end
         
 % [pt fs]=wavread('signal_name.wav');
 % nf=1024; %number of point in DTFT

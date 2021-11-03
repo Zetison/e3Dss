@@ -21,7 +21,6 @@ for useSymbolicPrecision = 0 %[0,1]
     models = {'S1','S3','S5','S13','S15','S35','S135'};
 %     models = {'S13','S15','S35','S135'};
     models = {'Skelton1997tao'};
-%     models = {'Sage1979mri'};
 %     models = {'S35'};
     counter = 1;
     for i_model = 1:length(models)
@@ -89,11 +88,6 @@ for useSymbolicPrecision = 0 %[0,1]
                 if ~SSBC
                     error('This example is only for SSBC')
                 end
-            case 'Sage1979mri'
-                layer = setSage1979mriParameters();
-                if any([SHBC,SSBC,ESBC])
-                    error('This example is only for NNBC')
-                end
         end
 
         alpha_s = 240*PI/180;
@@ -120,8 +114,6 @@ for useSymbolicPrecision = 0 %[0,1]
                 end
             case 'Skelton1997tao'
                 BC = 'SSBC';
-            case 'Sage1979mri'
-                BC = 'NNBC';
         end
         M = length(layer);
         
@@ -154,12 +146,12 @@ for useSymbolicPrecision = 0 %[0,1]
             layer{m}.X = pts(I,:);
         end
         R_1 = layer{1}.R_i;
-        if 1
+        if 0
     %         nFreqs = 4;
             nFreqs = 100;
             kR_start = 1e-1;
             kR_end = 1e3;
-%             kR_end = 1e0;
+    %         kR_end = 1e0;
             kR = 10.^linspaceHP(log10(kR_start),log10(kR_end),nFreqs);
             k = kR/R_1;
             omega = k*layer{1}.c_f;
@@ -173,15 +165,14 @@ for useSymbolicPrecision = 0 %[0,1]
             k = omega/layer{1}.c_f;
             kR = k*R_1;
         end
-        nu_a = 100;
-        nu_a = Inf;
+
         options = struct('BC', BC, ...
                          'd_vec', d_vec, ...
                          'omega', omega, ...
                          'P_inc', ones(1,class(O)), ...
                          'prec', prec, ...
-                         'Display','final',...
-                         'nu_a',nu_a,...
+                         'Display','Final',...
+                         'nu_a',100,...
                          'Eps', Eps);
 %         options.N_max = 2;
         for m = 1:M
@@ -206,7 +197,7 @@ for useSymbolicPrecision = 0 %[0,1]
             if ~isSphere && ~(m == M && SHBC)
                 err_pc = max([err_pc; layer{m}.err_pc],[],1);
             end
-            if ~isSphere && ~(m == M && SSBC) && ~(m ~= M && strcmp(layer{m}.media,'fluid') && strcmp(layer{m+1}.media,'fluid'))
+            if ~isSphere && ~(m == M && SSBC)
                 err_dc = max([err_dc; layer{m}.err_dc],[],1);
             end
             switch layer{m}.media
@@ -253,7 +244,7 @@ for useSymbolicPrecision = 0 %[0,1]
         fprintf('Finished a case in %f seconds!\n\n', toc)
         flags = find(flag);
         if any(flags)
-            fprintf('Flags at f > %f kHz (kR > %f)\n\n', f(flags(1))/1000, kR(flags(1)))
+            fprintf('Flags at f > %f kHz\n\n', f(flags(1))/1000)
         end
     end
 end

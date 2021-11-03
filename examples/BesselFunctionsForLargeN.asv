@@ -57,7 +57,7 @@ if true
         g1 = @(n) exp( (n+0.5).*zeta23_(x./(n+0.5)) - (n+1.5).*zeta23_(x./(n+1.5)));
         scaledg = abs(g1(N_arr))./(x./(2*N_arr));
         semilogx(N_arr,scaledg,'DisplayName',['$$g_n^{(1)}(x)/(x/(2n))$$ with $$x=10^' num2str(log10(x)) '$$']); 
-        printResultsToFile([resultsFolder '/scaledg_' num2str(log10(x))], {'x', N_arr, 'y', scaledg, 'xlabel','n', 'ylabel','scaledg'})
+        printResultsToFile([resultsFolder '/scaledg_' num2str(log10(x))], {'n', N_arr, 'scaledg', scaledg})
 %         loglog(N_arr,abs(1-abs(g1(N_arr))./(x./(2*N_arr))),'DisplayName',['$$|1-g_n^{(1)}(x)/(x/(2n))|$$ with $$x=10^' num2str(log10(x)) '$$']); 
         hold on
     end

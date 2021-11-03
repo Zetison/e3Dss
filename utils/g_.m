@@ -9,5 +9,5 @@ g(indices2) = g(indices2) - (-1)^(i+1)*(nu+1)*zeta23_(x(indices2)/(nu+1));
 
 g = exp(g);
 if any(isinf(g))
-	error('e3Dss:infWeight','A weight evaluation was too large')
+	warning('e3Dss:infWeight','A weight evaluation was too large')
 end

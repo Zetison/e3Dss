@@ -8,23 +8,26 @@ startMatlabPool
 plotP_inc = 0;
 playP_inc = 1;
 
-applyLoad = 'pointCharge';
+% applyLoad = 'pointCharge';
 % applyLoad = 'planeWave';
-% applyLoad = 'radialPulsation';
+applyLoad = 'radialPulsation';
 
+type = 1;
 model = 'S15';
 % model = 'S5';
-% f_c = 1500; % (300) source pulse center freq.
-f_c = 150; % (300) source pulse center freq.
-ss = 2^5;
-npts = 3;
-% npts = 10;
-Fs = 44100;
-% Fs = 200000;
-dt = 1/Fs;
-T = 4; %60/f_c
-% N = 2^11*ss;
-N = T*Fs;
+f_c = 1500; % (300) source pulse center freq.
+if type == 4
+    % npts = 10;
+    Fs = 44100;
+    % Fs = 200000;
+    dt = 1/Fs;
+    T = 16; %60/f_c
+    N = T*Fs;
+else
+    ss = 1;
+    T = 60/f_c;
+    N = 2^11*ss;
+end
 B = N/T; % bandwidth
 f_L = -B/2;
 f_R = B/2;
@@ -34,7 +37,6 @@ omega = 2*pi*f;
 f(end)
 T
 dt = T/N;
-type = 4;
 d_vec = -[0,0,1].';
 omega_c = 2*pi*f_c;
 c_f = 1500;
@@ -74,11 +76,11 @@ if playP_inc
     tt = (0:dt:(T-dt)).';
     Pt_inc = Pt_inc_(tt,0,omega_c,k_c,P_inc,type);
     plot(tt,Pt_inc)
-    p_inc = P_inc_(omega, omega_c,P_inc,type);
-    plot(f,abs(p_inc))
+    p_inc = P_inc_(omega(2:end), omega_c,P_inc,type);
+    plot(f(2:end),abs(p_inc))
     
 %     sound(Pt_inc,Fs);
-    return
+%     return
 end
 %             return
 %%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -102,7 +104,7 @@ end
 
 defineBCstring
 R_a = 1.5*layer{1}.R_i;
-
+npts = 1000;
 z1 = linspace(layer{1}.R_i,4*layer{1}.R_i,npts).';
 z2 = linspace(layer{2}.R_i,layer{1}.R_i,npts).';
 z3 = linspace(layer{3}.R_i,layer{2}.R_i,npts).';

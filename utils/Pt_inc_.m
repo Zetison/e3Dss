@@ -1,5 +1,7 @@
 function p = Pt_inc_(t,z,omega_c,k_c,P_inc,type,terms)
-
+if nargin < 7
+    terms = 1;
+end
 switch type
     case 1
         if length(z) > 1 && length(t) == 1
@@ -60,6 +62,9 @@ switch type
         p(1:numel(ysCut)) = ysCut/max(abs(ysCut));
         audiowrite('../miscellaneous/sonar.wav',p,Fs);
         p = audioread('../miscellaneous/sonar.wav');
+        if isrow(t)
+            p = p.';
+        end
 end
         
 

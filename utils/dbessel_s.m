@@ -1,11 +1,11 @@
-function dZ = dbessel_s(n,z,i,Z,scaled,nu_a)
+function dZ = dbessel_s(n,z,i,Z,scaled,g)
 % Returns the derivative of the n'th spherical bessel function of kind i
 % evaluated at every element in z
 if nargin < 5
     scaled = false;
 end
 if scaled
-    dZ = n*Z{i,1} - z.*g_(n,i,z,nu_a).*Z{i,2};
+    dZ = n*Z{i,1} - z.*g{i}.*Z{i,2};
 else
     if isa(z,'sym') || isa(z,'mp')
         tiny = realmin('double');
@@ -16,7 +16,7 @@ else
         indices = logical(abs(z) < tiny);
         z(indices) = 1; % Avoid symbolic division by zero. These values will be replaced anyways
     end
-    dZ = n./z.*Z{i,1} - g_(n,i,z,nu_a).*Z{i,2};
+    dZ = n./z.*Z{i,1} - g{i}.*Z{i,2};
     if i == 1
         if n == 1
             dZ(indices) = ones(1,class(z))/3;

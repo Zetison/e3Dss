@@ -17,8 +17,8 @@ P_inc = 1;
 f = 1e3; % frequencies in Hertz
 % model = 'S15';
 model = 'S1';
-applyLoad = 'planeWave';
-% applyLoad = 'radialPulsation';
+% applyLoad = 'planeWave';
+applyLoad = 'radialPulsation';
 switch model
     case 'S1'
         layer = setS1Parameters();

@@ -76,7 +76,7 @@ for m = 1:M
         end
         if singleLayerSupport
             k2 = NaN(size(layer{1}.k_temp)); % Not used
-            Z_zeta_s2 = NaN;                   % Not used
+            Z_zeta_s2 = NaN;                 % Not used
         else
             k2 = layer{m2}.k_temp;
             Z_zeta_s2 = layer{m2}.Z_zeta_o_s;
@@ -97,22 +97,26 @@ for m = 1:M
             rho = layer{m}.rho;
             if ~strcmp(nextMedia,'origin')
                 Z_zeta = layer{m}.Z_zeta_i;
+                zeta_i = k.*R_i;
+                gzeta  = {g_(n,1,zeta_i,nu_a),g_(n,2,zeta_i,nu_a)};
             end
             switch nextMedia
                 case 'void'
                     if SHBC
-                        H1{m} = dp_dr_s_(n,k,R_i,Rt_m,Z_zeta,rho,omega,isSphere,isOuterDomain,nu_a);
+                        H1{m} = dp_dr_s_(n,k,R_i,Rt_m,Z_zeta,rho,omega,isSphere,isOuterDomain,nu_a,gzeta);
                     elseif SSBC
                         H1{m} = p_(n,k,R_i,Rt_m,Z_zeta,isSphere,isOuterDomain,nu_a);
                     elseif IBC
-                        H1{m} = p_(n,k,R_i,Rt_m,Z_zeta,isSphere,isOuterDomain,nu_a) - zs.*dp_dr_s_(n,k,R_i,Rt_m,Z_zeta,rho,omega,isSphere,isOuterDomain,nu_a);
+                        H1{m} = p_(n,k,R_i,Rt_m,Z_zeta,isSphere,isOuterDomain,nu_a) - zs.*dp_dr_s_(n,k,R_i,Rt_m,Z_zeta,rho,omega,isSphere,isOuterDomain,nu_a,gzeta);
                     end
                 case 'fluid'
                         k2 = layer{m2}.k_temp;
                         rho2 = layer{m2}.rho;
                         Z_zeta2 = layer{m2}.Z_zeta_o;
-                        dp_dr_s  = dp_dr_s_(n,k, R_i,Rt_m,Z_zeta, rho, omega, isSphere,isOuterDomain,nu_a);
-                        dp_dr_s2 = dp_dr_s_(n,k2,R_i,Rt_m2,Z_zeta2,rho2,omega,isSphere2,false,nu_a);
+                        zeta2 = k2.*R_i;
+                        gzeta2  = {g_(n,1,zeta2,nu_a),g_(n,2,zeta2,nu_a)};
+                        dp_dr_s  = dp_dr_s_(n,k, R_i,Rt_m,Z_zeta, rho, omega, isSphere,isOuterDomain,nu_a,gzeta);
+                        dp_dr_s2 = dp_dr_s_(n,k2,R_i,Rt_m2,Z_zeta2,rho2,omega,isSphere2,false,nu_a,gzeta2);
                         p  = p_(n,k, R_i,Rt_m, Z_zeta, isSphere, isOuterDomain,nu_a);
                         p2 = p_(n,k2,R_i,Rt_m2,Z_zeta2,isSphere2,false,        nu_a);
                         
@@ -124,11 +128,15 @@ for m = 1:M
                         b2 = layer{m2}.b_temp;
                         Z_xi2  = layer{m2}.Z_xi_o;
                         Z_eta2 = layer{m2}.Z_eta_o;
-                        dp_dr_s = dp_dr_s_(n,k,R_i,Rt_m,Z_zeta,rho,omega,isSphere,isOuterDomain,nu_a);
+                        xi2 = a2.*R_i;
+                        eta2 = b2.*R_i;
+                        gxi2  = {g_(n,1,xi2,nu_a),g_(n,2,xi2,nu_a)};
+                        geta2  = {g_(n,1,eta2,nu_a),g_(n,2,eta2,nu_a)};
+                        dp_dr_s = dp_dr_s_(n,k,R_i,Rt_m,Z_zeta,rho,omega,isSphere,isOuterDomain,nu_a,gzeta);
                         p = p_(n,k,R_i,Rt_m,Z_zeta,isSphere,isOuterDomain,nu_a);
-                        u_r2 = u_r_(n,a2,b2,R_i,Rt_m2,Z_xi2,Z_eta2,isSphere2,nu_a);
-                        sigma_rr2 = sigma_rr_(n,a2,b2,R_i,Rt_m2,Z_xi2,Z_eta2,isSphere2,G2,nu_a);
-                        sigma_rt2 = sigma_rt_(n,a2,b2,R_i,Rt_m2,Z_xi2,Z_eta2,isSphere2,G2,nu_a);
+                        u_r2 = u_r_(n,a2,b2,R_i,Rt_m2,Z_xi2,Z_eta2,isSphere2,nu_a,gxi2,geta2);
+                        sigma_rr2 = sigma_rr_(n,a2,b2,R_i,Rt_m2,Z_xi2,Z_eta2,isSphere2,G2,nu_a,gxi2,geta2);
+                        sigma_rt2 = sigma_rt_(n,a2,b2,R_i,Rt_m2,Z_xi2,Z_eta2,isSphere2,G2,nu_a,gxi2,geta2);
                         void = zeros(size(sigma_rt2,1),size(p,2),size(sigma_rt2,3),class(a2));
                         
                         H1{m} = cat(1,cat(2, dp_dr_s,u_r2),...
@@ -148,17 +156,21 @@ for m = 1:M
             if ~strcmp(nextMedia,'origin')
                 Z_xi  = layer{m}.Z_xi_i;
                 Z_eta = layer{m}.Z_eta_i;
+                xi_i = a.*R_i;
+                eta_i = b.*R_i;
+                gxi  = {g_(n,1,xi_i, nu_a),g_(n,2,xi_i, nu_a)};
+                geta = {g_(n,1,eta_i,nu_a),g_(n,2,eta_i,nu_a)};
             end
             switch nextMedia
                 case 'void'
                     if SHBC
-                        u_r = u_r_(n,a,b,R_i,Rt_m,Z_xi,Z_eta,isSphere,nu_a);
-                        u_t = u_t_(n,a,b,R_i,Rt_m,Z_xi,Z_eta,isSphere,nu_a);
+                        u_r = u_r_(n,a,b,R_i,Rt_m,Z_xi,Z_eta,isSphere,nu_a,gxi,geta);
+                        u_t = u_t_(n,a,b,R_i,Rt_m,Z_xi,Z_eta,isSphere,nu_a,gxi,geta);
                         
                         H1{m} = cat(1,u_r,u_t);
                     elseif SSBC
-                        sigma_rr = sigma_rr_(n,a,b,R_i,Rt_m,Z_xi,Z_eta,isSphere,G,nu_a);
-                        sigma_rt = sigma_rt_(n,a,b,R_i,Rt_m,Z_xi,Z_eta,isSphere,G,nu_a);
+                        sigma_rr = sigma_rr_(n,a,b,R_i,Rt_m,Z_xi,Z_eta,isSphere,G,nu_a,gxi,geta);
+                        sigma_rt = sigma_rt_(n,a,b,R_i,Rt_m,Z_xi,Z_eta,isSphere,G,nu_a,gxi,geta);
                         
                         H1{m} = cat(1,sigma_rr,sigma_rt);
                     elseif IBC
@@ -168,11 +180,13 @@ for m = 1:M
                         k2 = layer{m2}.k_temp;
                         rho2 = layer{m2}.rho;
                         Z_zeta2 = layer{m2}.Z_zeta_o;
-                        dp_dr_s2 = dp_dr_s_(n,k2,R_i,Rt_m2,Z_zeta2,rho2,omega,isSphere2,false,nu_a);
+                        zeta2 = k2.*R_i;
+                        gzeta2  = {g_(n,1,zeta2,nu_a),g_(n,2,zeta2,nu_a)};
+                        dp_dr_s2 = dp_dr_s_(n,k2,R_i,Rt_m2,Z_zeta2,rho2,omega,isSphere2,false,nu_a,gzeta2);
                         p2 = p_(n,k2,R_i,Rt_m2,Z_zeta2,isSphere2,false,nu_a);
-                        u_r = u_r_(n,a,b,R_i,Rt_m,Z_xi,Z_eta,isSphere,nu_a);
-                        sigma_rr = sigma_rr_(n,a,b,R_i,Rt_m,Z_xi,Z_eta,isSphere,G,nu_a);
-                        sigma_rt = sigma_rt_(n,a,b,R_i,Rt_m,Z_xi,Z_eta,isSphere,G,nu_a);
+                        u_r = u_r_(n,a,b,R_i,Rt_m,Z_xi,Z_eta,isSphere,nu_a,gxi,geta);
+                        sigma_rr = sigma_rr_(n,a,b,R_i,Rt_m,Z_xi,Z_eta,isSphere,G,nu_a,gxi,geta);
+                        sigma_rt = sigma_rt_(n,a,b,R_i,Rt_m,Z_xi,Z_eta,isSphere,G,nu_a,gxi,geta);
                         void = zeros(size(sigma_rt,1),size(p2,2),numel(a),class(a));
                         
                         H1{m} = cat(1,cat(2, sigma_rt,void),...
@@ -184,14 +198,18 @@ for m = 1:M
                         b2 = layer{m2}.b_temp;
                         Z_xi2  = layer{m2}.Z_xi_o;
                         Z_eta2 = layer{m2}.Z_eta_o;
-                        u_r  = u_r_(n,a, b, R_i,Rt_m, Z_xi, Z_eta, isSphere, nu_a);
-                        u_r2 = u_r_(n,a2,b2,R_i,Rt_m2,Z_xi2,Z_eta2,isSphere2,nu_a);
-                        u_t  = u_t_(n,a, b, R_i,Rt_m, Z_xi, Z_eta, isSphere, nu_a);
-                        u_t2 = u_t_(n,a2,b2,R_i,Rt_m2,Z_xi2,Z_eta2,isSphere2,nu_a);
-                        sigma_rr  = sigma_rr_(n,a, b, R_i,Rt_m, Z_xi, Z_eta, isSphere, G, nu_a);
-                        sigma_rr2 = sigma_rr_(n,a2,b2,R_i,Rt_m2,Z_xi2,Z_eta2,isSphere2,G2,nu_a);
-                        sigma_rt  = sigma_rt_(n,a, b, R_i,Rt_m, Z_xi, Z_eta, isSphere, G, nu_a);
-                        sigma_rt2 = sigma_rt_(n,a2,b2,R_i,Rt_m2,Z_xi2,Z_eta2,isSphere2,G2,nu_a);
+                        xi2 = a2.*R_i;
+                        eta2 = b2.*R_i;
+                        gxi2  = {g_(n,1,xi2,nu_a),g_(n,2,xi2,nu_a)};
+                        geta2  = {g_(n,1,eta2,nu_a),g_(n,2,eta2,nu_a)};
+                        u_r  = u_r_(n,a, b, R_i,Rt_m, Z_xi, Z_eta, isSphere, nu_a,gxi, geta);
+                        u_r2 = u_r_(n,a2,b2,R_i,Rt_m2,Z_xi2,Z_eta2,isSphere2,nu_a,gxi2,geta2);
+                        u_t  = u_t_(n,a, b, R_i,Rt_m, Z_xi, Z_eta, isSphere, nu_a,gxi, geta);
+                        u_t2 = u_t_(n,a2,b2,R_i,Rt_m2,Z_xi2,Z_eta2,isSphere2,nu_a,gxi2,geta2);
+                        sigma_rr  = sigma_rr_(n,a, b, R_i,Rt_m, Z_xi, Z_eta, isSphere, G, nu_a,gxi,geta);
+                        sigma_rr2 = sigma_rr_(n,a2,b2,R_i,Rt_m2,Z_xi2,Z_eta2,isSphere2,G2,nu_a,gxi2,geta2);
+                        sigma_rt  = sigma_rt_(n,a, b, R_i,Rt_m, Z_xi, Z_eta, isSphere, G, nu_a,gxi,geta);
+                        sigma_rt2 = sigma_rt_(n,a2,b2,R_i,Rt_m2,Z_xi2,Z_eta2,isSphere2,G2,nu_a,gxi2,geta2);
                         
                         H1{m} = cat(1,cat(2, u_r,-u_r2),...
                                       cat(2, sigma_rr,-sigma_rr2),...
@@ -265,8 +283,9 @@ for j = 1:length(omega)
     Pinv2 = diag(1./max(abs(H2),[],2));
     H2 = Pinv2*H2;
     CC(j,:) = diag(Pinv).*(H2\(Pinv2*D));
+    
     if any(isinf(CC(j,:))) || any(isnan(CC(j,:)))
-        error('e3Dss:singularK','The modal matrix, K, was singular.')
+        warning('e3Dss:singularK','The modal matrix, K, was singular.')
     end
     
     % Uncomment the following to get the spy matrix in the paper
@@ -309,9 +328,9 @@ switch options.applyLoad
     case 'pointCharge'
         r_s = options.r_s;
         if R < r_s
-            D1 = (2*n+1)*1i/R*k*r_s.*(n*Z{1,1} - zeta.*Z{1,2}).*(Z_r_s{1,1}+1i*Z_r_s{2,1});
+            D1 = (2*n+1)*1i/R*k.*(n*Z{1,1} - zeta.*Z{1,2}).*(Z_r_s{1,1}+1i*Z_r_s{2,1});
         else
-            D1 = (2*n+1)*1i/R*k*r_s.*Z_r_s{1,1}.*(n*(Z{1,1}+1i*Z{2,1}) - zeta.*(Z{1,2}+1i*Z{2,2}));
+            D1 = (2*n+1)*1i/R*k.*Z_r_s{1,1}.*(n*(Z{1,1}+1i*Z{2,1}) - zeta.*(Z{1,2}+1i*Z{2,2}));
         end
     case 'mechExcitation'
         D1 = zeros(size(k));
@@ -324,6 +343,7 @@ switch options.applyLoad
             D1 = zeros(size(k));
         end
     case 'custom'
+        warning('This is experimental')
         D1 = zeros(size(k));
     otherwise
         error('Not implemented')
@@ -338,9 +358,9 @@ switch options.applyLoad
     case 'pointCharge'
         r_s = options.r_s;
         if R < r_s
-            D2 = (2*n+1)*1i*k*r_s.*Z{1,1}.*(Z_r_s{1,1}+1i*Z_r_s{2,1});
+            D2 = (2*n+1)*1i*k.*Z{1,1}.*(Z_r_s{1,1}+1i*Z_r_s{2,1});
         else
-            D2 = (2*n+1)*1i*k*r_s.*Z_r_s{1,1}.*(Z{1,1}+1i*Z{2,1});
+            D2 = (2*n+1)*1i*k.*Z_r_s{1,1}.*(Z{1,1}+1i*Z{2,1});
         end
     case 'mechExcitation'
         D2 = (2*n+1)/(4*pi*R^2)*ones(size(k));
@@ -355,6 +375,7 @@ switch options.applyLoad
             D2 = zeros(size(k));
         end
     case 'custom' 
+        warning('This is experimental')
         theta_s = options.theta_s;
         Psi = @(theta) exp(-theta.^2/theta_s(1));
         integrand = @(theta) Psi(theta).*legendre_(n,cos(theta)).*sin(theta);
@@ -383,19 +404,19 @@ else
     H(1,2,:) = w_(n,2,zetat_m,zeta,nu_a).*Z{2,1};
 end
 
-function H = dp_dr_s_(n,k,R,Rt_m,Z,rho,omega,isSphere,isOuterDomain,nu_a)
+function H = dp_dr_s_(n,k,R,Rt_m,Z,rho,omega,isSphere,isOuterDomain,nu_a,gzeta)
 
 zeta = k*R;
 zetat_m = k*Rt_m;
 if isSphere
     H = zeros(1,1,length(k),class(R));
-    zeta_dj_n = dbessel_s(n,zeta,1,Z,true,nu_a); % = zeta*dj_n
+    zeta_dj_n = dbessel_s(n,zeta,1,Z,true,gzeta); % = zeta*dj_n
     temp = -1./(rho*omega.^2);
     H(1,1,:) = temp.*w_(n,1,zetat_m,zeta,nu_a).*zeta_dj_n;
 elseif isOuterDomain
     H = zeros(1,1,length(k),class(R));
-    zeta_dy_n = dbessel_s(n,zeta,2,Z,true,nu_a); % = zeta*dy_n
-    zeta_dh_n = dbessel_s(n,zeta,1,Z,true,nu_a) + 1i*zeta_dy_n; % = zeta*dh_n
+    zeta_dy_n = dbessel_s(n,zeta,2,Z,true,gzeta); % = zeta*dy_n
+    zeta_dh_n = dbessel_s(n,zeta,1,Z,true,gzeta) + 1i*zeta_dy_n; % = zeta*dh_n
     temp = -1./(rho*omega.^2);
     
     indices = indices_(n+1/2,zetat_m,nu_a);
@@ -404,15 +425,15 @@ elseif isOuterDomain
 else
     H = zeros(1,2,length(k),class(R));
 
-    zeta_dj_n = dbessel_s(n,zeta,1,Z,true,nu_a); % = zeta*dj_n
-    zeta_dy_n = dbessel_s(n,zeta,2,Z,true,nu_a); % = zeta*dy_n
+    zeta_dj_n = dbessel_s(n,zeta,1,Z,true,gzeta); % = zeta*dj_n
+    zeta_dy_n = dbessel_s(n,zeta,2,Z,true,gzeta); % = zeta*dy_n
     temp = -1./(rho*omega.^2);
     H(1,1,:) = temp.*w_(n,1,zetat_m,zeta,nu_a).*zeta_dj_n;
     H(1,2,:) = temp.*w_(n,2,zetat_m,zeta,nu_a).*zeta_dy_n;
 end
 H = H/R;
 
-function H = u_r_(n,a,b,R,Rt_m,Z_xi,Z_eta,isSphere,nu_a)
+function H = u_r_(n,a,b,R,Rt_m,Z_xi,Z_eta,isSphere,nu_a,gxi,geta)
 
 xi = a*R;
 eta = b*R;
@@ -422,31 +443,31 @@ if isSphere
     if n == 0
         H = zeros(1,1,length(a),class(R));
 
-        H(1,1,:) = w_(n,1,xit_m,xi,nu_a).*S_(1, 1, n, xi, eta, Z_xi,nu_a);
+        H(1,1,:) = w_(n,1,xit_m,xi,nu_a).*S_(1, 1, n, xi, eta, Z_xi,gxi);
     else
         H = zeros(1,2,length(a),class(R));
 
-        H(1,1,:) = w_(n,1,xit_m,xi,nu_a).*S_(1, 1, n, xi, eta, Z_xi,nu_a);
-        H(1,2,:) = w_(n,1,etat_m,eta,nu_a).*T_(1, 1, n, eta, Z_eta,nu_a);
+        H(1,1,:) = w_(n,1,xit_m,xi,nu_a).*S_(1, 1, n, xi, eta, Z_xi,gxi);
+        H(1,2,:) = w_(n,1,etat_m,eta,nu_a).*T_(1, 1, n, eta, Z_eta,geta);
     end
 else
     if n == 0
         H = zeros(1,2,length(a),class(R));
 
-        H(1,1,:) = w_(n,1,xit_m,xi,nu_a).*S_(1, 1, n, xi, eta, Z_xi,nu_a);
-        H(1,2,:) = w_(n,2,xit_m,xi,nu_a).*S_(1, 2, n, xi, eta, Z_xi,nu_a);
+        H(1,1,:) = w_(n,1,xit_m,xi,nu_a).*S_(1, 1, n, xi, eta, Z_xi,gxi);
+        H(1,2,:) = w_(n,2,xit_m,xi,nu_a).*S_(1, 2, n, xi, eta, Z_xi,gxi);
     else
         H = zeros(1,4,length(a),class(R));
 
-        H(1,1,:) = w_(n,1,xit_m,xi,nu_a).*S_(1, 1, n, xi, eta, Z_xi,nu_a);
-        H(1,2,:) = w_(n,2,xit_m,xi,nu_a).*S_(1, 2, n, xi, eta, Z_xi,nu_a);
-        H(1,3,:) = w_(n,1,etat_m,eta,nu_a).*T_(1, 1, n, eta, Z_eta,nu_a);
-        H(1,4,:) = w_(n,2,etat_m,eta,nu_a).*T_(1, 2, n, eta, Z_eta,nu_a);
+        H(1,1,:) = w_(n,1,xit_m,xi,nu_a).*S_(1, 1, n, xi, eta, Z_xi,gxi);
+        H(1,2,:) = w_(n,2,xit_m,xi,nu_a).*S_(1, 2, n, xi, eta, Z_xi,gxi);
+        H(1,3,:) = w_(n,1,etat_m,eta,nu_a).*T_(1, 1, n, eta, Z_eta,geta);
+        H(1,4,:) = w_(n,2,etat_m,eta,nu_a).*T_(1, 2, n, eta, Z_eta,geta);
     end
 end
 H = H/R;
 
-function H = u_t_(n,a,b,R,Rt_m,Z_xi,Z_eta,isSphere,nu_a)
+function H = u_t_(n,a,b,R,Rt_m,Z_xi,Z_eta,isSphere,nu_a,gxi,geta)
 
 if n == 0
     if isSphere
@@ -462,20 +483,20 @@ else
     if isSphere
         H = zeros(1,2,length(a),class(R));
 
-        H(1,1,:) = w_(n,1,xit_m,xi,nu_a).*S_(2, 1, n, xi, eta, Z_xi,nu_a);
-        H(1,2,:) = w_(n,1,etat_m,eta,nu_a).*T_(2, 1, n, eta, Z_eta,nu_a);
+        H(1,1,:) = w_(n,1,xit_m,xi,nu_a).*S_(2, 1, n, xi, eta, Z_xi,gxi);
+        H(1,2,:) = w_(n,1,etat_m,eta,nu_a).*T_(2, 1, n, eta, Z_eta,geta);
     else
         H = zeros(1,4,length(a),class(R));
 
-        H(1,1,:) = w_(n,1,xit_m,xi,nu_a).*S_(2, 1, n, xi, eta, Z_xi,nu_a);
-        H(1,2,:) = w_(n,2,xit_m,xi,nu_a).*S_(2, 2, n, xi, eta, Z_xi,nu_a);
-        H(1,3,:) = w_(n,1,etat_m,eta,nu_a).*T_(2, 1, n, eta, Z_eta,nu_a);
-        H(1,4,:) = w_(n,2,etat_m,eta,nu_a).*T_(2, 2, n, eta, Z_eta,nu_a);
+        H(1,1,:) = w_(n,1,xit_m,xi,nu_a).*S_(2, 1, n, xi, eta, Z_xi,gxi);
+        H(1,2,:) = w_(n,2,xit_m,xi,nu_a).*S_(2, 2, n, xi, eta, Z_xi,gxi);
+        H(1,3,:) = w_(n,1,etat_m,eta,nu_a).*T_(2, 1, n, eta, Z_eta,geta);
+        H(1,4,:) = w_(n,2,etat_m,eta,nu_a).*T_(2, 2, n, eta, Z_eta,geta);
     end
     H = H/R;
 end
 
-function H = sigma_rr_(n,a,b,R,Rt_m,Z_xi,Z_eta,isSphere,G,nu_a)
+function H = sigma_rr_(n,a,b,R,Rt_m,Z_xi,Z_eta,isSphere,G,nu_a,gxi,geta)
 
 xi = a*R;
 eta = b*R;
@@ -485,32 +506,32 @@ if isSphere
     if n == 0
         H = zeros(1,1,length(a),class(R));
 
-        H(1,1,:) = w_(n,1,xit_m,xi,nu_a).*S_(5, 1, n, xi, eta, Z_xi,nu_a);
+        H(1,1,:) = w_(n,1,xit_m,xi,nu_a).*S_(5, 1, n, xi, eta, Z_xi,gxi);
     else
         H = zeros(1,2,length(a),class(R));
 
-        H(1,1,:) = w_(n,1,xit_m,xi,nu_a).*S_(5, 1, n, xi, eta, Z_xi,nu_a);
-        H(1,2,:) = w_(n,1,etat_m,eta,nu_a).*T_(5, 1, n, eta, Z_eta,nu_a);
+        H(1,1,:) = w_(n,1,xit_m,xi,nu_a).*S_(5, 1, n, xi, eta, Z_xi,gxi);
+        H(1,2,:) = w_(n,1,etat_m,eta,nu_a).*T_(5, 1, n, eta, Z_eta,geta);
     end
 else
     if n == 0
         H = zeros(1,2,length(a),class(R));
 
-        H(1,1,:) = w_(n,1,xit_m,xi,nu_a).*S_(5, 1, n, xi, eta, Z_xi,nu_a);
-        H(1,2,:) = w_(n,2,xit_m,xi,nu_a).*S_(5, 2, n, xi, eta, Z_xi,nu_a);
+        H(1,1,:) = w_(n,1,xit_m,xi,nu_a).*S_(5, 1, n, xi, eta, Z_xi,gxi);
+        H(1,2,:) = w_(n,2,xit_m,xi,nu_a).*S_(5, 2, n, xi, eta, Z_xi,gxi);
     else
         H = zeros(1,4,length(a),class(R));
 
-        H(1,1,:) = w_(n,1,xit_m,xi,nu_a).*S_(5, 1, n, xi, eta, Z_xi,nu_a);
-        H(1,2,:) = w_(n,2,xit_m,xi,nu_a).*S_(5, 2, n, xi, eta, Z_xi,nu_a);
+        H(1,1,:) = w_(n,1,xit_m,xi,nu_a).*S_(5, 1, n, xi, eta, Z_xi,gxi);
+        H(1,2,:) = w_(n,2,xit_m,xi,nu_a).*S_(5, 2, n, xi, eta, Z_xi,gxi);
 
-        H(1,3,:) = w_(n,1,etat_m,eta,nu_a).*T_(5, 1, n, eta, Z_eta,nu_a);
-        H(1,4,:) = w_(n,2,etat_m,eta,nu_a).*T_(5, 2, n, eta, Z_eta,nu_a);
+        H(1,3,:) = w_(n,1,etat_m,eta,nu_a).*T_(5, 1, n, eta, Z_eta,geta);
+        H(1,4,:) = w_(n,2,etat_m,eta,nu_a).*T_(5, 2, n, eta, Z_eta,geta);
     end
 end
 H = 2*G/R^2*H;
 
-function H = sigma_rt_(n,a,b,R,Rt_m,Z_xi,Z_eta,isSphere,G,nu_a)
+function H = sigma_rt_(n,a,b,R,Rt_m,Z_xi,Z_eta,isSphere,G,nu_a,gxi,geta)
 
 if n == 0
     if isSphere
@@ -526,15 +547,15 @@ else
     if isSphere
         H = zeros(1,2,length(a),class(R));
         
-        H(1,1,:) = w_(n,1,xit_m,xi,nu_a).*S_(7, 1, n, xi, eta, Z_xi,nu_a);
-        H(1,2,:) = w_(n,2,etat_m,eta,nu_a).*T_(7, 1, n, eta, Z_eta,nu_a);
+        H(1,1,:) = w_(n,1,xit_m,xi,nu_a).*S_(7, 1, n, xi, eta, Z_xi,gxi);
+        H(1,2,:) = w_(n,2,etat_m,eta,nu_a).*T_(7, 1, n, eta, Z_eta,geta);
     else
         H = zeros(1,4,length(a),class(R));
         
-        H(1,1,:) = w_(n,1,xit_m,xi,nu_a).*S_(7, 1, n, xi, eta, Z_xi,nu_a);
-        H(1,2,:) = w_(n,2,xit_m,xi,nu_a).*S_(7, 2, n, xi, eta, Z_xi,nu_a);
-        H(1,3,:) = w_(n,1,etat_m,eta,nu_a).*T_(7, 1, n, eta, Z_eta,nu_a);
-        H(1,4,:) = w_(n,2,etat_m,eta,nu_a).*T_(7, 2, n, eta, Z_eta,nu_a);
+        H(1,1,:) = w_(n,1,xit_m,xi,nu_a).*S_(7, 1, n, xi, eta, Z_xi,gxi);
+        H(1,2,:) = w_(n,2,xit_m,xi,nu_a).*S_(7, 2, n, xi, eta, Z_xi,gxi);
+        H(1,3,:) = w_(n,1,etat_m,eta,nu_a).*T_(7, 1, n, eta, Z_eta,geta);
+        H(1,4,:) = w_(n,2,etat_m,eta,nu_a).*T_(7, 2, n, eta, Z_eta,geta);
     end
     H = 2*G/R^2*H;
 end

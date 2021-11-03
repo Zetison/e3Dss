@@ -1,20 +1,24 @@
-addpath ..
-addpath ../utils
-addpath ../models
+addpath utils
+addpath models
+addpath examples
 homeDir = expanduser('~');
 folderName = [homeDir '/results/e3Dss'];
 if ~exist(folderName, 'dir')
     error('The folder in which results should be stored does not exist. Please make such a folder and alter the variable folderName in startup.m accordingly.')
 end
 
-if ~isfile('../miscellaneous/U_pol.mat')
-    i_max = 100;
+if ~isfile('miscellaneous/U_pol.mat')
+    i_max = 64;
     U_pol = cell(i_max,1);
+    u_k = zeros(i_max,1);
+    v_k = zeros(i_max,1);
     for i = 1:i_max
         U_pol{i} = U_p(i-1,U_pol);
+        u_k(i) = u_K(i-1);
+        v_k(i) = v_K(i-1);
     end
-    save('../miscellaneous/U_pol.mat','U_pol')
-%     load('../miscellaneous/U_pol.mat')
+    save('miscellaneous/U_pol.mat','U_pol','u_k','v_k')
+%     load('miscellaneous/U_pol.mat','U_pol','u_k','v_k')
     
     U_p(1,U_pol)-[-5,0,3,0]/24
     U_p(2,U_pol)-[385,0,-462,0,81,0,0]/1152
@@ -31,7 +35,9 @@ if ~isfile('../miscellaneous/U_pol.mat')
                    241770821762631191867/107752139522048,0, ...
                    -26416375998266454375/314460325543936,0, ...
                    1212400457192925/2199023255552,0,0,0,0,0,0,0,0,0,0,0];
-    (U_p(11,U_pol)-U_11)./U_11
+	U_11_ref = U_11;
+    U_11_ref(U_11_ref == 0) = 1;
+    (U_p(11,U_pol)-U_11)./U_11_ref
                    
 
 end
@@ -47,4 +53,13 @@ else
     end
     U = U + 1/8*polyint(conv([-5,0,1],U_pol{k}));
 end
+end
+
+
+function u = u_K(k)
+u = prod((2*k+1):2:(6*k-1))./216.^k./factorial(k);
+end
+
+function v = v_K(k)
+v = (6*k+1)./(1-6*k).*u_K(k);
 end

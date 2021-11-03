@@ -12,11 +12,10 @@ playP_inc = 1;
 applyLoad = 'planeWave';
 % applyLoad = 'radialPulsation';
 
-model = 'S15';
-% model = 'S5';
+% model = 'S35';
+model = 'S5';
 f_c = 1500; % (300) source pulse center freq.
 ss = 2^5;
-npts = 3;
 % npts = 10;
 Fs = 44100;
 % Fs = 200000;
@@ -73,7 +72,7 @@ if playP_inc
     tt = (0:dt:(T-dt)).';
     Pt_inc = Pt_inc_(tt,0,omega_c,k_c,P_inc,type);
     plot(tt,Pt_inc)
-    p_inc = P_inc_(omega, omega_c,P_inc,type);
+    p_inc = P_inc_(omega(2:end), omega_c,P_inc,type);
     semilogy(f(2:end),abs(p_inc))
     
     sound(Pt_inc,Fs);
@@ -93,13 +92,13 @@ switch model
     case 'S5'
         layer = setS5Parameters();
 end
-layer{1}.calc_p_0 = true;
+layer{1}.calc_p_0 = false;
 layer{1}.calc_p = true;
-layer{1}.calc_p_inc = true;
+layer{1}.calc_p_inc = false;
 
 defineBCstring
 
-layer{1}.X = [0, 0, 1];
+layer{1}.X = [0, 0, 2*layer{1}.R_i];
 
 if ~exist('options','var')
     options = struct('BC', BC,...
@@ -116,6 +115,7 @@ if false
     layer{1}.X = [1,0,0];
     layer = e3Dss(layer, options);
     plot(omega(2:end),20*log10(abs(layer{1}.p)))
+    plot(omega(2:end),abs(layer{1}.p))
     return
 else
     layer = e3Dss(layer, options);
@@ -126,12 +126,17 @@ startIdx = 2*round(1900/2);
 if N < 100
     startIdx = 1;
 end
-totField1 = zeros(npts,N/2);
-PincField = zeros(npts,N/2);
+if type == 4
+    startIdx = 1;
+end
+totField1 = zeros(1,N/2);
+PincField = zeros(1,N/2);
 
 for n = 0:N-1
     if n >= N/2+1
-%         PincField(:,n-N/2+1) = layer{1}.p_inc(:,n-N/2);
+        if layer{1}.calc_p_inc
+            PincField(:,n-N/2+1) = layer{1}.p_inc(:,n-N/2);
+        end
 % 
 %         totField1(:,n-N/2+1) = PincField(:,n-N/2+1) + layer{1}.p(:,n-N/2);
         totField1(:,n-N/2+1) = layer{1}.p(:,n-N/2);
@@ -150,6 +155,8 @@ PincFieldTime(:,N-startIdx+2:end) = temp(:,1:startIdx-1);
 
 filename = ['../../../results/e3Dss/' model '.wav'];
 y = real(totFieldTime(end,:));
+figure
+plot(y)
 ys = y/max(abs(y));
 if 0
     load handel.mat
