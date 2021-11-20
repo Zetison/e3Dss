@@ -53,25 +53,27 @@ layer = getDefaultParameters(newLayers);
 layer = updateOptions(layer,newLayers);
 
 % Supress warning for ill-conditioned matrices in getCoeffs.m
-poolobj = gcp('nocreate');
-if isempty(poolobj)
-    warning('off', 'MATLAB:nearlySingularMatrix')
-    warning('off', 'MATLAB:singularMatrix')
-    if ~options.debug
-        warning('off', 'e3Dss:infBessel')
-        warning('off', 'e3Dss:divergeBessel')
-        warning('off', 'e3Dss:infWeight')
-        warning('off', 'e3Dss:singularK')
-    end
+if options.debug
+    debugStr = 'on';
 else
-    pctRunOnAll warning('off', 'MATLAB:singularMatrix')
-    pctRunOnAll warning('off', 'MATLAB:nearlySingularMatrix')
-    if ~options.debug
-        pctRunOnAll warning('off', 'e3Dss:infBessel')
-        pctRunOnAll warning('off', 'e3Dss:divergeBessel')
-        pctRunOnAll warning('off', 'e3Dss:infWeight')
-        pctRunOnAll warning('off', 'e3Dss:singularK')
-    end
+    debugStr = 'off';
+end
+poolobj = gcp('nocreate');
+singMatrixWarning = 'off';
+if isempty(poolobj)
+    warning(singMatrixWarning, 'MATLAB:nearlySingularMatrix')
+    warning(singMatrixWarning, 'MATLAB:singularMatrix')
+    warning(debugStr, 'e3Dss:infBessel')
+    warning(debugStr, 'e3Dss:divergeBessel')
+    warning(debugStr, 'e3Dss:infWeight')
+    warning(debugStr, 'e3Dss:singularK')
+else
+    pctRunOnAll(['warning(''' singMatrixWarning ''', ''MATLAB:singularMatrix'')'])
+    pctRunOnAll(['warning(''' singMatrixWarning ''', ''MATLAB:nearlySingularMatrix'')'])
+    pctRunOnAll(['warning(''' debugStr ''', ''e3Dss:infBessel'')'])
+    pctRunOnAll(['warning(''' debugStr ''', ''e3Dss:divergeBessel'')'])
+    pctRunOnAll(['warning(''' debugStr ''', ''e3Dss:infWeight'')'])
+    pctRunOnAll(['warning(''' debugStr ''', ''e3Dss:singularK'')'])
 end
 prec = options.prec;
 
@@ -288,7 +290,7 @@ for m = 1:M
                                 layer{m}.dp_inc{3} = zeros(nFreqs,n_X,prec);
                                 for ii = 1:3
                                     if layer{m}.calc_dp_inc(ii)
-                                    	for jj = 1:3
+                                        for jj = 1:3
                                             layer{m}.dp_inc{ii} = layer{m}.dp_inc{ii} + A(ii,jj)*dp_incdX_m{jj};
                                         end
                                     end
@@ -463,7 +465,7 @@ for m = 1:M
                         muv = 1i*rho*wv/kT^2;
                         c = repmat(4*1i*wv*muv/(3*rho) + ev.^2./kL.^2,1,n_X);
 
-                        layer{m}.p = -1i*rho*c^2./Omega.*(du_X{1,1}+du_X{2,2}+du_X{3,3});
+                        layer{m}.p = -1i*rho*c^2./Omega.*(layer{m}.du{1,1}+layer{m}.du{2,2}+layer{m}.du{3,3});
                     end
                 end
                 if layer{m}.calcStresses
@@ -841,6 +843,7 @@ solidFieldNames = {'u_r','u_t','du_rdr','du_rdt','du_tdr','du_tdt','sigma_rr','s
 load('miscellaneous/U_pol.mat','U_pol','u_k','v_k')
 
 M = numel(layer);
+m_s = options.m_s;
 displayIter = strcmp(options.Display, 'iter');
 prec = options.prec;
 omega = options.omega;
@@ -858,6 +861,7 @@ R_i = inf;
 for m = 1:M
     R_o = R_i;
     R_i = layer{m}.R_i;
+    isOuterDomain = m == 1;
     isSphere = R_i == 0;
     if isfield(layer{m} ,'X')
         n_X = size(layer{m}.X,1);
@@ -867,23 +871,26 @@ for m = 1:M
     layer{m}.P = zeros(2,n_X,prec); 
     layer{m}.dP = zeros(2,n_X,prec); 
     layer{m}.d2P = zeros(2,n_X,prec);
+    besselIndices = getBesselFlags(layer{m},options,m,m_s,isOuterDomain,isSphere,true);
     switch layer{m}.media
         case 'fluid'
             layer{m}.k = omega*(1./layer{m}.c_f);
-
-            for i = 1:2
-                for j = 1:2
-                    layer{m}.Z_zeta{i,j} = zeros(nFreqs-computeForStaticCase,n_X,prec);
-                    if ~isSphere
-                        layer{m}.Z_zeta_i{i,j} = zeros(nFreqs,1,prec);
-                        layer{m}.Z_zeta_i_s{i,j} = zeros(nFreqs,1,prec);
-                    end
-                    if ~isinf(R_o)
-                        layer{m}.Z_zeta_o{i,j} = zeros(nFreqs,1,prec);
-                        layer{m}.Z_zeta_o_s{i,j} = zeros(nFreqs,1,prec);
-                    end
-                    if strcmp(options.applyLoad,'pointCharge')
-                        layer{m}.Z_r_s{i,j} = zeros(nFreqs,1,prec);
+            
+            for i = 1:numel(besselIndices)
+                if besselIndices(i)
+                    for j = 1:2
+                        layer{m}.Z_zeta{i,j} = zeros(nFreqs-computeForStaticCase,n_X,prec);
+                        if ~isSphere
+                            layer{m}.Z_zeta_i{i,j} = zeros(nFreqs,1,prec);
+                            layer{m}.Z_zeta_i_s{i,j} = zeros(nFreqs,1,prec);
+                        end
+                        if ~isinf(R_o)
+                            layer{m}.Z_zeta_o{i,j} = zeros(nFreqs,1,prec);
+                            layer{m}.Z_zeta_o_s{i,j} = zeros(nFreqs,1,prec);
+                        end
+                        if strcmp(options.applyLoad,'pointCharge')
+                            layer{m}.Z_r_s{i,j} = zeros(nFreqs,1,prec);
+                        end
                     end
                 end
             end
@@ -908,21 +915,19 @@ for m = 1:M
             layer{m}.a = omega/c_s_1;
             layer{m}.b = omega/c_s_2;
 
-            for i = 1:2
-                for j = 1:2
-                    layer{m}.Z_xi{i,j} = zeros(nFreqs-computeForStaticCase,n_X,prec);
-                    layer{m}.Z_eta{i,j} = zeros(nFreqs-computeForStaticCase,n_X,prec);
-                    if ~isSphere
-                        layer{m}.Z_xi_i{i,j} = zeros(nFreqs,1,prec);
-                        layer{m}.Z_eta_i{i,j} = zeros(nFreqs,1,prec);
-                        layer{m}.Z_xi_i_s{i,j} = zeros(nFreqs,1,prec);
-                        layer{m}.Z_eta_i_s{i,j} = zeros(nFreqs,1,prec);
-                    end
-                    if ~isinf(R_o)
-                        layer{m}.Z_xi_o{i,j} = zeros(nFreqs,1,prec);
-                        layer{m}.Z_eta_o{i,j} = zeros(nFreqs,1,prec);
-                        layer{m}.Z_xi_o_s{i,j} = zeros(nFreqs,1,prec);
-                        layer{m}.Z_eta_o_s{i,j} = zeros(nFreqs,1,prec);
+            for i = 1:numel(besselIndices)
+                if besselIndices(i)
+                    for j = 1:2
+                        layer{m}.Z_xi{i,j} = zeros(nFreqs-computeForStaticCase,n_X,prec);
+                        layer{m}.Z_eta{i,j} = zeros(nFreqs-computeForStaticCase,n_X,prec);
+                        if ~isSphere
+                            layer{m}.Z_xi_i{i,j} = zeros(nFreqs,1,prec);
+                            layer{m}.Z_eta_i{i,j} = zeros(nFreqs,1,prec);
+                        end
+                        if ~isinf(R_o)
+                            layer{m}.Z_xi_o{i,j} = zeros(nFreqs,1,prec);
+                            layer{m}.Z_eta_o{i,j} = zeros(nFreqs,1,prec);
+                        end
                     end
                 end
             end
@@ -1011,27 +1016,22 @@ while n <= N_max && ~(singleModeSolution && n > 0)
         R_o = R_i;
         R_i = layer{m}.R_i;
         isSphere = R_i == 0;
+        isOuterDomain = m == 1;
+        besselIndices = getBesselFlags(layer{m},options,m,m_s,isOuterDomain,isSphere,true);
         switch layer{m}.media
             case 'fluid'
-                evalPointCharge = strcmp(options.applyLoad,'pointCharge') && m == options.m_s;
-                evalPlaneWave = strcmp(options.applyLoad,'planeWave') && m == 1;
+                evalPointCharge = strcmp(options.applyLoad,'pointCharge') && m == m_s;
                 layer{m}.k_temp = layer{m}.k(indices,:);
                 if ~isSphere
                     zeta_i = layer{m}.k_temp*R_i;
-                    layer{m}.Z_zeta_i = iterate_Z(n,zeta_i,layer{m}.Z_zeta_i,Zindices,~isSphere,nu_a,U_pol,u_k,v_k);
-                    if evalPlaneWave || evalPointCharge
-                        layer{m}.Z_zeta_i_s = iterate_Z(n,layer{m}.k_temp*R_i,layer{m}.Z_zeta_i_s,Zindices,~isSphere || evalPointCharge,Inf,U_pol,u_k,v_k);
-                    end
+                    layer{m}.Z_zeta_i = iterate_Z(n,zeta_i,layer{m}.Z_zeta_i,Zindices,besselIndices,nu_a,U_pol,u_k,v_k);
                 end
-                if ~isinf(R_o)
+                if ~isOuterDomain
                     zeta_o = layer{m}.k_temp*R_o;
-                    layer{m}.Z_zeta_o = iterate_Z(n,zeta_o,layer{m}.Z_zeta_o,Zindices,~isSphere || evalPointCharge,nu_a,U_pol,u_k,v_k);
-                    if evalPlaneWave || evalPointCharge
-                        layer{m}.Z_zeta_o_s = iterate_Z(n,layer{m}.k_temp*R_o,layer{m}.Z_zeta_o_s,Zindices,~isSphere || evalPointCharge,Inf,U_pol,u_k,v_k);
-                    end
+                    layer{m}.Z_zeta_o = iterate_Z(n,zeta_o,layer{m}.Z_zeta_o,Zindices,besselIndices,nu_a,U_pol,u_k,v_k);
                 end
                 if evalPointCharge
-                    layer{m}.Z_r_s = iterate_Z(n,layer{m}.k_temp*options.r_s,layer{m}.Z_r_s,Zindices,~isSphere,Inf,U_pol,u_k,v_k);
+                    layer{m}.Z_r_s = iterate_Z(n,layer{m}.k_temp*options.r_s,layer{m}.Z_r_s,Zindices,besselIndices,nu_a,U_pol,u_k,v_k);
                 end
             case {'solid','viscoelastic'}
                 layer{m}.a_temp = layer{m}.a(indices,:);
@@ -1039,48 +1039,68 @@ while n <= N_max && ~(singleModeSolution && n > 0)
                 if ~isSphere
                     xi_i = layer{m}.a_temp*R_i;
                     eta_i = layer{m}.b_temp*R_i;
-                    layer{m}.Z_xi_i  = iterate_Z(n,xi_i, layer{m}.Z_xi_i, Zindices,~isSphere,nu_a,U_pol,u_k,v_k);
-                    layer{m}.Z_eta_i = iterate_Z(n,eta_i,layer{m}.Z_eta_i,Zindices,~isSphere,nu_a,U_pol,u_k,v_k);
+                    layer{m}.Z_xi_i  = iterate_Z(n,xi_i, layer{m}.Z_xi_i, Zindices,besselIndices,nu_a,U_pol,u_k,v_k);
+                    layer{m}.Z_eta_i = iterate_Z(n,eta_i,layer{m}.Z_eta_i,Zindices,besselIndices,nu_a,U_pol,u_k,v_k);
                 end
                 if ~isinf(R_o)
                     xi_o = layer{m}.a_temp*R_o;
                     eta_o = layer{m}.b_temp*R_o;
-                    layer{m}.Z_xi_o  = iterate_Z(n,xi_o,layer{m}.Z_xi_o, Zindices,~isSphere,nu_a,U_pol,u_k,v_k);
-                    layer{m}.Z_eta_o = iterate_Z(n,eta_o,layer{m}.Z_eta_o,Zindices,~isSphere,nu_a,U_pol,u_k,v_k);
+                    layer{m}.Z_xi_o  = iterate_Z(n,xi_o,layer{m}.Z_xi_o, Zindices,besselIndices,nu_a,U_pol,u_k,v_k);
+                    layer{m}.Z_eta_o = iterate_Z(n,eta_o,layer{m}.Z_eta_o,Zindices,besselIndices,nu_a,U_pol,u_k,v_k);
                 end
+        end
+        % Compute exponent of scale for incident wave
+        if m == m_s
+            switch options.applyLoad
+                case 'planeWave'
+                    nu = n+0.5;
+                    Rt_m = getIntermediateRadius(layer,m,isSphere,isOuterDomain);
+                    zetat_m = Rt_m*layer{m}.k_temp;
+                    exponentShift = exponent_(1,nu,zetat_m,nu_a);
+                case 'pointCharge'
+                    nu = n+0.5;
+                    Rt_m = getIntermediateRadius(layer,m,isSphere,isOuterDomain);
+                    zetat_m = Rt_m*layer{m}.k_temp;
+                    r_s = options.r_s;
+                    zetat_s = r_s*layer{m}.k_temp;
+                    if Rt_m < r_s
+                        exponentShift = exponent_(1,nu,zetat_m,nu_a) + exponent_(3,nu,zetat_s,nu_a);
+                    else
+                        exponentShift = exponent_(1,nu,zetat_s,nu_a) + exponent_(3,nu,zetat_m,nu_a);
+                    end
+                otherwise
+                    exponentShift = 0;
+            end
         end
     end
     C = getCoeffs(n, omega_temp, layer, options);
+    
     hasCnvrgdTmp = zeros(length(indices),M); % temporary hasCnvrgd matrix
     hasDvrgdTmp = zeros(length(indices),M); % temporary hasDvrgd matrix
     relTermMax = -Inf(nFreqs,1);
     for m = 1:M
         isSphere = layer{m}.R_i == 0;
+        isOuterDomain = m == 1;
+        besselIndices = getBesselFlags(layer{m},options,m,m_s,isOuterDomain,isSphere);
         hasCnvrgdTmp2 = ones(size(indices)); % temporary hasCnvrgd vector  
         hasDvrgdTmp2 = zeros(size(indices)); % temporary hasDvrgd vector    
         if isfield(layer{m},'r') && ~isempty(layer{m}.r)
             [layer{m}.P, layer{m}.dP, layer{m}.d2P] = legendreDerivs(n, cos(layer{m}.theta), layer{m}.P, layer{m}.dP, layer{m}.d2P);
-            if m == 1
-                Rt_m = layer{1}.R_i;
-            elseif isSphere
-                Rt_m = layer{m-1}.R_i;
-            else
-                Rt_m = (layer{m}.R_i+layer{m-1}.R_i)/2;
-            end
+            Rt_m = getIntermediateRadius(layer,m,isSphere,isOuterDomain);
 
             switch layer{m}.media
                 case 'fluid'
                     zeta = layer{m}.k_temp*layer{m}.r;
                     if ~layer{m}.calc_farFieldOnly
-                        layer{m}.Z_zeta = iterate_Z(n,zeta,layer{m}.Z_zeta,Zindices,~isSphere,nu_a,U_pol,u_k,v_k);
+                        layer{m}.Z_zeta = iterate_Z(n,zeta,layer{m}.Z_zeta,Zindices,besselIndices,nu_a,U_pol,u_k,v_k);
                     end
-                    media = p_(m,n,zeta,C{m},Rt_m,layer,isSphere,options.applyLoad,nu_a);
+                    media = p_(m,n,zeta,C{m},Rt_m,layer,isSphere,isOuterDomain,options.applyLoad,besselIndices,nu_a,exponentShift);
                     fieldNames = fluidFieldNames;
                 case {'solid','viscoelastic'}
                     xi = layer{m}.a_temp*layer{m}.r;
                     eta = layer{m}.b_temp*layer{m}.r;
-                    layer{m}.Z_xi = iterate_Z(n,xi,layer{m}.Z_xi,Zindices,~isSphere,nu_a,U_pol,u_k,v_k);
-                    layer{m}.Z_eta = iterate_Z(n,eta,layer{m}.Z_eta,Zindices,~isSphere,nu_a,U_pol,u_k,v_k);
+                    layer{m}.Z_xi = iterate_Z(n,xi,layer{m}.Z_xi,Zindices,besselIndices,nu_a,U_pol,u_k,v_k);
+                    layer{m}.Z_eta = iterate_Z(n,eta,layer{m}.Z_eta,Zindices,besselIndices,nu_a,U_pol,u_k,v_k);
                     if isSphere
                         A = C{m}(:,1);
                         if n > 0
@@ -1096,9 +1116,10 @@ while n <= N_max && ~(singleModeSolution && n > 0)
                             B = NaN(1,2);
                         end
                     end
-                    media = u_(n,m,A,B,xi,eta,Rt_m,isSphere,layer,omega_temp,nu_a);
+                    media = u_(n,m,A,B,xi,eta,Rt_m,isSphere,layer,omega_temp,nu_a,exponentShift);
                     fieldNames = solidFieldNames;
             end
+            
             % Update fields
             for fieldName = fieldNames
                 if layer{m}.(['calc_' fieldName{1}])
@@ -1174,20 +1195,45 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function Z = iterate_Z(n,x,Z,Zindices,evalBessely,nu_a,U_pol,u_k,v_k)
+function Z = iterate_Z(n,x,Z,Zindices,besselIndices,nu_a,U_pol,u_k,v_k)
 
 if n == 0
-    Z{1,2} = bessel_s(n,x,1,nu_a,U_pol,u_k,v_k);
-    if evalBessely
-        Z{2,2} = bessel_s(n,x,2,nu_a,U_pol,u_k,v_k);
+    for i = 1:numel(besselIndices)
+        if besselIndices(i)
+            Z{i,2} = bessel_s(n,x,i,nu_a,U_pol,u_k,v_k);
+        end
     end
 end
-Z{1,1} = Z{1,2}(Zindices,:);
-Z{1,2} = bessel_s(n+1,x,1,nu_a,U_pol,u_k,v_k);
-if evalBessely
-    Z{2,1} = Z{2,2}(Zindices,:);
-    Z{2,2} = bessel_s(n+1,x,2,nu_a,U_pol,u_k,v_k);    
+for i = 1:numel(besselIndices)
+    if besselIndices(i)
+        Z{i,1} = Z{i,2}(Zindices,:);
+        Z{i,2} = bessel_s(n+1,x,i,nu_a,U_pol,u_k,v_k);
+    end
 end
+
+function besselFlag = getBesselFlags(layer,options,m,m_s,isOuterDomain,isSphere,calcForCoeffs)
+if nargin < 7
+    calcForCoeffs = false;
+end
+besselFlag = false(1,3);
+if isOuterDomain
+    besselFlag(3) = true;
+elseif isSphere
+    besselFlag(1) = true;
+else
+    besselFlag(1:2) = true;
+end
+if strcmp(options.applyLoad,'planeWave') || strcmp(options.applyLoad,'pointCharge')
+    calcForP_inc = (m == m_s && (calcForCoeffs || layer.calc_p_inc || layer.calc_dp_incdr || layer.calc_dp_incdt));
+else
+    calcForP_inc = false;
+end
+if strcmp(options.applyLoad,'planeWave')
+    calcForP_inc = calcForP_inc*[1,0,0];
+elseif strcmp(options.applyLoad,'pointCharge')
+    calcForP_inc = calcForP_inc*[1,0,1];
+end
+besselFlag = or(besselFlag, calcForP_inc);
 
 function [layer,hasCnvrgd,hasDvrgd,relTermMax] = updateSum(layer,m,media,fieldName,indices,hasCnvrgd,hasDvrgd,relTermMax,tiny,Eps)
 % Track any Inf/NaN in next term
@@ -1211,7 +1257,16 @@ maxRelTerm(nonConvergedIdx) = max(relTerm,[],2);
 indices2 = maxRelTerm > relTermMax;
 relTermMax(indices2) = maxRelTerm(indices2);
 
-function fluid = p_(m,n,zeta,C,Rt_m,layer,isSphere,applyLoad,nu_a)
+function Rt_m = getIntermediateRadius(layer,m,isSphere,isOuterDomain)
+if isOuterDomain
+    Rt_m = layer{1}.R_i;
+elseif isSphere
+    Rt_m = layer{m-1}.R_i;
+else
+    Rt_m = (layer{m}.R_i+layer{m-1}.R_i)/2;
+end
+
+function fluid = p_(m,n,zeta,C,Rt_m,layer,isSphere,isOuterDomain,applyLoad,besselIndices,nu_a,exponentShift)
 % Note that in the case of isSphere and zeta = 0: 
 % --- dpdz =: dpdr and dpdx = dpdy = dpdt = 0, with same convention for p_inc
 % --- nabla p =: d2pdr2, d2pdt2 := 0
@@ -1222,117 +1277,118 @@ P = layer{m}.P(2,:);
 dP = layer{m}.dP(2,:);
 d2P = layer{m}.d2P(2,:);
 Z = layer{m}.Z_zeta;
-g = {g_(n,1,zeta,nu_a),g_(n,2,zeta,nu_a)};
+g = {g_(n,1,zeta,nu_a),g_(n,2,zeta,nu_a),g_(n,3,zeta,nu_a)};
 r = layer{m}.r;
 theta = layer{m}.theta;
 
 Q0 = P;
-zetat_m = Rt_m*k;
-if layer{m}.calc_p || layer{m}.calc_dpdr || layer{m}.calc_dpdt || layer{m}.calc_d2pdr2 || layer{m}.calc_d2pdr2 ...
-        || layer{m}.calc_p_inc || layer{m}.calc_dp_incdr || layer{m}.calc_dp_incdt
-    w1 = w_(n,1,zetat_m,zeta,nu_a);
-    w2 = w_(n,2,zetat_m,zeta,nu_a);
-    j_n = w1.*Z{1,1};
-    if layer{m}.calc_dpdr
-        dj_n = w1.*dbessel_s(n,zeta,1,Z,false,g);
-    end
-    if layer{m}.calc_d2pdr2
-        d2j_n = w1.*d2bessel_s(n,zeta,1,Z,g);
-    end
-    if m == 1
-        y_n = w2.*Z{2,1};
-        indices = indices_(n+1/2,zetat_m,nu_a);
-        if any(size(indices) ~= size(zeta))
-            indices = repmat(indices,1+size(zeta)-size(indices));
-        end
-        h_n = zeros(size(Z{1,1}));
-        h_n(indices) = y_n(indices)*(1+1i); 
-        h_n(~indices) = j_n(~indices) + 1i*y_n(~indices); 
-        if layer{m}.calc_dpdr
-            dy_n = w2.*dbessel_s(n,zeta,2,Z,false,g);
-            dh_n = zeros(size(Z{1,1}));
-            dh_n(indices) = dy_n(indices)*(1+1i); 
-            dh_n(~indices) = dj_n(~indices) + 1i*dy_n(~indices); 
-        end
-        if layer{m}.calc_d2pdr2
-            d2y_n = w2.*d2bessel_s(n,zeta,2,Z,g);   
-            d2h_n = zeros(size(Z{1,1}));
-            d2h_n(indices) = d2y_n(indices)*(1+1i); 
-            d2h_n(~indices) = d2j_n(~indices) + 1i*d2y_n(~indices); 
-        end
-    elseif ~isSphere
-        y_n = w2.*Z{2,1};
-        if layer{m}.calc_dpdr
-            dy_n = w2.*dbessel_s(n,zeta,2,Z,false,g);
-        end
-        if layer{m}.calc_d2pdr2
-            d2y_n = w2.*d2bessel_s(n,zeta,2,Z,g);
-        end
-    end
-end
 if layer{m}.calc_dpdt
     Q1 = Q_(1,theta,P,dP,d2P,true);
 end
 if layer{m}.calc_d2pdt2
     Q2 = Q_(2,theta,P,dP,d2P);
 end
-if layer{m}.calc_p_inc
-    switch applyLoad
-        case 'planeWave'
-            fluid.p_inc = (2*n+1)*1i^n*Q0.*j_n;
-        case 'pointCharge'
-            Z_r_s = layer{m}.Z_r_s;
-            r_s = options.r_s;
-            fluid.p_inc = zeros(size(zeta));
-            indices = repmat(r < r_s,numel(k),1);
-            fluid.p_inc(indices)  = (2*n+1)*1i*k*Q0.*j_n(indices).*(Z_r_s{1,1}+1i*Z_r_s{2,1});
-            fluid.p_inc(~indices) = (2*n+1)*1i*k*Q0.*Z_r_s{1,1}.*(j_n(indices)+1i*y_n(indices));
-        otherwise
-            fluid.p_inc = zeros(size(j_n));
+zetat_m = Rt_m*k;
+nu = n + 1/2;
+
+if layer{m}.calc_p || layer{m}.calc_dpdr || layer{m}.calc_dpdt || layer{m}.calc_d2pdr2 || layer{m}.calc_d2pdr2 ...
+        || layer{m}.calc_p_inc || layer{m}.calc_dp_incdr || layer{m}.calc_dp_incdt
+    w = cell(1,3);
+    wZt = cell(1,3);
+    dwZt = cell(1,3);
+    d2wZt = cell(1,3);
+    for i = 1:numel(besselIndices)
+        if besselIndices(i)
+            wZt{i} = Z{i,1};
+            if layer{m}.calc_dpdr
+                dwZt{i} = dbessel_s(n,zeta,i,Z,false,g);
+            end
+            if layer{m}.calc_d2pdr2
+                d2wZt{i} = d2bessel_s(n,zeta,i,Z,g);
+            end
+        end
     end
-end
-if layer{m}.calc_dp_incdr
-    switch applyLoad
-        case 'planeWave'
-            fluid.dp_incdr = (2*n+1)*1i^n*k*Q0.*dj_n;
-        case 'pointCharge'
-            Z_r_s = layer{m}.Z_r_s;
-            r_s = options.r_s;
-            fluid.p_inc = zeros(size(zeta));
-            indices = repmat(r < r_s,numel(k),1);
-            fluid.p_inc(indices)  = (2*n+1)*1i*k*Q0.*dj_n(indices).*(Z_r_s{1,1}+1i*Z_r_s{2,1});
-            fluid.p_inc(~indices) = (2*n+1)*1i*k*Q0.*Z_r_s{1,1}.*(dj_n(~indices)+1i*dy_n(~indices));
-        otherwise
-            fluid.dp_incdr = zeros(size(j_n));
+    if layer{m}.calc_p_inc
+        switch applyLoad
+            case 'planeWave'
+                s1 = exp(exponent_(1,nu,zeta,nu_a));
+                fluid.p_inc = (2*n+1)*1i^n*Q0.*wZt{1}./s1;
+            case 'pointCharge'
+                s1 = exp(exponent_(1,nu,zeta,nu_a));
+                s3 = exp(exponent_(3,nu,zeta,nu_a));
+                Z_r_s = layer{m}.Z_r_s;
+                r_s = options.r_s;
+                s1_r_s = exp(exponent_(1,nu,k*r_s,nu_a));
+                s3_r_s = exp(exponent_(3,nu,k*r_s,nu_a));
+                fluid.p_inc = zeros(size(zeta));
+                indices = repmat(r < r_s,numel(k),1);
+                fluid.p_inc(indices)  = (2*n+1)*1i*k*Q0.*wZt{1}(indices).*Z_r_s{3,1}./s3_r_s./s1(indices);
+                fluid.p_inc(~indices) = (2*n+1)*1i*k*Q0.*Z_r_s{1,1}.*wZt{3}(indices)./s1_r_s./s3(indices);
+            otherwise
+                fluid.p_inc = zeros(size(j_n));
+        end
     end
-end
-if layer{m}.calc_dp_incdt
-    switch applyLoad
-        case 'planeWave'
-            fluid.dp_incdt = (2*n+1)*1i^n*Q1.*j_n;
-        case 'pointCharge'
-            Z_r_s = layer{m}.Z_r_s;
-            r_s = options.r_s;
-            fluid.p_inc = zeros(size(zeta));
-            indices = repmat(r < r_s,numel(k),1);
-            fluid.p_inc(indices)  = (2*n+1)*1i*k*Q1.*j_n(indices).*(Z_r_s{1,1}+1i*Z_r_s{2,1});
-            fluid.p_inc(~indices) = (2*n+1)*1i*k*Q1.*Z_r_s{1,1}.*(j_n(indices)+1i*y_n(indices));
-        otherwise
-            fluid.dp_incdt = zeros(size(j_n));
+    if layer{m}.calc_dp_incdr
+        switch applyLoad
+            case 'planeWave'
+                s1 = exp(exponent_(1,nu,zeta,nu_a));
+                fluid.dp_incdr = (2*n+1)*1i^n*k*Q0.*dj_n./s1;
+            case 'pointCharge'
+                s1 = exp(exponent_(1,nu,zeta,nu_a));
+                s3 = exp(exponent_(3,nu,zeta,nu_a));
+                Z_r_s = layer{m}.Z_r_s;
+                r_s = options.r_s;
+                s1_r_s = exp(exponent_(1,nu,k*r_s,nu_a));
+                s3_r_s = exp(exponent_(3,nu,k*r_s,nu_a));
+                fluid.p_inc = zeros(size(zeta));
+                indices = repmat(r < r_s,numel(k),1);
+                fluid.p_inc(indices)  = (2*n+1)*1i*k*Q0.*dwZt{1}(indices).*Z_r_s{3,1}./s3_r_s./s1(indices);
+                fluid.p_inc(~indices) = (2*n+1)*1i*k*Q0.*Z_r_s{1,1}.*dwZt{3}(~indices)./s1_r_s./s3(indices);
+            otherwise
+                fluid.dp_incdr = zeros(size(j_n));
+        end
+    end
+    if layer{m}.calc_dp_incdt
+        switch applyLoad
+            case 'planeWave'
+                s1 = exp(exponent_(1,nu,zeta,nu_a));
+                fluid.dp_incdt = (2*n+1)*1i^n*Q1.*j_n./s1;
+            case 'pointCharge'
+                s1 = exp(exponent_(1,nu,zeta,nu_a));
+                s3 = exp(exponent_(3,nu,zeta,nu_a));
+                Z_r_s = layer{m}.Z_r_s;
+                r_s = options.r_s;
+                s1_r_s = exp(exponent_(1,nu,k*r_s,nu_a));
+                s3_r_s = exp(exponent_(3,nu,k*r_s,nu_a));
+                fluid.p_inc = zeros(size(zeta));
+                indices = repmat(r < r_s,numel(k),1);
+                fluid.p_inc(indices)  = (2*n+1)*1i*k*Q1.*wZt{1}(indices).*Z_r_s{3,1}./s3_r_s./s1(indices);
+                fluid.p_inc(~indices) = (2*n+1)*1i*k*Q1.*Z_r_s{1,1}.*wZt{3}(indices)./s1_r_s./s3(indices);
+            otherwise
+                fluid.dp_incdt = zeros(size(j_n));
+        end
+    end
+    for i = 1:numel(besselIndices)
+        if besselIndices(i)
+            w{i} = w_(n,i,zetat_m,zeta,nu_a,exponentShift);
+            wZt{i} = w{i}.*wZt{i};
+            if layer{m}.calc_dpdr
+                dwZt{i} = w{i}.*dwZt{i};
+            end
+            if layer{m}.calc_d2pdr2
+                d2wZt{i} = w{i}.*d2wZt{i};
+            end
+        end
     end
 end
 
-if m == 1
+if isOuterDomain
     if layer{m}.calc_p_0
-        nu = n + 1/2;
-        indices = indices_(nu,zetat_m,nu_a);
-        cs = exp(nu*zeta23_(zetat_m(indices)/nu))*(1+1i)/2;
+        cs = exp(-exponent_(3,nu,zeta,nu_a)+exponentShift);
         if isinf(cs)
             warning('e3Dss:infWeight','A weight evaluation was too large')
         end
-        h_n_0 = zeros(size(k));
-        h_n_0(indices)  = 1i^(-n-1)./k(indices)./cs;
-        h_n_0(~indices) = 1i^(-n-1)./k(~indices);
+        h_n_0  = 1i^(-n-1)./k./cs;
         h_n_0 = repmat(h_n_0, 1, size(zeta,2));
         fluid.p_0 = C*Q0.*h_n_0;
     end
@@ -1343,26 +1399,26 @@ if m == 1
 %         d2h_n_0 = repmat(1i^(-n+1)*k, 1, size(zeta,2));
 %     end
     if layer{m}.calc_p
-        fluid.p = C*Q0.*h_n;
+        fluid.p = C*Q0.*wZt{3};
     end
     if layer{m}.calc_dpdr
-        fluid.dpdr = C.*k*Q0.*dh_n;
+        fluid.dpdr = C.*k*Q0.*dwZt{3};
     end
     if layer{m}.calc_dpdt % calculate a scaled dpdt (scaled by csc)
-        fluid.dpdt = C*Q1.*h_n;
+        fluid.dpdt = C*Q1.*wZt{3};
     end
     if layer{m}.calc_d2pdr2
-        fluid.d2pdr2 = C.*k.^2*Q0.*d2h_n;
+        fluid.d2pdr2 = C.*k.^2*Q0.*d2wZt{3};
     end
     if layer{m}.calc_d2pdt2
-        fluid.d2pdt2 = C*Q2.*h_n;
+        fluid.d2pdt2 = C*Q2.*wZt{3};
     end
 elseif isSphere
     if layer{m}.calc_p
-        fluid.p = C*Q0.*j_n;
+        fluid.p = C*Q0.*wZt{1};
     end
     if layer{m}.calc_dpdr
-        fluid.dpdr = C.*k*Q0.*dj_n;
+        fluid.dpdr = C.*k*Q0.*dwZt{1};
         indices = logical(zeta(1,:) < eps);
         if n == 1
             fluid.dpdr(:,indices) = repmat(k/3.*C,1,sum(indices));
@@ -1371,12 +1427,12 @@ elseif isSphere
         end
     end
     if layer{m}.calc_dpdt % calculate a scaled dpdt (scaled by csc)
-        fluid.dpdt = C*Q1.*j_n;
+        fluid.dpdt = C*Q1.*wZt{1};
         indices = logical(zeta(1,:) < eps);
         fluid.dpdt(:,indices) = 0;
     end
     if layer{m}.calc_d2pdr2
-        fluid.d2pdr2 = C.*k.^2*Q0.*d2j_n;
+        fluid.d2pdr2 = C.*k.^2*Q0.*d2wZt{1};
         indices = logical(zeta(1,:) < eps);
         if n == 0
             fluid.d2pdr2(:,indices) = repmat(-k.^2.*C,1,sum(indices));
@@ -1385,31 +1441,31 @@ elseif isSphere
         end
     end
     if layer{m}.calc_d2pdt2
-        fluid.d2pdt2 = C*Q2.*j_n;
+        fluid.d2pdt2 = C*Q2.*wZt{1};
         indices = logical(zeta(1,:) < eps);
         fluid.d2pdt2(:,indices) = 0;
     end
 else
     if layer{m}.calc_p
-        fluid.p = C(:,1)*Q0.*j_n + C(:,2)*Q0.*y_n;
+        fluid.p = C(:,1)*Q0.*wZt{1} + C(:,2)*Q0.*wZt{2};
     end
     if layer{m}.calc_dpdr
-        fluid.dpdr = C(:,1).*k*Q0.*dj_n + C(:,2).*k*Q0.*dy_n;
+        fluid.dpdr = C(:,1).*k*Q0.*dwZt{1} + C(:,2).*k*Q0.*dwZt{2};
     end
     if layer{m}.calc_dpdt % calculate a scaled dpdt (scaled by csc)
-        fluid.dpdt = C(:,1)*Q1.*j_n + C(:,2)*Q1.*y_n;
+        fluid.dpdt = C(:,1)*Q1.*wZt{1} + C(:,2)*Q1.*wZt{2};
     end
     if layer{m}.calc_d2pdr2
-        fluid.d2pdr2 = C(:,1).*k.^2*Q0.*d2j_n + C(:,2).*k.^2*Q0.*d2y_n;
+        fluid.d2pdr2 = C(:,1).*k.^2*Q0.*d2wZt{1} + C(:,2).*k.^2*Q0.*d2wZt{2};
     end
     if layer{m}.calc_d2pdt2
-        fluid.d2pdt2 = C(:,1)*Q2.*j_n + C(:,2)*Q2.*y_n;
+        fluid.d2pdt2 = C(:,1)*Q2.*wZt{1} + C(:,2)*Q2.*wZt{2};
     end
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function solid = u_(n,m,A,B,xi,eta,Rt_m,isSphere,layer,omega,nu_a)
+function solid = u_(n,m,A,B,xi,eta,Rt_m,isSphere,layer,omega,nu_a,exponentShift)
 % Note that in the case of isSphere and r = 0: 
 % --- u_z =: u_r and u_x = u_y = u_t = 0
 % --- du_xdx =: du_rdr, du_ydy =: du_rdt, du_zdz =: du_tdr, 0 =: du_tdt
@@ -1436,11 +1492,11 @@ Q1 = sin(theta).*Q1s;
 Q2 = Q_(2,theta,P,dP,d2P);
 
 r2 = r.^2;
-wjxi = w_(n,1,Rt_m*a,xi,nu_a);
-wjeta = w_(n,1,Rt_m*b,eta,nu_a);
+wjxi = w_(n,1,Rt_m*a,xi,nu_a,exponentShift);
+wjeta = w_(n,1,Rt_m*b,eta,nu_a,exponentShift);
 if ~isSphere
-    wyxi = w_(n,2,Rt_m*a,xi,nu_a);
-    wyeta = w_(n,2,Rt_m*b,eta,nu_a);
+    wyxi = w_(n,2,Rt_m*a,xi,nu_a,exponentShift);
+    wyeta = w_(n,2,Rt_m*b,eta,nu_a,exponentShift);
 end
 if layer{m}.calc_u_r
     Q0r = Q0./r;

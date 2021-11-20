@@ -1,43 +1,40 @@
-function f = bessel_c(nu,z,type,nu_a,U_pol,u_k,v_k)
+function f = bessel_c(nu,z,i,nu_a,U_pol,u_k,v_k)
 
-indices = indices_(nu,z,nu_a);
-if length(z) > 1
-    f = zeros(size(z));
-    f(~indices) = bessel_std(nu,z(~indices),type);
-    if any(indices)
-        f(indices) = bessel_asy(nu,z(indices),type,U_pol,u_k,v_k);
-    end
+indices = indices_(i,nu,z,nu_a);
+f = zeros(size(z));
+f(~indices) = bessel_std(nu,z(~indices),i,nu_a);
+if any(indices)
+    f(indices) = bessel_asy(nu,z(indices),i,U_pol,u_k,v_k);
+end
+end
+
+function f = bessel_std(nu,z,i,nu_a)
+expScale = nu <= nu_a;
+if i == 1 % besselj
+    f = besselj(nu,z,double(expScale));
+elseif i == 2 % bessely
+    f = bessely(nu,z,double(expScale));
 else
-    f = zeros(length(nu),length(z));
-    f(~indices) = bessel_std(nu(~indices),z,type);
-    if any(indices)
-        f(indices) = bessel_asy(nu(indices),z,type,U_pol,u_k,v_k);
-    end
+    f = besselh(nu,1,z,double(expScale)); % Hankel function of first kind
+end
+if ~expScale
+    f = exp(exponent_(i,nu,z,nu_a)).*f;
 end
 end
 
-function f = bessel_std(nu,z,type)
-
-if type == 1 % besselj
-    f = besselj(nu,z);
-else % bessely
-    f = bessely(nu,z);
-end
-end
-
-function f = bessel_asy(nu,z,type,U_pol,u_k,v_k)
+function f = bessel_asy(nu,z,i,U_pol,u_k,v_k)
 % Reference: https://dlmf.nist.gov/10.20
 Eps = eps;
 K = numel(U_pol)/2-1;
-sum1 = 0;
-sum2 = 0;
+sum1 = zeros(size(z),class(z));
+sum2 = zeros(size(z),class(z));
 useScaling = 1;
 % useScaling = 0;
 % sum1_k_arr = zeros(K+1,max(length(z),length(nu)));
 % sum2_k_arr = zeros(K+1,max(length(z),length(nu)));
 zdnu = z./nu;
 zeta23 = zeta23_(zdnu);
-zeta = (3/2*zeta23).^(2/3);
+zeta = zeta_(zdnu,zeta23);
 arg1mz2 = (1-zdnu.^2).^(-1/2);
 for k = 0:K
     nu2k = nu.^(2*k);
@@ -56,12 +53,21 @@ if k == K
     error('e3Dss:divergeBessel','Series did not converge')
 end
 nu23zeta = nu.^(2/3).*zeta;
-sum1 = airy(2*(type-1),  nu23zeta,useScaling)./nu.^(1/3).*sum1;
-sum2 = airy(2*(type-1)+1,nu23zeta,useScaling)./nu.^(5/3).*sum2;
+if i == 3
+    nu23zeta = nu23zeta*exp(2*pi*1i/3);
+    airytype = 0;
+else
+    airytype = 2*(i-1);
+end
+sum1 = airy(airytype,  nu23zeta,useScaling)./nu.^(1/3).*sum1;
+sum2 = airy(airytype+1,nu23zeta,useScaling)./nu.^(5/3).*sum2;
+if i == 3
+    sum2 = sum2*exp(2*pi*1i/3);
+end
 
-f = (-1)^(type+1)*(4*zeta./(1-zdnu.^2)).^(1/4).*(sum1+sum2);
-if type == 2
-    f = f.*exp(1i*imag(nu.*zeta23));
+f = (-1)^(i+1)*(4*zeta./(1-zdnu.^2)).^(1/4).*(sum1+sum2);
+if i == 3
+    f = f.*2*exp(-pi*1i/3);
 end
 end
 

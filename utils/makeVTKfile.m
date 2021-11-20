@@ -374,17 +374,17 @@ for i = 1:Nq
 
     %% Error function
     if options.plotErrorFunc
-        printField(data.errorFunc(:,:,i), 'plotErrorFunc', fid)
+        printField(data.errorFunc(:,:,i), 'ErrorFunc', fid)
     end
 
     %% Test function
     if options.plotTestFun
-        printField(data.testFun(:,:,i), 'plotTestFun', fid)
+        printField(data.testFun(:,:,i), 'testFun', fid)
     end
     
     %% Test field
     if options.plotTestField
-        printField(data.testField(:,:,i), 'plotTestField', fid)
+        printField(data.testField(:,:,i), 'testField', fid)
     end
     
     %% Error in scalar field

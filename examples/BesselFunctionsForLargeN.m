@@ -36,8 +36,21 @@ x = linspace(0,1,100000);
 % U_p(3,U_pol)-[-425425,0,765765,0,-369603,0,30375,0,0,0]/414720
 % bessel_j_asy(n,xi)
 % bessel_s(n,xi,1)
-
-
+if 1
+    x = 1000;
+    nu_a = 100;
+    nu = 100+1/2;
+    
+    j_n = bessel_c(nu,x,1,nu_a,U_pol,u_k,v_k);
+    y_n = bessel_c(nu,x,2,nu_a,U_pol,u_k,v_k);
+    h_n = bessel_c(nu,x,3,nu_a,U_pol,u_k,v_k);
+    j_n/exp(exponent_(1,nu,x,nu_a)) + 1i*y_n/exp(exponent_(2,nu,x,nu_a))
+    h_n/exp(exponent_(3,nu,x,nu_a))
+    
+    besselj(nu,x) + 1i*bessely(nu,x)
+    besselh(nu,x)
+    return
+end
 type = 2;
 switch type
     case 1
@@ -49,31 +62,61 @@ npts = N;
 nu_a = 100;
 B = zeros(npts,1);
 N_arr = linspace(1,N,npts).';
-if true
+if 0
     N_arr = 10.^linspace(0,9,1000).';
 %     N_arr = 10.^linspace(log10(xi),10,1000).';
     figure
     for x = 10.^(0:4)
+        figure(45)
         g1 = @(n) exp( (n+0.5).*zeta23_(x./(n+0.5)) - (n+1.5).*zeta23_(x./(n+1.5)));
-        scaledg = abs(g1(N_arr))./(x./(2*N_arr));
-        semilogx(N_arr,scaledg,'DisplayName',['$$g_n^{(1)}(x)/(x/(2n))$$ with $$x=10^' num2str(log10(x)) '$$']); 
-        printResultsToFile([resultsFolder '/scaledg_' num2str(log10(x))], {'x', N_arr, 'y', scaledg, 'xlabel','n', 'ylabel','scaledg'})
+        scaledg1 = abs(g1(N_arr))./(x./(2*N_arr));
+        semilogx(N_arr,scaledg1,'DisplayName',['$$g_n^{(1)}(x)/(x/(2n))$$ with $$x=10^' num2str(log10(x)) '$$']); 
+        printResultsToFile([resultsFolder '/scaledg_' num2str(log10(x))], {'x', N_arr, 'y', scaledg1, 'xlabel','n', 'ylabel','scaledg'})
+%         loglog(N_arr,abs(1-abs(g1(N_arr))./(x./(2*N_arr))),'DisplayName',['$$|1-g_n^{(1)}(x)/(x/(2n))|$$ with $$x=10^' num2str(log10(x)) '$$']); 
+        hold on
+        figure(46)
+        g2 = @(n) exp( -abs(real((n+0.5).*zeta23_(x./(n+0.5)))) + abs(real((n+1.5).*zeta23_(x./(n+1.5)))));
+        scaledg2 = abs(g2(N_arr))./(2*N_arr./x);
+        semilogx(N_arr,scaledg2,'DisplayName',['$$g_n^{(2)}(x)/(2n/x)$$ with $$x=10^' num2str(log10(x)) '$$']); 
+        printResultsToFile([resultsFolder '/scaledg_' num2str(log10(x))], {'x', N_arr, 'y', scaledg2, 'xlabel','n', 'ylabel','scaledg'})
+        ylim([0,5])
+%         loglog(N_arr,abs(1-abs(g1(N_arr))./(x./(2*N_arr))),'DisplayName',['$$|1-g_n^{(1)}(x)/(x/(2n))|$$ with $$x=10^' num2str(log10(x)) '$$']); 
+        hold on
+        figure(47)
+        g3 = @(n) exp( -(n+0.5).*zeta23_(x./(n+0.5)) + (n+1.5).*zeta23_(x./(n+1.5)));
+        scaledg3 = abs(g3(N_arr))./(2*N_arr./x);
+        ylim([0,5])
+        semilogx(N_arr,scaledg3,'DisplayName',['$$g_n^{(2)}(x)/(2n/x)$$ with $$x=10^' num2str(log10(x)) '$$']); 
+        printResultsToFile([resultsFolder '/scaledg_' num2str(log10(x))], {'x', N_arr, 'y', scaledg3, 'xlabel','n', 'ylabel','scaledg'})
 %         loglog(N_arr,abs(1-abs(g1(N_arr))./(x./(2*N_arr))),'DisplayName',['$$|1-g_n^{(1)}(x)/(x/(2n))|$$ with $$x=10^' num2str(log10(x)) '$$']); 
         hold on
     end
-    xlabel('$$n$$','interpreter','latex')
-    legend('interpreter','latex')
+    for i = [45,46,47]
+        figure(i)
+        xlabel('$$n$$','interpreter','latex')
+        legend('interpreter','latex')
+    end
 end
-return
+if 1
+    g1 = @(n) exp( (n+0.5).*zeta23_(x./(n+0.5)) - (n+1.5).*zeta23_(x./(n+1.5)));
+    x = linspace(-1,1,100);
+    y = x;
+    [X,Y] = ndgrid(x,y);
+    Z = X+1i*Y;
+    imagesc(x,y,abs(g1(Z).'))
+    set(gca,'YDir','normal')
+    
+    return
+end
 % semilogy(k_arr,u_k(k_arr),k_arr,abs(v_k(k_arr)))
 % semilogy(N_arr,abs(bessel_c(N_arr,xi,1)),N_arr,abs(besselj(N_arr,xi)))
 % semilogy(N_arr,abs(bessel_c(N_arr,xi,2)),N_arr,abs(bessely(N_arr,xi)))
 % semilogy(N_arr,abs(bessel_c(N_arr,xi,2)),N_arr,abs(bessely(N_arr,xi)))
 % figure
-semilogy(N_arr,abs(bessel_c(N_arr,xi,2,nu_a,U_pol,u_k,v_k)-bessely(N_arr,xi))./abs(bessely(N_arr,xi)))
-hold on
-semilogy(N_arr,abs(bessel_c(N_arr,xi,1,nu_a,U_pol,u_k,v_k)-besselj(N_arr,xi))./abs(besselj(N_arr,xi)))
-if false
+% semilogy(N_arr,abs(bessel_c(N_arr,xi,2,nu_a,U_pol,u_k,v_k)-bessely(N_arr,xi))./abs(bessely(N_arr,xi)))
+% hold on
+% semilogy(N_arr,abs(bessel_c(N_arr,xi,1,nu_a,U_pol,u_k,v_k)-besselj(N_arr,xi))./abs(besselj(N_arr,xi)))
+if 0
     xi_arr = linspace(1,1000,1000);
     C = zeros(numel(N_arr),numel(xi_arr));
     for n = N_arr.'
@@ -91,7 +134,8 @@ if false
     xlabel('xi')
     ylabel('n')
     colorbar
-    
+end
+if 1
     npts = 1000;
     z = linspace(1,1000,npts);
     N_arr = linspace(1,1000,npts).';
@@ -99,13 +143,12 @@ if false
     C = zeros(numel(N_arr),numel(z));
     indices = z < nu;
     C(indices) = 1;
-    indices = abs(nu.*zeta23_(z./nu)) > log(sqrt(realmax(class(z))));
+    indices = abs(nu.*real(zeta23_(z./nu))) > log(sqrt(realmax(class(z))));
     C(indices) = 2;
-    indices = and(indices, z < nu);
+    indices = indices_(nu,z,nu_a);
     C(indices) = 3;
     imagesc(z,N_arr,C)
     hold on
-%     plot(10:1000,((10:1000)+32)/0.97,'magenta') % n > (xi+30)/0.97
     xlabel('z')
     ylabel('n')
     colorbar
@@ -150,3 +193,37 @@ legend({'$$|\mathrm{j}_n(500)|$$',...
 %         printResultsToFile([resultsFolder '/besseljForLargeN2'], {'x', N_arr, 'y', abs(B1)})
 %         printResultsToFile([resultsFolder '/besselyForLargeN2'], {'x', N_arr, 'y', abs(B2)})
 % end
+
+function A = airy_dlmf(type,z,u_k)
+
+A = 0;
+N = 100;
+zeta = 2/3*z.^(3/2);
+if type == 0
+    for k = 0:N
+        A_n = (-1)^k*u_k(k+1)./zeta.^k;
+        A = A + A_n;
+        if abs(A_n./A) < eps
+            break
+        end
+    end
+    if k == N
+        error('Series did not converge')
+    end
+    A = A.*exp(-2/3*z.^(3/2))./(2*sqrt(pi)*z.^(1/4));
+elseif type == 2
+    for k = 0:N
+        A_n = u_k(k+1)./zeta.^k;
+        A = A + A_n;
+        if abs(A_n./A) < eps
+            break
+        end
+    end
+    if k == N
+        error('Series did not converge')
+    end
+    A = A.*exp(2/3*z.^(3/2))./(sqrt(pi)*z.^(1/4));
+end
+
+end
+

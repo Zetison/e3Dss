@@ -29,7 +29,7 @@ layer{1}.calc_p = true;
 layer = e3Dss(layer, options);
 
 figure(8)
-real_p_Hetmaniuk = importdata('../models/Hetmaniuk2012raa/Figure8.csv');
+real_p_Hetmaniuk = importdata('models/Hetmaniuk2012raa/Figure8.csv');
 plot(k, real(layer{1}.p),'DisplayName','Exact')
 title('Figure 8 in Hetmaniuk2012raa')
 hold on
@@ -60,6 +60,7 @@ options = struct('applyLoad', 'mechExcitation', ...
                  'r_s', layer{2}.R_i, ...
                  'BC', BC, ...
                  'omega', omega, ...
+                 'nu_a', 100, ...
                  'P_inc', -1);
              
 
@@ -71,7 +72,7 @@ figure(12)
 plot(f, real(layer{1}.p),'DisplayName','Exact')
 title('Figure 12 in Hetmaniuk2012raa')
 hold on
-real_p_Hetmaniuk = importdata('../models/Hetmaniuk2012raa/Figure12.csv');
+real_p_Hetmaniuk = importdata('models/Hetmaniuk2012raa/Figure12.csv');
 plot(real_p_Hetmaniuk(:,1), real_p_Hetmaniuk(:,2),'DisplayName','Hetmaniuk2012raa')
 xlabel('Frequency [Hz]')
 xlim([f(1), f(end)])
@@ -84,9 +85,9 @@ savefig([resultsFolder '/Figure12'])
 figure(42)
 for i = 1:24
     semilogy(0:(size(relTermMaxArr,2)-1),relTermMaxArr(10*i,:).','DisplayName',['\omega = ' num2str(omega(10*i))])
-    xlabel('n')
     hold on
 end
+xlabel('n')
 hold off
 legend('show');
 
@@ -108,7 +109,7 @@ layer{1}.calc_p = true;
 [layer,~,~,relTermMaxArr] = e3Dss(layer, options);
 
 figure(17)
-real_p_Hetmaniuk = importdata('../models/Hetmaniuk2012raa/Figure17.csv');
+real_p_Hetmaniuk = importdata('models/Hetmaniuk2012raa/Figure17.csv');
 plot(f, real(layer{1}.p),'DisplayName','Exact')
 title('Figure 17 in Hetmaniuk2012raa')
 hold on
@@ -126,5 +127,6 @@ for i = 1:24
     semilogy(relTermMaxArr(10*i,:).','DisplayName',['\omega = ' num2str(omega(10*i))])
     hold on
 end
+xlabel('n')
 hold off
 legend('show');

@@ -67,108 +67,108 @@ legend show
 savefig([resultsFolder '/figure1.fig'])
 
 
-% figure(2)
+figure(2)
 % npts = 2;
-% % npts = 2000;
-% % npts = 100;
+npts = 2000;
+% npts = 100;
 % f_max = 25e3;
-% f_max = 25e4;
-% f = linspace(f_max/npts,f_max,npts);
-% options = struct('BC', 'SSBC', ...
-%                  'd_vec', d_vec, ...
-%                  'omega', 2*pi*f);
-% 
-% layerSSBC = e3Dss(layerSSBC, options);
-% TS = 20*log10(abs(layerSSBC{1}.p_0));
-% plot(f,TS,'DisplayName','e3Dss')
-% TS_SSBC1 = importdata('models/Skelton1997tao/Figure10.4_SSBC.csv');
-% TS_SSBC2 = importdata('models/Skelton1997tao/Figure10.6.csv');
-% TS_SSBC = [TS_SSBC1(TS_SSBC1(:,1) < 1000,1), TS_SSBC1(TS_SSBC1(:,1) < 1000,2);
-%             TS_SSBC2(TS_SSBC2(:,1) > 1000,1), TS_SSBC2(TS_SSBC2(:,1) > 1000,2)];
-% hold on
-% plot(TS_SSBC(:,1),TS_SSBC(:,2),'DisplayName','Ref')
-% ylim([-30,20])
-% title('Figure 10.6')
-% xlabel('Frequency (Hz)')
-% ylabel('Target strength')
-% legend show
-% savefig([resultsFolder '/figure2.fig'])
+f_max = 25e4;
+f = linspace(f_max/npts,f_max,npts);
+options = struct('BC', 'SSBC', ...
+                 'd_vec', d_vec, ...
+                 'omega', 2*pi*f);
 
-% % this case is not perfectly reproducable due to lacking parameters
-% figure(3)
-% f_c = 15e3; % pulse center freq.
-% N = 2^12;       % **NOTE** it is not clear what Skelton uses for this parameter ("The time scale, in milliseconds, has an arbitrary origin.")
-% T = 10*5e-3;    % **NOTE** it is not clear what Skelton uses for this parameter ("The time scale, in milliseconds, has an arbitrary origin.")
-% B = N/T; % bandwidth
-% f_L = -B/2;
-% f_R = B/2;
-% df = 1/T;
-% f = linspace(0,f_R-df,N/2);
-% omega = 2*pi*f;
-% omega_c = 2*pi*f_c;
-% P_inc = 1;
-% layerSSBC{1}.X = -d_vec.'; % Compute backscattered pressure
-% plotP_inc = true;
-% type = 3; % The time variation of the plane wave is a f_c=15kHz sine wave on for 1 cycle
-% 
-% options = struct('BC', 'SSBC', ...
-%                  'd_vec', d_vec, ...
-%                  'omega', omega(2:end));
-% options.P_inc = @(omega) P_inc_(omega, omega_c,P_inc,type);
-% 
-% if plotP_inc
-%     k_c = omega_c/layer{1}.c_f;
-%     %             t = linspace(-1/f_c,6/f_c,1000);
-%     tt = linspace(0,1/f_c,1000);
-%     tt = [-1e-3,tt,3e-3];
-%     Pt_inc = Pt_inc_(tt,0,omega_c,k_c,P_inc,type);
-%     subplot(311), plot(tt,Pt_inc)
-%     ft = linspace(0,f_R,2000);
-%     omegat = 2*pi*ft;
-%     P_incArr = P_inc_(omegat,omega_c,P_inc,type);
-%     
-%     figure(5)
-%     plot(omegat,abs(P_incArr))
-%     ylabel('$|P_{\mathrm{inc}}(\omega)|$ [Pa]')
-%     xlabel('$\omega$ [$\mathrm{s}^{-1}$]')
-% 
-%     figure(6)
-%     plot(tt,Pt_inc)
-%     ylabel('$\breve{P}_{\mathrm{inc}}(t)$ [Pa]')
-%     xlabel('$t$ [s]')
-% end
-% 
-% layerSSBC = e3Dss(layerSSBC, options);
-% 
-% npts = 1;
-% p_0 = zeros(npts,N/2);
-% for n = 0:N-1
-%     f_n = f_L + (f_R-f_L)/N*n;
-%     omega_n = 2*pi*f_n;
-%     if n >= N/2+1
-%         k = omega_n/layer{1}.c_f;
-%         k_vec = options.d_vec*k;
-%         p_0(:,n-N/2+1) = layerSSBC{1}.p_0(:,n-N/2);
-%     end
-% end
-% startIdx = round(0.9668*N);       % **NOTE** it is not clear what Skelton uses for this parameter
-% p_0_t = 2/T*fft(p_0,N,2);
-% temp = p_0_t;
-% p_0_t(:,1:N-startIdx+1) = temp(:,startIdx:end);
-% p_0_t(:,N-startIdx+2:end) = temp(:,1:startIdx-1);
-% dt = T/N;
-% t = dt*(0:N-1);
-% plot(1000*t,1000*real(p_0_t),'DisplayName','e3Dss')
-% p_ref = importdata('models/Skelton1997tao/Figure10.7.csv');
-% hold on
-% plot(1000*p_ref(:,1),1000*p_ref(:,2),'DisplayName','Ref')
-% ylim([-600,600])
-% xlim([0,5])
-% title('Figure 10.7')
-% xlabel('Time (ms)')
-% ylabel('Pressure (mPa)')
-% legend show
-% savefig([resultsFolder '/figure3.fig'])
-% 
-% 
-% 
+layerSSBC = e3Dss(layerSSBC, options);
+TS = 20*log10(abs(layerSSBC{1}.p_0));
+plot(f,TS,'DisplayName','e3Dss')
+TS_SSBC1 = importdata('models/Skelton1997tao/Figure10.4_SSBC.csv');
+TS_SSBC2 = importdata('models/Skelton1997tao/Figure10.6.csv');
+TS_SSBC = [TS_SSBC1(TS_SSBC1(:,1) < 1000,1), TS_SSBC1(TS_SSBC1(:,1) < 1000,2);
+            TS_SSBC2(TS_SSBC2(:,1) > 1000,1), TS_SSBC2(TS_SSBC2(:,1) > 1000,2)];
+hold on
+plot(TS_SSBC(:,1),TS_SSBC(:,2),'DisplayName','Ref')
+ylim([-30,20])
+title('Figure 10.6')
+xlabel('Frequency (Hz)')
+ylabel('Target strength')
+legend show
+savefig([resultsFolder '/figure2.fig'])
+
+% this case is not perfectly reproducable due to lacking parameters
+figure(3)
+f_c = 15e3; % pulse center freq.
+N = 2^12;       % **NOTE** it is not clear what Skelton uses for this parameter ("The time scale, in milliseconds, has an arbitrary origin.")
+T = 10*5e-3;    % **NOTE** it is not clear what Skelton uses for this parameter ("The time scale, in milliseconds, has an arbitrary origin.")
+B = N/T; % bandwidth
+f_L = -B/2;
+f_R = B/2;
+df = 1/T;
+f = linspace(0,f_R-df,N/2);
+omega = 2*pi*f;
+omega_c = 2*pi*f_c;
+P_inc = 1;
+layerSSBC{1}.X = -d_vec.'; % Compute backscattered pressure
+plotP_inc = true;
+type = 3; % The time variation of the plane wave is a f_c=15kHz sine wave on for 1 cycle
+
+options = struct('BC', 'SSBC', ...
+                 'd_vec', d_vec, ...
+                 'omega', omega(2:end));
+options.P_inc = @(omega) P_inc_(omega, omega_c,P_inc,type);
+
+if plotP_inc
+    k_c = omega_c/layer{1}.c_f;
+    %             t = linspace(-1/f_c,6/f_c,1000);
+    tt = linspace(0,1/f_c,1000);
+    tt = [-1e-3,tt,3e-3];
+    Pt_inc = Pt_inc_(tt,0,omega_c,k_c,P_inc,type);
+    plot(tt,Pt_inc)
+    ft = linspace(0,f_R,2000);
+    omegat = 2*pi*ft;
+    P_incArr = P_inc_(omegat,omega_c,P_inc,type);
+    
+    figure(5)
+    plot(omegat,abs(P_incArr))
+    ylabel('$|P_{\mathrm{inc}}(\omega)|$ [Pa]')
+    xlabel('$\omega$ [$\mathrm{s}^{-1}$]')
+
+    figure(6)
+    plot(tt,Pt_inc)
+    ylabel('$\breve{P}_{\mathrm{inc}}(t)$ [Pa]')
+    xlabel('$t$ [s]')
+end
+
+layerSSBC = e3Dss(layerSSBC, options);
+
+npts = 1;
+p_0 = zeros(npts,N/2);
+for n = 0:N-1
+    f_n = f_L + (f_R-f_L)/N*n;
+    omega_n = 2*pi*f_n;
+    if n >= N/2+1
+        k = omega_n/layer{1}.c_f;
+        k_vec = options.d_vec*k;
+        p_0(:,n-N/2+1) = layerSSBC{1}.p_0(:,n-N/2);
+    end
+end
+startIdx = round(0.9668*N);       % **NOTE** it is not clear what Skelton uses for this parameter
+p_0_t = 2/T*fft(p_0,N,2);
+temp = p_0_t;
+p_0_t(:,1:N-startIdx+1) = temp(:,startIdx:end);
+p_0_t(:,N-startIdx+2:end) = temp(:,1:startIdx-1);
+dt = T/N;
+t = dt*(0:N-1);
+plot(1000*t,1000*real(p_0_t),'DisplayName','e3Dss')
+p_ref = importdata('models/Skelton1997tao/Figure10.7.csv');
+hold on
+plot(1000*p_ref(:,1),1000*p_ref(:,2),'DisplayName','Ref')
+ylim([-600,600])
+xlim([0,5])
+title('Figure 10.7')
+xlabel('Time (ms)')
+ylabel('Pressure (mPa)')
+legend show
+savefig([resultsFolder '/figure3.fig'])
+
+
+

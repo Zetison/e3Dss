@@ -24,7 +24,7 @@ switch type
         p(indices) = 1i*pi/omega_c;
         p = P_inc*p;
     case 4
-        pt = audioread('../miscellaneous/sonar.wav');
+        pt = audioread('miscellaneous/sonar.wav');
         T = 16;
         Fs = 44100;
         N = T*Fs;

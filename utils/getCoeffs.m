@@ -43,14 +43,22 @@ for m = 1:M
     if IBC
         zs = options.z/1i*reshape(omega,1,1,numel(omega));
     end
+    if strcmp(layer{m}.media,'fluid')
+        k = layer{m}.k_temp;
+        if ~strcmp(nextMedia,'origin')
+            Z_zeta = layer{m}.Z_zeta_i;
+            zeta_i = k.*R_i;
+            gzeta_i  = {g_(n,1,zeta_i,nu_a),g_(n,2,zeta_i,nu_a),g_(n,3,zeta_i,nu_a)};
+        end
+    end
     if m == m_s && supportAtR_i
         rho = layer{m}.rho;
         if singleLayerSupport
             k = NaN(size(layer{1}.k_temp)); % Not used
-            Z_zeta_s = NaN;                   % Not used
+            Z_zeta = NaN;                   % Not used
         else
             k = layer{m}.k_temp;
-            Z_zeta_s = layer{m}.Z_zeta_i_s;
+            Z_zeta = layer{m}.Z_zeta_i;
         end
         if strcmp(options.applyLoad,'pointCharge')
             Z_r_s = layer{m}.Z_r_s;
@@ -58,14 +66,14 @@ for m = 1:M
             Z_r_s = NaN;
         end
         if SSBC && M == m_s
-            D1{m} = D2_(n,k,R_i,Z_zeta_s,Z_r_s,options);
+            D1{m} = D2_(n,k,R_i,Z_zeta,Z_r_s,options);
         elseif SHBC && M == m_s
-            D1{m} = D1_(n,k,R_i,Z_zeta_s,Z_r_s,rho,omega,options);
+            D1{m} = D1_(n,k,R_i,Z_zeta,Z_r_s,rho,omega,options,gzeta_i);
         elseif IBC && M == m_s
-            D1{m} = -D2_(n,k,R_i,Z_zeta_s,Z_r_s,options) + zs.*D1_(n,k,R_i,Z_zeta_s,Z_r_s,rho,omega,options); % Ayres1987ars equation (38)
+            D1{m} = -D2_(n,k,R_i,Z_zeta,Z_r_s,options) + zs.*D1_(n,k,R_i,Z_zeta,Z_r_s,rho,omega,options,gzeta_i); % Ayres1987ars equation (38)
         else
-            D1{m} = cat(1,D1_(n,k,R_i,Z_zeta_s,Z_r_s,rho,omega,options),...    
-                          D2_(n,k,R_i,Z_zeta_s,Z_r_s,options));
+            D1{m} = cat(1,D1_(n,k,R_i,Z_zeta,Z_r_s,rho,omega,options,gzeta_i),...    
+                          D2_(n,k,R_i,Z_zeta,Z_r_s,options));
         end
     elseif m2 == m_s && supportAtR_i
         rho2 = layer{m2}.rho;
@@ -76,38 +84,32 @@ for m = 1:M
         end
         if singleLayerSupport
             k2 = NaN(size(layer{1}.k_temp)); % Not used
-            Z_zeta_s2 = NaN;                 % Not used
+            Z_zeta2 = NaN;                 % Not used
         else
             k2 = layer{m2}.k_temp;
-            Z_zeta_s2 = layer{m2}.Z_zeta_o_s;
+            Z_zeta2 = layer{m2}.Z_zeta_o;
         end
         if strcmp(layer{m}.media,'solid') || strcmp(layer{m}.media,'viscoelastic')
             void = zeros(n > 0,1,numel(omega),class(R_i));
             D1{m} = cat(1,void,...
-                          D2_(n,k2,R_i,Z_zeta_s2,Z_r_s2,options),...    
-                          D1_(n,k2,R_i,Z_zeta_s2,Z_r_s2,rho2,omega,options));
+                          D2_(n,k2,R_i,Z_zeta2,Z_r_s2,options),...    
+                          D1_(n,k2,R_i,Z_zeta2,Z_r_s2,rho2,omega,options,gzeta_i));
         else
-            D1{m} = cat(1,D1_(n,k2,R_i,Z_zeta_s2,Z_r_s2,rho2,omega,options),...    
-                          D2_(n,k2,R_i,Z_zeta_s2,Z_r_s2,options));
+            D1{m} = cat(1,D1_(n,k2,R_i,Z_zeta2,Z_r_s2,rho2,omega,options,gzeta_i),...    
+                          D2_(n,k2,R_i,Z_zeta2,Z_r_s2,options));
         end
     end
     switch layer{m}.media
         case 'fluid'
-            k = layer{m}.k_temp;
             rho = layer{m}.rho;
-            if ~strcmp(nextMedia,'origin')
-                Z_zeta = layer{m}.Z_zeta_i;
-                zeta_i = k.*R_i;
-                gzeta  = {g_(n,1,zeta_i,nu_a),g_(n,2,zeta_i,nu_a)};
-            end
             switch nextMedia
                 case 'void'
                     if SHBC
-                        H1{m} = dp_dr_s_(n,k,R_i,Rt_m,Z_zeta,rho,omega,isSphere,isOuterDomain,nu_a,gzeta);
+                        H1{m} = dp_dr_s_(n,k,R_i,Rt_m,Z_zeta,rho,omega,isSphere,isOuterDomain,nu_a,gzeta_i);
                     elseif SSBC
                         H1{m} = p_(n,k,R_i,Rt_m,Z_zeta,isSphere,isOuterDomain,nu_a);
                     elseif IBC
-                        H1{m} = p_(n,k,R_i,Rt_m,Z_zeta,isSphere,isOuterDomain,nu_a) - zs.*dp_dr_s_(n,k,R_i,Rt_m,Z_zeta,rho,omega,isSphere,isOuterDomain,nu_a,gzeta);
+                        H1{m} = p_(n,k,R_i,Rt_m,Z_zeta,isSphere,isOuterDomain,nu_a) + zs.*dp_dr_s_(n,k,R_i,Rt_m,Z_zeta,rho,omega,isSphere,isOuterDomain,nu_a,gzeta_i);
                     end
                 case 'fluid'
                         k2 = layer{m2}.k_temp;
@@ -115,7 +117,7 @@ for m = 1:M
                         Z_zeta2 = layer{m2}.Z_zeta_o;
                         zeta2 = k2.*R_i;
                         gzeta2  = {g_(n,1,zeta2,nu_a),g_(n,2,zeta2,nu_a)};
-                        dp_dr_s  = dp_dr_s_(n,k, R_i,Rt_m,Z_zeta, rho, omega, isSphere,isOuterDomain,nu_a,gzeta);
+                        dp_dr_s  = dp_dr_s_(n,k, R_i,Rt_m,Z_zeta, rho, omega, isSphere,isOuterDomain,nu_a,gzeta_i);
                         dp_dr_s2 = dp_dr_s_(n,k2,R_i,Rt_m2,Z_zeta2,rho2,omega,isSphere2,false,nu_a,gzeta2);
                         p  = p_(n,k, R_i,Rt_m, Z_zeta, isSphere, isOuterDomain,nu_a);
                         p2 = p_(n,k2,R_i,Rt_m2,Z_zeta2,isSphere2,false,        nu_a);
@@ -132,7 +134,7 @@ for m = 1:M
                         eta2 = b2.*R_i;
                         gxi2  = {g_(n,1,xi2,nu_a),g_(n,2,xi2,nu_a)};
                         geta2  = {g_(n,1,eta2,nu_a),g_(n,2,eta2,nu_a)};
-                        dp_dr_s = dp_dr_s_(n,k,R_i,Rt_m,Z_zeta,rho,omega,isSphere,isOuterDomain,nu_a,gzeta);
+                        dp_dr_s = dp_dr_s_(n,k,R_i,Rt_m,Z_zeta,rho,omega,isSphere,isOuterDomain,nu_a,gzeta_i);
                         p = p_(n,k,R_i,Rt_m,Z_zeta,isSphere,isOuterDomain,nu_a);
                         u_r2 = u_r_(n,a2,b2,R_i,Rt_m2,Z_xi2,Z_eta2,isSphere2,nu_a,gxi2,geta2);
                         sigma_rr2 = sigma_rr_(n,a2,b2,R_i,Rt_m2,Z_xi2,Z_eta2,isSphere2,G2,nu_a,gxi2,geta2);
@@ -244,6 +246,9 @@ for m = 1:M
 end
 %% Calculate coefficients CC for each frequency
 C = cell(M,1);
+% if n == 1100
+%     keyboard
+% end
 if M == 1
     if SSBC || SHBC || IBC
         C{1} = D1{1}(:)./H1{1}(:);
@@ -283,7 +288,6 @@ for j = 1:length(omega)
     Pinv2 = diag(1./max(abs(H2),[],2));
     H2 = Pinv2*H2;
     CC(j,:) = diag(Pinv).*(H2\(Pinv2*D));
-    
     if any(isinf(CC(j,:))) || any(isnan(CC(j,:)))
         warning('e3Dss:singularK','The modal matrix, K, was singular.')
     end
@@ -320,17 +324,17 @@ for m = 1:M
     J = J + dofs(m);
 end
 
-function D1 = D1_(n,k,R,Z,Z_r_s,rho,omega,options)
+function D1 = D1_(n,k,R,Z,Z_r_s,rho,omega,options,g)
 zeta = k*R;
 switch options.applyLoad
     case 'planeWave'
-        D1 = (2*n+1)*1i^n/R*(n*Z{1,1} - zeta.*Z{1,2});
+        D1 = (2*n+1)*1i^n/R*dbessel_s(n,zeta,1,Z,true,g); 
     case 'pointCharge'
         r_s = options.r_s;
         if R < r_s
-            D1 = (2*n+1)*1i/R*k.*(n*Z{1,1} - zeta.*Z{1,2}).*(Z_r_s{1,1}+1i*Z_r_s{2,1});
+            D1 = (2*n+1)*1i/R*k.*dbessel_s(n,zeta,1,Z,true,g).*Z_r_s{3,1};
         else
-            D1 = (2*n+1)*1i/R*k.*Z_r_s{1,1}.*(n*(Z{1,1}+1i*Z{2,1}) - zeta.*(Z{1,2}+1i*Z{2,2}));
+            D1 = (2*n+1)*1i/R*k.*Z_r_s{1,1}.*dbessel_s(n,zeta,3,Z,true,g);
         end
     case 'mechExcitation'
         D1 = zeros(size(k));
@@ -358,9 +362,9 @@ switch options.applyLoad
     case 'pointCharge'
         r_s = options.r_s;
         if R < r_s
-            D2 = (2*n+1)*1i*k.*Z{1,1}.*(Z_r_s{1,1}+1i*Z_r_s{2,1});
+            D2 = (2*n+1)*1i*k.*Z{1,1}.*Z_r_s{3,1};
         else
-            D2 = (2*n+1)*1i*k.*Z_r_s{1,1}.*(Z{1,1}+1i*Z{2,1});
+            D2 = (2*n+1)*1i*k.*Z_r_s{1,1}.*Z{3,1};
         end
     case 'mechExcitation'
         D2 = (2*n+1)/(4*pi*R^2)*ones(size(k));
@@ -390,18 +394,16 @@ function H = p_(n,k,R,Rt_m,Z,isSphere,isOuterDomain,nu_a)
 zeta = k*R;
 zetat_m = k*Rt_m;
 if isSphere
-    H = zeros(1,1,length(Z{1,1}),class(Z{1,1}));
-    H(1,1,:) = w_(n,1,zetat_m,zeta,nu_a).*Z{1,1}; 
+    H = zeros(1,1,length(k),class(R));
+    H(1,1,:) = w_(n,1,zetat_m,zeta,nu_a,0).*Z{1,1}; 
 elseif isOuterDomain
-    H = zeros(1,1,length(Z{1,1}),class(Z{1,1}));
-    indices = indices_(n+1/2,zetat_m,nu_a);
-    H(1,1,indices) = w_(n,2,zetat_m(indices),zeta(indices),nu_a).*Z{2,1}(indices)*(1+1i); 
-    H(1,1,~indices) = Z{1,1}(~indices) + 1i*Z{2,1}(~indices); 
+    H = zeros(1,1,length(k),class(R));
+    H(1,1,:) = w_(n,3,zetat_m,zeta,nu_a,0).*Z{3,1}; 
 else
-    H = zeros(1,2,length(Z{1,1}),class(Z{1,1}));
+    H = zeros(1,2,length(k),class(R));
 
-    H(1,1,:) = w_(n,1,zetat_m,zeta,nu_a).*Z{1,1};
-    H(1,2,:) = w_(n,2,zetat_m,zeta,nu_a).*Z{2,1};
+    H(1,1,:) = w_(n,1,zetat_m,zeta,nu_a,0).*Z{1,1};
+    H(1,2,:) = w_(n,2,zetat_m,zeta,nu_a,0).*Z{2,1};
 end
 
 function H = dp_dr_s_(n,k,R,Rt_m,Z,rho,omega,isSphere,isOuterDomain,nu_a,gzeta)
@@ -412,24 +414,21 @@ if isSphere
     H = zeros(1,1,length(k),class(R));
     zeta_dj_n = dbessel_s(n,zeta,1,Z,true,gzeta); % = zeta*dj_n
     temp = -1./(rho*omega.^2);
-    H(1,1,:) = temp.*w_(n,1,zetat_m,zeta,nu_a).*zeta_dj_n;
+    H(1,1,:) = temp.*w_(n,1,zetat_m,zeta,nu_a,0).*zeta_dj_n;
 elseif isOuterDomain
     H = zeros(1,1,length(k),class(R));
-    zeta_dy_n = dbessel_s(n,zeta,2,Z,true,gzeta); % = zeta*dy_n
-    zeta_dh_n = dbessel_s(n,zeta,1,Z,true,gzeta) + 1i*zeta_dy_n; % = zeta*dh_n
+    zeta_dh_n = dbessel_s(n,zeta,3,Z,true,gzeta); % = zeta*dh_n
     temp = -1./(rho*omega.^2);
     
-    indices = indices_(n+1/2,zetat_m,nu_a);
-    H(1,1,indices) = temp(indices).*w_(n,2,zetat_m(indices),zeta(indices),nu_a).*zeta_dy_n(indices)*(1+1i); 
-    H(1,1,~indices) = temp(~indices).*zeta_dh_n(~indices); 
+    H(1,1,:) = temp.*w_(n,3,zetat_m,zeta,nu_a,0).*zeta_dh_n; 
 else
     H = zeros(1,2,length(k),class(R));
 
     zeta_dj_n = dbessel_s(n,zeta,1,Z,true,gzeta); % = zeta*dj_n
     zeta_dy_n = dbessel_s(n,zeta,2,Z,true,gzeta); % = zeta*dy_n
     temp = -1./(rho*omega.^2);
-    H(1,1,:) = temp.*w_(n,1,zetat_m,zeta,nu_a).*zeta_dj_n;
-    H(1,2,:) = temp.*w_(n,2,zetat_m,zeta,nu_a).*zeta_dy_n;
+    H(1,1,:) = temp.*w_(n,1,zetat_m,zeta,nu_a,0).*zeta_dj_n;
+    H(1,2,:) = temp.*w_(n,2,zetat_m,zeta,nu_a,0).*zeta_dy_n;
 end
 H = H/R;
 
@@ -443,26 +442,26 @@ if isSphere
     if n == 0
         H = zeros(1,1,length(a),class(R));
 
-        H(1,1,:) = w_(n,1,xit_m,xi,nu_a).*S_(1, 1, n, xi, eta, Z_xi,gxi);
+        H(1,1,:) = w_(n,1,xit_m,xi,nu_a,0).*S_(1, 1, n, xi, eta, Z_xi,gxi);
     else
         H = zeros(1,2,length(a),class(R));
 
-        H(1,1,:) = w_(n,1,xit_m,xi,nu_a).*S_(1, 1, n, xi, eta, Z_xi,gxi);
-        H(1,2,:) = w_(n,1,etat_m,eta,nu_a).*T_(1, 1, n, eta, Z_eta,geta);
+        H(1,1,:) = w_(n,1,xit_m,xi,nu_a,0).*S_(1, 1, n, xi, eta, Z_xi,gxi);
+        H(1,2,:) = w_(n,1,etat_m,eta,nu_a,0).*T_(1, 1, n, eta, Z_eta,geta);
     end
 else
     if n == 0
         H = zeros(1,2,length(a),class(R));
 
-        H(1,1,:) = w_(n,1,xit_m,xi,nu_a).*S_(1, 1, n, xi, eta, Z_xi,gxi);
-        H(1,2,:) = w_(n,2,xit_m,xi,nu_a).*S_(1, 2, n, xi, eta, Z_xi,gxi);
+        H(1,1,:) = w_(n,1,xit_m,xi,nu_a,0).*S_(1, 1, n, xi, eta, Z_xi,gxi);
+        H(1,2,:) = w_(n,2,xit_m,xi,nu_a,0).*S_(1, 2, n, xi, eta, Z_xi,gxi);
     else
         H = zeros(1,4,length(a),class(R));
 
-        H(1,1,:) = w_(n,1,xit_m,xi,nu_a).*S_(1, 1, n, xi, eta, Z_xi,gxi);
-        H(1,2,:) = w_(n,2,xit_m,xi,nu_a).*S_(1, 2, n, xi, eta, Z_xi,gxi);
-        H(1,3,:) = w_(n,1,etat_m,eta,nu_a).*T_(1, 1, n, eta, Z_eta,geta);
-        H(1,4,:) = w_(n,2,etat_m,eta,nu_a).*T_(1, 2, n, eta, Z_eta,geta);
+        H(1,1,:) = w_(n,1,xit_m,xi,nu_a,0).*S_(1, 1, n, xi, eta, Z_xi,gxi);
+        H(1,2,:) = w_(n,2,xit_m,xi,nu_a,0).*S_(1, 2, n, xi, eta, Z_xi,gxi);
+        H(1,3,:) = w_(n,1,etat_m,eta,nu_a,0).*T_(1, 1, n, eta, Z_eta,geta);
+        H(1,4,:) = w_(n,2,etat_m,eta,nu_a,0).*T_(1, 2, n, eta, Z_eta,geta);
     end
 end
 H = H/R;
@@ -483,15 +482,15 @@ else
     if isSphere
         H = zeros(1,2,length(a),class(R));
 
-        H(1,1,:) = w_(n,1,xit_m,xi,nu_a).*S_(2, 1, n, xi, eta, Z_xi,gxi);
-        H(1,2,:) = w_(n,1,etat_m,eta,nu_a).*T_(2, 1, n, eta, Z_eta,geta);
+        H(1,1,:) = w_(n,1,xit_m,xi,nu_a,0).*S_(2, 1, n, xi, eta, Z_xi,gxi);
+        H(1,2,:) = w_(n,1,etat_m,eta,nu_a,0).*T_(2, 1, n, eta, Z_eta,geta);
     else
         H = zeros(1,4,length(a),class(R));
 
-        H(1,1,:) = w_(n,1,xit_m,xi,nu_a).*S_(2, 1, n, xi, eta, Z_xi,gxi);
-        H(1,2,:) = w_(n,2,xit_m,xi,nu_a).*S_(2, 2, n, xi, eta, Z_xi,gxi);
-        H(1,3,:) = w_(n,1,etat_m,eta,nu_a).*T_(2, 1, n, eta, Z_eta,geta);
-        H(1,4,:) = w_(n,2,etat_m,eta,nu_a).*T_(2, 2, n, eta, Z_eta,geta);
+        H(1,1,:) = w_(n,1,xit_m,xi,nu_a,0).*S_(2, 1, n, xi, eta, Z_xi,gxi);
+        H(1,2,:) = w_(n,2,xit_m,xi,nu_a,0).*S_(2, 2, n, xi, eta, Z_xi,gxi);
+        H(1,3,:) = w_(n,1,etat_m,eta,nu_a,0).*T_(2, 1, n, eta, Z_eta,geta);
+        H(1,4,:) = w_(n,2,etat_m,eta,nu_a,0).*T_(2, 2, n, eta, Z_eta,geta);
     end
     H = H/R;
 end
@@ -506,27 +505,27 @@ if isSphere
     if n == 0
         H = zeros(1,1,length(a),class(R));
 
-        H(1,1,:) = w_(n,1,xit_m,xi,nu_a).*S_(5, 1, n, xi, eta, Z_xi,gxi);
+        H(1,1,:) = w_(n,1,xit_m,xi,nu_a,0).*S_(5, 1, n, xi, eta, Z_xi,gxi);
     else
         H = zeros(1,2,length(a),class(R));
 
-        H(1,1,:) = w_(n,1,xit_m,xi,nu_a).*S_(5, 1, n, xi, eta, Z_xi,gxi);
-        H(1,2,:) = w_(n,1,etat_m,eta,nu_a).*T_(5, 1, n, eta, Z_eta,geta);
+        H(1,1,:) = w_(n,1,xit_m,xi,nu_a,0).*S_(5, 1, n, xi, eta, Z_xi,gxi);
+        H(1,2,:) = w_(n,1,etat_m,eta,nu_a,0).*T_(5, 1, n, eta, Z_eta,geta);
     end
 else
     if n == 0
         H = zeros(1,2,length(a),class(R));
 
-        H(1,1,:) = w_(n,1,xit_m,xi,nu_a).*S_(5, 1, n, xi, eta, Z_xi,gxi);
-        H(1,2,:) = w_(n,2,xit_m,xi,nu_a).*S_(5, 2, n, xi, eta, Z_xi,gxi);
+        H(1,1,:) = w_(n,1,xit_m,xi,nu_a,0).*S_(5, 1, n, xi, eta, Z_xi,gxi);
+        H(1,2,:) = w_(n,2,xit_m,xi,nu_a,0).*S_(5, 2, n, xi, eta, Z_xi,gxi);
     else
         H = zeros(1,4,length(a),class(R));
 
-        H(1,1,:) = w_(n,1,xit_m,xi,nu_a).*S_(5, 1, n, xi, eta, Z_xi,gxi);
-        H(1,2,:) = w_(n,2,xit_m,xi,nu_a).*S_(5, 2, n, xi, eta, Z_xi,gxi);
+        H(1,1,:) = w_(n,1,xit_m,xi,nu_a,0).*S_(5, 1, n, xi, eta, Z_xi,gxi);
+        H(1,2,:) = w_(n,2,xit_m,xi,nu_a,0).*S_(5, 2, n, xi, eta, Z_xi,gxi);
 
-        H(1,3,:) = w_(n,1,etat_m,eta,nu_a).*T_(5, 1, n, eta, Z_eta,geta);
-        H(1,4,:) = w_(n,2,etat_m,eta,nu_a).*T_(5, 2, n, eta, Z_eta,geta);
+        H(1,3,:) = w_(n,1,etat_m,eta,nu_a,0).*T_(5, 1, n, eta, Z_eta,geta);
+        H(1,4,:) = w_(n,2,etat_m,eta,nu_a,0).*T_(5, 2, n, eta, Z_eta,geta);
     end
 end
 H = 2*G/R^2*H;
@@ -547,19 +546,18 @@ else
     if isSphere
         H = zeros(1,2,length(a),class(R));
         
-        H(1,1,:) = w_(n,1,xit_m,xi,nu_a).*S_(7, 1, n, xi, eta, Z_xi,gxi);
-        H(1,2,:) = w_(n,2,etat_m,eta,nu_a).*T_(7, 1, n, eta, Z_eta,geta);
+        H(1,1,:) = w_(n,1,xit_m,xi,nu_a,0).*S_(7, 1, n, xi, eta, Z_xi,gxi);
+        H(1,2,:) = w_(n,2,etat_m,eta,nu_a,0).*T_(7, 1, n, eta, Z_eta,geta);
     else
         H = zeros(1,4,length(a),class(R));
         
-        H(1,1,:) = w_(n,1,xit_m,xi,nu_a).*S_(7, 1, n, xi, eta, Z_xi,gxi);
-        H(1,2,:) = w_(n,2,xit_m,xi,nu_a).*S_(7, 2, n, xi, eta, Z_xi,gxi);
-        H(1,3,:) = w_(n,1,etat_m,eta,nu_a).*T_(7, 1, n, eta, Z_eta,geta);
-        H(1,4,:) = w_(n,2,etat_m,eta,nu_a).*T_(7, 2, n, eta, Z_eta,geta);
+        H(1,1,:) = w_(n,1,xit_m,xi,nu_a,0).*S_(7, 1, n, xi, eta, Z_xi,gxi);
+        H(1,2,:) = w_(n,2,xit_m,xi,nu_a,0).*S_(7, 2, n, xi, eta, Z_xi,gxi);
+        H(1,3,:) = w_(n,1,etat_m,eta,nu_a,0).*T_(7, 1, n, eta, Z_eta,geta);
+        H(1,4,:) = w_(n,2,etat_m,eta,nu_a,0).*T_(7, 2, n, eta, Z_eta,geta);
     end
     H = 2*G/R^2*H;
 end
-
 
 
 

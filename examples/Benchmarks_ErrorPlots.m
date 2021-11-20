@@ -20,14 +20,15 @@ for useSymbolicPrecision = 0 %[0,1]
     end
     models = {'S1','S3','S5','S13','S15','S35','S135'};
 %     models = {'S13','S15','S35','S135'};
-    models = {'Skelton1997tao'};
+%     models = {'Skelton1997tao'};
 %     models = {'Sage1979mri'};
-%     models = {'S35'};
+    models = {'S35'};
+%     models = {'S5'};
     counter = 1;
     for i_model = 1:length(models)
         for ESBC = 0 %[0, 1]
-            for SHBC = 0 %[0, 1]
-                for SSBC = 1 %[0, 1]
+            for SHBC = 1 %[0, 1]
+                for SSBC = 0 %[0, 1]
                     if ~(ESBC + SHBC + SSBC > 1)
                         tasks(counter).model = models{i_model};
                         tasks(counter).ESBC = ESBC;
@@ -44,7 +45,7 @@ for useSymbolicPrecision = 0 %[0,1]
         switch prec
             case 'single'
                 Eps = 1e-7;
-                PI = pi;b
+                PI = pi;
                 O = 0;
             case 'double'
                 Eps = eps;
@@ -155,10 +156,10 @@ for useSymbolicPrecision = 0 %[0,1]
         end
         R_1 = layer{1}.R_i;
         if 1
-    %         nFreqs = 4;
             nFreqs = 100;
+%             nFreqs = 4;
             kR_start = 1e-1;
-            kR_end = 1e3;
+            kR_end = 1e4;
 %             kR_end = 1e0;
             kR = 10.^linspaceHP(log10(kR_start),log10(kR_end),nFreqs);
             k = kR/R_1;
@@ -174,13 +175,14 @@ for useSymbolicPrecision = 0 %[0,1]
             kR = k*R_1;
         end
         nu_a = 100;
-        nu_a = Inf;
+%         nu_a = Inf;
         options = struct('BC', BC, ...
                          'd_vec', d_vec, ...
                          'omega', omega, ...
                          'P_inc', ones(1,class(O)), ...
                          'prec', prec, ...
                          'Display','final',...
+                         'debug',true, ...
                          'nu_a',nu_a,...
                          'Eps', Eps);
 %         options.N_max = 2;

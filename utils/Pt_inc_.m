@@ -53,15 +53,15 @@ switch type
         end
         p = P_inc*p;
     case 4
-        [ys,Fs] = audioread('../miscellaneous/sonar_raw.wav'); % From https://freesound.org/s/28693/
+        [ys,Fs] = audioread('miscellaneous/sonar_raw.wav'); % From https://freesound.org/s/28693/
         T = 16;
         N = T*Fs;
         p = zeros(N,1);
         idx = 186894;
         ysCut = ys(idx:end,1);
         p(1:numel(ysCut)) = ysCut/max(abs(ysCut));
-        audiowrite('../miscellaneous/sonar.wav',p,Fs);
-        p = audioread('../miscellaneous/sonar.wav');
+        audiowrite('miscellaneous/sonar.wav',p,Fs);
+        p = audioread('miscellaneous/sonar.wav');
         if isrow(t)
             p = p.';
         end

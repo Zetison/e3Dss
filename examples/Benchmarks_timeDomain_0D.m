@@ -12,8 +12,8 @@ playP_inc = 1;
 applyLoad = 'planeWave';
 % applyLoad = 'radialPulsation';
 
-% model = 'S35';
-model = 'S5';
+model = 'S35';
+% model = 'S5';
 f_c = 1500; % (300) source pulse center freq.
 ss = 2^5;
 % npts = 10;
@@ -153,7 +153,7 @@ temp = PincFieldTime;
 PincFieldTime(:,1:N-startIdx+1) = temp(:,startIdx:end);
 PincFieldTime(:,N-startIdx+2:end) = temp(:,1:startIdx-1);
 
-filename = ['../../../results/e3Dss/' model '.wav'];
+filename = ['../../results/e3Dss/' model '.wav'];
 y = real(totFieldTime(end,:));
 figure
 plot(y)
@@ -166,5 +166,6 @@ audiowrite(filename,ys,Fs);
 % [ys,Fs] = audioread(filename);
 sound(Pt_inc,Fs);
 sound(ys,Fs);
+% sound(y*1000,Fs);
 
 
