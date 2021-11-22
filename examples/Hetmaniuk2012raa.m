@@ -6,6 +6,7 @@ close all
 clear all %#ok
 
 startup
+folderName = [homeDir '/Dropbox/Apps/Overleaf/createFigures/data/e3Dss_article2'];
 resultsFolder = [folderName '/Hetmaniuk2012raa'];
 if ~exist(resultsFolder, 'dir')
     mkdir(resultsFolder);
@@ -80,6 +81,8 @@ ylim([-200, 200])
 ylabel('Real part of pressure')  
 legend('show');
 savefig([resultsFolder '/Figure12'])
+printResultsToFile([resultsFolder '/Figure12'], {'x', real_p_Hetmaniuk(:,1), 'y', real_p_Hetmaniuk(:,2), 'xlabel','f', 'ylabel','realp'})
+printResultsToFile([resultsFolder '/Figure12_e3Dss'], {'x', f, 'y', real(layer{1}.p).', 'xlabel','f', 'ylabel','realp'})
 
 
 figure(42)
@@ -120,6 +123,8 @@ ylim([-15, 15])
 ylabel('Real part of pressure')  
 legend('show');
 savefig([resultsFolder '/Figure17'])
+printResultsToFile([resultsFolder '/Figure17'], {'x', real_p_Hetmaniuk(:,1), 'y', real_p_Hetmaniuk(:,2), 'xlabel','f', 'ylabel','realp'})
+printResultsToFile([resultsFolder '/Figure17_e3Dss'], {'x', f, 'y', real(layer{1}.p).', 'xlabel','f', 'ylabel','realp'})
 
 
 figure(43)
@@ -130,3 +135,6 @@ end
 xlabel('n')
 hold off
 legend('show');
+
+
+

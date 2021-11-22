@@ -23,6 +23,6 @@ if i == 1
 end
 if ~(isa(z,'sym') || isa(z,'mp'))
     if any(any(abs(d2Z) > 1e290))
-        error('e3Dss:infBessel','A Bessel function evaluation was too large')
+        warning('e3Dss:infBessel','A Bessel function evaluation was too large')
     end
 end

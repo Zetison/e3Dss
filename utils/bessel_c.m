@@ -2,23 +2,19 @@ function f = bessel_c(nu,z,i,nu_a,U_pol,u_k,v_k)
 
 indices = indices_(i,nu,z,nu_a);
 f = zeros(size(z));
-f(~indices) = bessel_std(nu,z(~indices),i,nu_a);
+f(~indices) = bessel_std(nu,z(~indices),i);
 if any(indices)
     f(indices) = bessel_asy(nu,z(indices),i,U_pol,u_k,v_k);
 end
 end
 
-function f = bessel_std(nu,z,i,nu_a)
-expScale = nu <= nu_a;
+function f = bessel_std(nu,z,i)
 if i == 1 % besselj
-    f = besselj(nu,z,double(expScale));
+    f = besselj(nu,z,1);
 elseif i == 2 % bessely
-    f = bessely(nu,z,double(expScale));
+    f = bessely(nu,z,1);
 else
-    f = besselh(nu,1,z,double(expScale)); % Hankel function of first kind
-end
-if ~expScale
-    f = exp(exponent_(i,nu,z,nu_a)).*f;
+    f = besselh(nu,1,z,1); % Hankel function of first kind
 end
 end
 

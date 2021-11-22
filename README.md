@@ -63,3 +63,11 @@ layer{m}.calc_errNav  = false;      % Toggle calculation of the errors for the N
 ```
 
 It is recomended to build upon examples in the examples folder. In particular, a minimal example is given in examples/theDefaultExample.m
+
+Some suggested extensions include
+% Why has the error in the displacement condition worsen slightly?
+% Expand to cylinder case?
+% Add functionality to compute resonance frequencies
+% Enable p_inc in multiple domains
+
+

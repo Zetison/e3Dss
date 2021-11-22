@@ -36,7 +36,7 @@ x = linspace(0,1,100000);
 % U_p(3,U_pol)-[-425425,0,765765,0,-369603,0,30375,0,0,0]/414720
 % bessel_j_asy(n,xi)
 % bessel_s(n,xi,1)
-if 1
+if 0
     x = 1000;
     nu_a = 100;
     nu = 100+1/2;
@@ -62,7 +62,7 @@ npts = N;
 nu_a = 100;
 B = zeros(npts,1);
 N_arr = linspace(1,N,npts).';
-if 0
+if 1
     N_arr = 10.^linspace(0,9,1000).';
 %     N_arr = 10.^linspace(log10(xi),10,1000).';
     figure

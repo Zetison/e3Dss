@@ -21,6 +21,7 @@ options = struct('d_vec',           [0;0;1],  ... 	 % Direction of the incident 
                 'Display',          'final', ...     % Print options ('final', 'iter' or 'none')
                 'BC',               'SHBC', ...      % Boundary condition at the innermost layer: 'IBC', 'SHBC', 'SSBC' or 'NNBC'
                 'applyLoad',        'planeWave', ... % Incident wave type: I.e. 'planeWave', 'pointCharge', 'mechExcitation', 'surfExcitation', 'radialPulsation'
+                'r_s',              NaN, ...         % Distance to load source (for loads 'pointCharge', 'mechExcitation' and 'surfExcitation')
                 'p_inc_fromSeries', false, ...       % Calculate p_inc by series expansions (in terms of Bessel functions)
                 'nu_a',             100, ...         % Value of nu at which scaled asymptotic expansions are used in bessel_c
                 'Eps',              eps,  ...        % Small parameter for series truncation
@@ -63,6 +64,8 @@ singMatrixWarning = 'off';
 if isempty(poolobj)
     warning(singMatrixWarning, 'MATLAB:nearlySingularMatrix')
     warning(singMatrixWarning, 'MATLAB:singularMatrix')
+    warning(singMatrixWarning, 'MATLAB:illConditionedMatrix')
+    
     warning(debugStr, 'e3Dss:infBessel')
     warning(debugStr, 'e3Dss:divergeBessel')
     warning(debugStr, 'e3Dss:infWeight')
@@ -70,6 +73,7 @@ if isempty(poolobj)
 else
     pctRunOnAll(['warning(''' singMatrixWarning ''', ''MATLAB:singularMatrix'')'])
     pctRunOnAll(['warning(''' singMatrixWarning ''', ''MATLAB:nearlySingularMatrix'')'])
+    pctRunOnAll(['warning(''' singMatrixWarning ''', ''MATLAB:illConditionedMatrix'')'])
     pctRunOnAll(['warning(''' debugStr ''', ''e3Dss:infBessel'')'])
     pctRunOnAll(['warning(''' debugStr ''', ''e3Dss:divergeBessel'')'])
     pctRunOnAll(['warning(''' debugStr ''', ''e3Dss:infWeight'')'])
@@ -124,6 +128,9 @@ for m = 1:M
     calc_err_dc = layer{m}.calc_err_dc;
     switch layer{m}.media
         case 'fluid'
+            % Modify sound speed to acount for the hysteretic loss factor
+            layer{m}.c_f = layer{m}.c_f*sqrt(1-1i*layer{m}.lossFactor);
+            
             calc_err_helmholtz = layer{m}.calc_err_helmholtz;
             calc_dp = or(layer{m}.calc_dp, calc_err_dc);
 
@@ -146,6 +153,8 @@ for m = 1:M
                 layer{m}.calc_dp_inc = or(layer{m}.calc_dp_inc, layer{m}.calc_errors);
             end
         case {'solid','viscoelastic'}
+            % Modify Youngs modulus to acount for the hysteretic loss factor
+            layer{m}.E = layer{m}.E*(1-1i*layer{m}.lossFactor);
             
             calc_u = layer{m}.calc_u;
             calcCartesianDispDerivatives = any(layer{m}.calc_du(:));
@@ -651,7 +660,7 @@ for m = 1:M
                             end
                         case 'fluid'
                             p_tot = layer{m+1}.p(:,indices2);
-                            if m+1 == m_s
+                            if m2 == m_s
                                 k = omega/layer{m+1}.c_f;
                                 k_vec = options.d_vec*k;
                                 p_inc = P_inc*exp(1i*X_s*k_vec);
@@ -699,27 +708,41 @@ for m = 1:M
                     n_y = repmat(n_y,1,length(omega)).';
                     n_z = repmat(n_z,1,length(omega)).';
 
-                    dp = cell(1,3);
+                    dp_s = cell(1,3);
                     for i = 1:3
-                        dp{i} = layer{m}.dp{i}(:,indices);
-                        if m == m_s
-                            dp{i} = dp{i} + layer{m}.dp_inc{i}(:,indices);
+                        dp_s{i} = layer{m}.dp{i}(:,indices);
+                        if i == 1
+                            Omega = repmat(omega,1,size(dp_s{i},2));
                         end
+                        if m == m_s
+                            dp_s{i} = dp_s{i} + layer{m}.dp_inc{i}(:,indices);
+                        end
+                        dp_s{i} = dp_s{i}./(rho*Omega.^2);
                     end
                     switch nextMedia
                         case 'void'
                             if SHBC
-                                layer{m}.err_dc = max(abs(dp{1}.*n_x + dp{2}.*n_y + dp{3}.*n_z),[],2)/P_inc;
+                                layer{m}.err_dc = max(abs(dp_s{1}.*n_x + dp_s{2}.*n_y + dp_s{3}.*n_z),[],2)/P_inc;
                             end
+                        case 'fluid'
+                            dp_s2 = cell(1,3);
+                            rho2 = layer{m2}.rho;
+                            for i = 1:3
+                                dp_s2{i} = layer{m2}.dp{i}(:,indices2);
+                                if m2 == m_s
+                                    dp_s2{i} = dp_s2{i} + layer{m2}.dp_inc{i}(:,indices2);
+                                end
+                                dp_s2{i} = dp_s2{i}./(rho2*Omega.^2);
+                            end
+                            layer{m}.err_dc = max(abs((dp_s{1}-dp_s2{1}).*n_x + (dp_s{2}-dp_s2{2}).*n_y + (dp_s{3}-dp_s2{3}).*n_z),[],2)./max(abs(dp_s{1}.*n_x + dp_s{2}.*n_y + dp_s{3}.*n_z),[],1);                            
                         case {'solid','viscoelastic'}
                             u = cell(1,3);
                             for i = 1:3
                                 u{i} = layer{m+1}.u{i}(:,indices2);
                             end
-                            Omega = repmat(omega,1,size(u{1},2));
-                            layer{m}.err_dc = max(abs(    (dp{1}-rho*Omega.^2.*u{1}).*n_x ...
-                                                        + (dp{2}-rho*Omega.^2.*u{2}).*n_y ...
-                                                        + (dp{3}-rho*Omega.^2.*u{3}).*n_z),[],2)./max(abs(dp{1}.*n_x + dp{2}.*n_y + dp{3}.*n_z),[],1);
+                            layer{m}.err_dc = max(abs(    (dp_s{1}-u{1}).*n_x ...
+                                                        + (dp_s{2}-u{2}).*n_y ...
+                                                        + (dp_s{3}-u{3}).*n_z),[],2)./max(abs(dp_s{1}.*n_x + dp_s{2}.*n_y + dp_s{3}.*n_z),[],1);
                     end
                 case {'solid','viscoelastic'}
                     u = cell(1,3);
@@ -803,8 +826,9 @@ end
 function layer = getDefaultParameters(layer)
 
 for m = 1:numel(layer)
-    layer{m}.R_i              = 1;       % Inner radius of layer
-    layer{m}.rho              = 1000;    % Mass density
+    layer{m}.R_i         = 1;       % Inner radius of layer
+    layer{m}.rho         = 1000;    % Mass density
+    layer{m}.lossFactor  = 0;       % Hysteretic loss factor (values around 0.001 for lightly damped materials, values around 0.01 for moderately damped materials and values around 0.1 for heavily damped materials)
     layer{m}.calc_err_dc = false;   % Calculate the errors for the displacement conditions
     layer{m}.calc_err_pc = false;   % Calculate the errors for the pressure conditions
     switch layer{m}.media
@@ -1332,7 +1356,7 @@ if layer{m}.calc_p || layer{m}.calc_dpdr || layer{m}.calc_dpdt || layer{m}.calc_
         switch applyLoad
             case 'planeWave'
                 s1 = exp(exponent_(1,nu,zeta,nu_a));
-                fluid.dp_incdr = (2*n+1)*1i^n*k*Q0.*dj_n./s1;
+                fluid.dp_incdr = (2*n+1)*1i^n*k*Q0.*dwZt{1}./s1;
             case 'pointCharge'
                 s1 = exp(exponent_(1,nu,zeta,nu_a));
                 s3 = exp(exponent_(3,nu,zeta,nu_a));
@@ -1352,7 +1376,7 @@ if layer{m}.calc_p || layer{m}.calc_dpdr || layer{m}.calc_dpdt || layer{m}.calc_
         switch applyLoad
             case 'planeWave'
                 s1 = exp(exponent_(1,nu,zeta,nu_a));
-                fluid.dp_incdt = (2*n+1)*1i^n*Q1.*j_n./s1;
+                fluid.dp_incdt = (2*n+1)*1i^n*Q1.*wZt{1}./s1;
             case 'pointCharge'
                 s1 = exp(exponent_(1,nu,zeta,nu_a));
                 s3 = exp(exponent_(3,nu,zeta,nu_a));
@@ -1389,7 +1413,6 @@ if isOuterDomain
             warning('e3Dss:infWeight','A weight evaluation was too large')
         end
         h_n_0  = 1i^(-n-1)./k./cs;
-        h_n_0 = repmat(h_n_0, 1, size(zeta,2));
         fluid.p_0 = C*Q0.*h_n_0;
     end
 %     if layer{m}.calc_dp_0dr

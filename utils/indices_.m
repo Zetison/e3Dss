@@ -2,7 +2,7 @@ function indices = indices_(i,nu,z,nu_a)
 % indices = and(nu > abs(z), and(abs(nu.*real(zeta23_(z./nu))) > log(sqrt(realmax(class(z)))), nu > nu_a));
 % indices = and(nu > abs(z), and(abs(nu.*real(zeta23_(z./nu))) > log(realmax(class(z))*eps), nu > nu_a));
 if nu_a == -1
-    indices = true(size(z));
+    indices = false(size(z));
 else
     if i == 2
         indices = and(and(abs(nu.*real(zeta23_(z./nu))) > log(sqrt(realmax(class(z)))), nu > nu_a), abs(z) < nu);
