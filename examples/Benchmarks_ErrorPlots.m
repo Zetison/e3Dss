@@ -20,18 +20,19 @@ for nu_a = [-1, 100]
         else
             prec = 'double';
         end
-        models = {'S1','S3','S5','S13','S15','S35','S135'};
+%         models = {'S1','S3','S5','S13','S15','S35','S135'};
     %     models = {'S13','S15','S35','S135'};
 %         models = {'Skelton1997tao'};
 %         models = {'Hetmaniuk2012raa'};
 %         models = {'Sage1979mri'};
+        models = {'S135'};
 %         models = {'S35'};
     %     models = {'S5'};
         counter = 1;
         for i_model = 1:length(models)
-            for ESBC = [0, 1]
-                for SHBC = [0, 1]
-                    for SSBC = [0, 1]
+            for ESBC = 0 %[0, 1]
+                for SHBC = 1 %[0, 1]
+                    for SSBC = 0 %[0, 1]
                         if ~(ESBC + SHBC + SSBC > 1)
                             tasks(counter).model = models{i_model};
                             tasks(counter).ESBC = ESBC;
