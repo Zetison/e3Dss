@@ -1,5 +1,5 @@
 function zeta = zeta23_(z)
-% zeta = zeros(size(z));
+% zeta = zeros(size(z),class(z));
 % indices = real(z) <= 1;
 % z1 = z(indices);
 % z2 = z(~indices);

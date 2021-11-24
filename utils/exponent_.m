@@ -1,7 +1,7 @@
 function exponent = exponent_(i,nu,x,nu_a)
 
 indices = indices_(i,nu,x,nu_a);
-exponent = zeros(size(x));
+exponent = zeros(size(x),class(x));
 if nu_a ~= -1
     if i == 1
         exponent(~indices) = -abs(imag(x(~indices)));

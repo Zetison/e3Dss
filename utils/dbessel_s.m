@@ -14,14 +14,14 @@ else
     end
     if i == 1
         indices = logical(abs(z) < tiny);
-        z(indices) = 1; % Avoid symbolic division by zero. These values will be replaced anyways
+        z(indices) = ones(1,class(z)); % Avoid symbolic division by zero. These values will be replaced anyways
     end
     dZ = n./z.*Z{i,1} - g{i}.*Z{i,2};
     if i == 1
         if n == 1
             dZ(indices) = ones(1,class(z))/3;
         else
-            dZ(indices) = 0;
+            dZ(indices) = zeros(1,class(z));
         end
     end
 end

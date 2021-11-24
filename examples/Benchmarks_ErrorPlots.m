@@ -12,8 +12,8 @@ mpstartup
 % startMatlabPool
 % mp = NaN;
 %% Calculate errors
-for nu_a = [-1, 100]
-    for useSymbolicPrecision = 0 %[0,1]
+for nu_a = -1 %[-1, 100]
+    for useSymbolicPrecision = 1 %[0,1]
         if useSymbolicPrecision
             prec = 'mp';
     %         prec = 'sym';
@@ -46,30 +46,27 @@ for nu_a = [-1, 100]
         end
         for i = 1:length(tasks)
     %     parfor i = 1:length(tasks)
-            nosymdigits = 40;
+            nosymdigits = 80;
             switch prec
                 case 'single'
                     Eps = 1e-7;
-                    PI = pi;
                     O = 0;
                 case 'double'
                     Eps = eps;
-                    PI = pi;
                     O = 0;
                 case 'sym'
-                    Eps = 1e-40;
+                    Eps = vpa('1e-40');
     %                 digits(2000);
                     digits(nosymdigits);
-                    PI = vpa(pi,digits);
                     O = vpa('0');
                 case 'mp'
-                    Eps = 10^(-nosymdigits);
+                    Eps = 10^(-mp(nosymdigits));
     %                 Eps = 1e-30;
                     mp.Digits(nosymdigits);
     %                 mp.Digits(2000);
-                    PI = mp('pi');
                     O = mp('0');
             end
+            PI = getPI(prec);
             model = tasks(i).model;
             ESBC = tasks(i).ESBC;
             SHBC = tasks(i).SHBC;
@@ -183,7 +180,7 @@ for nu_a = [-1, 100]
                 f_max = 25e4;
                 f_max = 10000;
                 f = linspace(f_max/nFreqs,f_max,nFreqs);
-                omega = 2*pi*f;
+                omega = 2*PI*f;
                 k = omega/layer{1}.c_f;
                 kR = k*R_1;
             end

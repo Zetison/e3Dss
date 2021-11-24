@@ -1,29 +1,27 @@
-function Z = bessel_s(n,z,i,nu_a,U_pol,u_k,v_k)
+function Z = bessel_s(n,z,i,nu_a,U_pol,u_k,v_k,Eps)
 %Returns the n'th spherical bessel function of kind "i" evaluated at
 %every element in z
 
 if isa(z,'sym')
-    PI = vpa('pi');
     tiny = realmin('double');
 elseif isa(z,'mp')
-    PI = mp('pi');
     tiny = realmin('double');
 else
     tiny = eps;
-    PI = pi;
 end
+PI = getPI(class(z));
 if i == 1
     indices = logical(abs(z) < tiny);
-    z(indices) = 1; % Avoid symbolic division by zero. These values will be replaced anyways
+    z(indices) = ones(1,class(z)); % Avoid symbolic division by zero. These values will be replaced anyways
 end
 
-Z = sqrt(PI/2)./sqrt(z).*bessel_c(n+0.5,z,i,nu_a,U_pol,u_k,v_k);
+Z = sqrt(PI/2)./sqrt(z).*bessel_c(n+0.5,z,i,nu_a,U_pol,u_k,v_k,Eps);
 
 if i == 1
     if n == 0
-        Z(indices) = 1;
+        Z(indices) = ones(1,class(z));
     else
-        Z(indices) = 0;
+        Z(indices) = zeros(1,class(z));
     end
 end
 if ~(isa(z,'sym') || isa(z,'mp'))

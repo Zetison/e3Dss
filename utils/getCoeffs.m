@@ -90,7 +90,7 @@ for m = 1:M
             Z_zeta2 = layer{m2}.Z_zeta_o;
         end
         if strcmp(layer{m}.media,'solid') || strcmp(layer{m}.media,'viscoelastic')
-            void = zeros(n > 0,1,numel(omega),class(R_i));
+            void = zeros(n > 0,1,numel(omega),prec);
             D1{m} = cat(1,void,...
                           D2_(n,k2,R_i,Z_zeta2,Z_r_s2,options),...    
                           D1_(n,k2,R_i,Z_zeta2,Z_r_s2,rho2,omega,options,gzeta_i));
@@ -139,7 +139,7 @@ for m = 1:M
                         u_r2 = u_r_(n,a2,b2,R_i,Rt_m2,Z_xi2,Z_eta2,isSphere2,nu_a,gxi2,geta2);
                         sigma_rr2 = sigma_rr_(n,a2,b2,R_i,Rt_m2,Z_xi2,Z_eta2,isSphere2,G2,nu_a,gxi2,geta2);
                         sigma_rt2 = sigma_rt_(n,a2,b2,R_i,Rt_m2,Z_xi2,Z_eta2,isSphere2,G2,nu_a,gxi2,geta2);
-                        void = zeros(size(sigma_rt2,1),size(p,2),size(sigma_rt2,3),class(a2));
+                        void = zeros(size(sigma_rt2,1),size(p,2),size(sigma_rt2,3),prec);
                         
                         H1{m} = cat(1,cat(2, dp_dr_s,u_r2),...
                                       cat(2, p, sigma_rr2),... 
@@ -189,7 +189,7 @@ for m = 1:M
                         u_r = u_r_(n,a,b,R_i,Rt_m,Z_xi,Z_eta,isSphere,nu_a,gxi,geta);
                         sigma_rr = sigma_rr_(n,a,b,R_i,Rt_m,Z_xi,Z_eta,isSphere,G,nu_a,gxi,geta);
                         sigma_rt = sigma_rt_(n,a,b,R_i,Rt_m,Z_xi,Z_eta,isSphere,G,nu_a,gxi,geta);
-                        void = zeros(size(sigma_rt,1),size(p2,2),numel(a),class(a));
+                        void = zeros(size(sigma_rt,1),size(p2,2),numel(a),prec);
                         
                         H1{m} = cat(1,cat(2, sigma_rt,void),...
                                       cat(2, sigma_rr, p2),...
@@ -337,18 +337,18 @@ switch options.applyLoad
             D1 = (2*n+1)*1i/R*k.*Z_r_s{1,1}.*dbessel_s(n,zeta,3,Z,true,g);
         end
     case 'mechExcitation'
-        D1 = zeros(size(k));
+        D1 = zeros(size(k),class(k));
     case 'surfExcitation'
-        D1 = zeros(size(k));
+        D1 = zeros(size(k),class(k));
     case 'radialPulsation'
         if n == 0
             D1 = -(1/R+1i*k);
         else
-            D1 = zeros(size(k));
+            D1 = zeros(size(k),class(k));
         end
     case 'custom'
         warning('This is experimental')
-        D1 = zeros(size(k));
+        D1 = zeros(size(k),class(k));
     otherwise
         error('Not implemented')
 end
@@ -367,16 +367,16 @@ switch options.applyLoad
             D2 = (2*n+1)*1i*k.*Z_r_s{1,1}.*Z{3,1};
         end
     case 'mechExcitation'
-        D2 = (2*n+1)/(4*pi*R^2)*ones(size(k));
+        D2 = (2*n+1)/(4*pi*R^2)*ones(size(k),class(k));
     case 'surfExcitation'
         theta_s = options.theta_s;
         D2 = (  legendre_(n-1,cos(theta_s(2))) - legendre_(n+1,cos(theta_s(2))) ...
-              -(legendre_(n-1,cos(theta_s(1))) - legendre_(n+1,cos(theta_s(1)))))/2*ones(size(k));
+              -(legendre_(n-1,cos(theta_s(1))) - legendre_(n+1,cos(theta_s(1)))))/2*ones(size(k),class(k));
     case 'radialPulsation' 
         if n == 0
-            D2 = ones(size(k));
+            D2 = ones(size(k),class(k));
         else
-            D2 = zeros(size(k));
+            D2 = zeros(size(k),class(k));
         end
     case 'custom' 
         warning('This is experimental')
