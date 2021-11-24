@@ -56,7 +56,7 @@ options = struct('BC', 'NNBC', ...
 [layer,N_eps,flag,relTermMaxArr] = e3Dss(layer, options);
 
 figure(1)
-options.nu_a = Inf;
+options.nu_a = -1;
 layer2 = e3Dss(layer, options);
 
 if 1

@@ -6,7 +6,6 @@ folderName = [homeDir '/results/e3Dss'];
 if ~exist(folderName, 'dir')
     error('The folder in which results should be stored does not exist. Please make such a folder and alter the variable folderName in startup.m accordingly.')
 end
-
 if ~isfile('miscellaneous/U_pol.mat')
     i_max = 64;
     U_pol = cell(i_max,1);

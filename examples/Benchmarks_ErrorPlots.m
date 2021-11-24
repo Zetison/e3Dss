@@ -8,7 +8,7 @@ if ~exist(resultsFolder, 'dir')
     mkdir(resultsFolder);
 end
 
-% mpstartup
+mpstartup
 % startMatlabPool
 % mp = NaN;
 %% Calculate errors
@@ -25,9 +25,9 @@ for nu_a = [-1, 100]
 %         models = {'Skelton1997tao'};
 %         models = {'Hetmaniuk2012raa'};
 %         models = {'Sage1979mri'};
-        models = {'S135'};
+%         models = {'S135'};
 %         models = {'S35'};
-    %     models = {'S5'};
+        models = {'S5'};
         counter = 1;
         for i_model = 1:length(models)
             for ESBC = 0 %[0, 1]
@@ -46,6 +46,7 @@ for nu_a = [-1, 100]
         end
         for i = 1:length(tasks)
     %     parfor i = 1:length(tasks)
+            nosymdigits = 40;
             switch prec
                 case 'single'
                     Eps = 1e-7;
@@ -58,13 +59,13 @@ for nu_a = [-1, 100]
                 case 'sym'
                     Eps = 1e-40;
     %                 digits(2000);
-                    digits(40);
-                    PI = vpa('pi');
+                    digits(nosymdigits);
+                    PI = vpa(pi,digits);
                     O = vpa('0');
                 case 'mp'
-                    Eps = 1e-40;
+                    Eps = 10^(-nosymdigits);
     %                 Eps = 1e-30;
-                    mp.Digits(40);
+                    mp.Digits(nosymdigits);
     %                 mp.Digits(2000);
                     PI = mp('pi');
                     O = mp('0');
@@ -169,10 +170,10 @@ for nu_a = [-1, 100]
             R_1 = layer{1}.R_i;
             if 1
                 nFreqs = 100;
-%                 nFreqs = 4;
+                nFreqs = 4;
                 kR_start = 1e-1;
                 kR_end = 1e4;
-%                 kR_end = 1e0;
+                kR_end = 1e0;
                 kR = 10.^linspaceHP(log10(kR_start),log10(kR_end),nFreqs);
                 k = kR/R_1;
                 omega = k*layer{1}.c_f;
