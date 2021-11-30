@@ -8,31 +8,31 @@ if ~exist(resultsFolder, 'dir')
     mkdir(resultsFolder);
 end
 
-mpstartup
 % startMatlabPool
 % mp = NaN;
 %% Calculate errors
-for nu_a = -1 %[-1, 100]
-    for useSymbolicPrecision = 1 %[0,1]
+for nu_a = [-1, 100]
+    for useSymbolicPrecision = 0 %[0,1]
         if useSymbolicPrecision
             prec = 'mp';
     %         prec = 'sym';
+            mpstartup
         else
             prec = 'double';
         end
-%         models = {'S1','S3','S5','S13','S15','S35','S135'};
+        models = {'S1','S3','S5','S13','S15','S35','S135'};
     %     models = {'S13','S15','S35','S135'};
 %         models = {'Skelton1997tao'};
 %         models = {'Hetmaniuk2012raa'};
 %         models = {'Sage1979mri'};
 %         models = {'S135'};
 %         models = {'S35'};
-        models = {'S5'};
+%         models = {'S1'};
         counter = 1;
         for i_model = 1:length(models)
-            for ESBC = 0 %[0, 1]
-                for SHBC = 1 %[0, 1]
-                    for SSBC = 0 %[0, 1]
+            for ESBC = [0, 1]
+                for SHBC = [0, 1]
+                    for SSBC = [0, 1]
                         if ~(ESBC + SHBC + SSBC > 1)
                             tasks(counter).model = models{i_model};
                             tasks(counter).ESBC = ESBC;
@@ -46,7 +46,7 @@ for nu_a = -1 %[-1, 100]
         end
         for i = 1:length(tasks)
     %     parfor i = 1:length(tasks)
-            nosymdigits = 80;
+            nosymdigits = 40;
             switch prec
                 case 'single'
                     Eps = 1e-7;
@@ -139,15 +139,18 @@ for nu_a = -1 %[-1, 100]
             npts_r = 4;
             npts_theta = 4;
             npts_phi = 4;
-    %         npts_r = 2;
-    %         npts_theta = 2;
-    %         npts_phi = 1;
+%             npts_r = 2;
+%             npts_theta = 2;
+%             npts_phi = 1;
             for m = 1:M
                 if m == 1
                     r = linspaceHP(layer{m}.R_i, 2*layer{m}.R_i, npts_r);
                 else
                     r = linspaceHP(layer{m}.R_i, layer{m-1}.R_i, npts_r);
                 end
+%                 if m == M
+%                     r(1) = 0.001;
+%                 end
                 theta = linspaceHP(O,PI,npts_theta);
                 phi = linspaceHP(O,2*PI,npts_phi);
                 pts = zeros(length(r)*length(theta)*length(phi),3,class(PI));
@@ -167,10 +170,10 @@ for nu_a = -1 %[-1, 100]
             R_1 = layer{1}.R_i;
             if 1
                 nFreqs = 100;
-                nFreqs = 4;
+%                 nFreqs = 4;
                 kR_start = 1e-1;
                 kR_end = 1e4;
-                kR_end = 1e0;
+%                 kR_end = 1e0;
                 kR = 10.^linspaceHP(log10(kR_start),log10(kR_end),nFreqs);
                 k = kR/R_1;
                 omega = k*layer{1}.c_f;
@@ -257,7 +260,7 @@ for nu_a = -1 %[-1, 100]
             printResultsToFile(filename, {'x',double(kR.'), 'y', double(err.'), 'xlabel','kR', 'ylabel',legendArr})
             xlabel('$k_1 R_1$','interpreter','latex')
             ylabel('Relative residual error')
-            title(['Errors for model ' model '_' BC], 'interpreter', 'none')
+            title(['Errors for model ' model '_' BC '_Symbolic' num2str(useSymbolicPrecision) '_Scaling' num2str(useScaling)], 'interpreter', 'none')
             hold off
             if ~useSymbolicPrecision
                 ylim([0.1*eps 1e2])

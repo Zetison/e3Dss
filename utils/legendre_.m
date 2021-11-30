@@ -8,7 +8,7 @@ else
     xIsCol = false;
 end
 i = 1;
-P = [zeros(size(x)); ones(size(x))];
+P = [zeros(size(x),class(x)); ones(size(x),class(x))];
 if n < 0
     P = P(1,:);
     return

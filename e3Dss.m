@@ -26,6 +26,7 @@ options = struct('d_vec',           [0;0;1],  ... 	 % Direction of the incident 
                 'nu_a',             100, ...         % Value of nu at which scaled asymptotic expansions are used in bessel_c
                 'Eps',              eps,  ...        % Small parameter for series truncation
                 'debug',            false, ...       % Print additional warning messages
+                'saveRelTermMax',   false, ...       % Save the maximum of the relative terms added to the series
                 'prec',             'double');       % Precision of the calculations
 if nargin > 1
     options = updateOptions(options,newOptions);
@@ -864,7 +865,6 @@ function [layer,N_eps,flag,relTermMaxArr] = e3Dss_0(layer, options)
 % Note that dpdt, u_t, du_tdr, and du_rdt are scaled by csc(theta)
 fluidFieldNames = {'p_0','p','dpdr','dpdt','d2pdr2','d2pdt2','p_inc','dp_incdr','dp_incdt'};
 solidFieldNames = {'u_r','u_t','du_rdr','du_rdt','du_tdr','du_tdt','sigma_rr','sigma_tt','sigma_pp','sigma_rt','navier1','navier2'};
-load('miscellaneous/U_pol.mat','U_pol','u_k','v_k')
 
 M = numel(layer);
 m_s = options.m_s;
@@ -880,6 +880,7 @@ if any(omega == 0)
 else
     computeForStaticCase = false;
 end
+load(['miscellaneous/U_pol_' prec '.mat'],'U_pol','u_k','v_k')
 
 R_i = inf;
 for m = 1:M
@@ -1022,10 +1023,14 @@ end
 n = zeros(1,prec);
 N_eps = NaN(nFreqs,1);
 relTermMaxFinal = zeros(nFreqs,1,prec); % Program terminated successfully unless error occurs (for each frequency)
-if isinf(N_max) % Track the relative term magnitude
-    relTermMaxArr = zeros(nFreqs,1000,prec);
+if options.saveRelTermMax
+    if isinf(N_max) % Track the relative term magnitude
+        relTermMaxArr = zeros(nFreqs,1000,prec);
+    else
+        relTermMaxArr = zeros(nFreqs,N_max,prec);
+    end
 else
-    relTermMaxArr = zeros(nFreqs,N_max,prec);
+    relTermMaxArr = NaN(1,prec);
 end
 singleModeSolution = (strcmp(options.applyLoad,'pointCharge') && options.r_s == 0) || strcmp(options.applyLoad,'radialPulsation') ...
                      || (strcmp(options.applyLoad,'surfExcitation') && options.theta_s(1) == 0 && abs(options.theta_s(2) - pi) < Eps);
@@ -1098,10 +1103,9 @@ while n <= N_max && ~(singleModeSolution && n > 0)
         end
     end
     C = getCoeffs(n, omega_temp, layer, options);
-    
     hasCnvrgdTmp = zeros(length(indices),M); % temporary hasCnvrgd matrix
     hasDvrgdTmp = zeros(length(indices),M); % temporary hasDvrgd matrix
-    relTermMax = -Inf(nFreqs,1);
+    relTermMax = -Inf(nFreqs,1,prec);
     for m = 1:M
         isSphere = layer{m}.R_i == 0;
         isOuterDomain = m == 1;
@@ -1147,14 +1151,17 @@ while n <= N_max && ~(singleModeSolution && n > 0)
             % Update fields
             for fieldName = fieldNames
                 if layer{m}.(['calc_' fieldName{1}])
-                    [layer,hasCnvrgdTmp2,hasDvrgdTmp2,relTermMax] = updateSum(layer,m,media,fieldName{1},indices,hasCnvrgdTmp2,hasDvrgdTmp2,relTermMax,tiny,Eps);
+                    [layer,hasCnvrgdTmp2,hasDvrgdTmp2,relTermMax] = updateSum(layer,m,media,fieldName{1},indices,hasCnvrgdTmp2,hasDvrgdTmp2,relTermMax,tiny,Eps,prec);
                 end
             end
         end
         hasCnvrgdTmp(logical(hasCnvrgdTmp2),m) = 1;
         hasDvrgdTmp(logical(hasDvrgdTmp2),m) = 1;
+%         hasDvrgdTmp(any(C{m} == 0,2),m) = 1; % Assume that solution contains 1/Inf = 0 calculations (and flag it as divergent)
     end
-    relTermMaxArr(:,n+1) = relTermMax;
+    if options.saveRelTermMax
+        relTermMaxArr(:,n+1) = relTermMax;
+    end
     hasCnvrgd(indices,:) = [hasCnvrgd(indices,2:end), prod(hasCnvrgdTmp,2)];
     hasDvrgd(indices) = sum(hasDvrgdTmp,2);
     indicesPrev = indices;
@@ -1168,7 +1175,7 @@ while n <= N_max && ~(singleModeSolution && n > 0)
         break;
     end
     if displayIter
-        fprintf('Completed calculation of term n = %d using %g seconds.\n', n, toc)
+        fprintf('n = %5d, Relative term: %10.5g, Elapsed time: %g seconds.\n', n, double(max(relTermMax)), toc)
     end
     n = n + 1;
 end
@@ -1177,7 +1184,9 @@ if singleModeSolution
 else
     flag = -or(~hasCnvrgd(:,end),hasDvrgd);
 end
-relTermMaxArr = relTermMaxArr(:,1:n-1);
+if options.saveRelTermMax
+    relTermMaxArr = relTermMaxArr(:,1:n-1);
+end
 if strcmp(options.Display, 'final') || strcmp(options.Display, 'iter')
     if n-1 == N_max
         warning('e3Dss:N_max_reached','The summation did not converge using N_max = %d terms (relTermMax = %f).', N_max, max(relTermMaxFinal))
@@ -1220,7 +1229,6 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function Z = iterate_Z(n,x,Z,Zindices,besselIndices,nu_a,U_pol,u_k,v_k,Eps)
-
 if n == 0
     for i = 1:numel(besselIndices)
         if besselIndices(i)
@@ -1259,7 +1267,7 @@ elseif strcmp(options.applyLoad,'pointCharge')
 end
 besselFlag = or(besselFlag, calcForP_inc);
 
-function [layer,hasCnvrgd,hasDvrgd,relTermMax] = updateSum(layer,m,media,fieldName,indices,hasCnvrgd,hasDvrgd,relTermMax,tiny,Eps)
+function [layer,hasCnvrgd,hasDvrgd,relTermMax] = updateSum(layer,m,media,fieldName,indices,hasCnvrgd,hasDvrgd,relTermMax,tiny,Eps,prec)
 % Track any Inf/NaN in next term
 hasDvrgdSub = or(hasDvrgd,or(any(isinf(media.(fieldName)),2),any(isnan(media.(fieldName)),2)));
 
@@ -1276,7 +1284,7 @@ hasDvrgd = hasDvrgd + hasDvrgdSub;
 % Only track frequencies that have not converged
 nonConvergedIdx = false(size(relTermMax,1),1);
 nonConvergedIdx(indices) = true;
-maxRelTerm = -Inf(size(relTermMax,1),1);
+maxRelTerm = -Inf(size(relTermMax,1),1,prec);
 maxRelTerm(nonConvergedIdx) = max(relTerm,[],2);
 indices2 = maxRelTerm > relTermMax;
 relTermMax(indices2) = maxRelTerm(indices2);
@@ -1406,20 +1414,26 @@ if layer{m}.calc_p || layer{m}.calc_dpdr || layer{m}.calc_dpdt || layer{m}.calc_
     end
 end
 
+if isSphere
+    indices = logical(zeta(1,:) < eps);
+    sOrigin  = exp(exponent_(1,nu,zetat_m,nu_a)-exponentShift);
+end
 if isOuterDomain
     if layer{m}.calc_p_0
-        cs = exp(-exponent_(3,nu,zeta,nu_a)+exponentShift);
+        cs = exp(exponent_(3,nu,zeta,nu_a)-exponentShift);
         if isinf(cs)
             warning('e3Dss:infWeight','A weight evaluation was too large')
         end
-        h_n_0  = 1i^(-n-1)./k./cs;
-        fluid.p_0 = C*Q0.*h_n_0;
+        h_n_0  = 1i^(-n-1)./k;
+        fluid.p_0 = C*Q0.*h_n_0.*cs;
     end
 %     if layer{m}.calc_dp_0dr
-%         dh_n_0  = repmat(1i^(-n), size(zeta,1),size(zeta,2));
+%         dh_n_0 = 1i^(-n);
+%         fluid.dh_n_0  = C*Q0.*dh_n_0.*cs;
 %     end
 %     if layer{m}.calc_d2p_0dr2
-%         d2h_n_0 = repmat(1i^(-n+1)*k, 1, size(zeta,2));
+%         d2h_n_0 = 1i^(-n+1)*k;
+%         fluid.d2h_n_0 = C*Q0.*d2h_n_0.*cs;
 %     end
     if layer{m}.calc_p
         fluid.p = C*Q0.*wZt{3};
@@ -1439,33 +1453,34 @@ if isOuterDomain
 elseif isSphere
     if layer{m}.calc_p
         fluid.p = C*Q0.*wZt{1};
+        if n == 0
+            fluid.p(:,indices) = repmat(C,1,sum(indices)).*sOrigin;
+        else
+            fluid.p(:,indices) = 0;
+        end
     end
     if layer{m}.calc_dpdr
         fluid.dpdr = C.*k*Q0.*dwZt{1};
-        indices = logical(zeta(1,:) < eps);
         if n == 1
-            fluid.dpdr(:,indices) = repmat(k/3.*C,1,sum(indices));
+            fluid.dpdr(:,indices) = repmat(k/3.*C,1,sum(indices)).*sOrigin;
         else
             fluid.dpdr(:,indices) = 0;
         end
     end
     if layer{m}.calc_dpdt % calculate a scaled dpdt (scaled by csc)
         fluid.dpdt = C*Q1.*wZt{1};
-        indices = logical(zeta(1,:) < eps);
         fluid.dpdt(:,indices) = 0;
     end
     if layer{m}.calc_d2pdr2
         fluid.d2pdr2 = C.*k.^2*Q0.*d2wZt{1};
-        indices = logical(zeta(1,:) < eps);
         if n == 0
-            fluid.d2pdr2(:,indices) = repmat(-k.^2.*C,1,sum(indices));
+            fluid.d2pdr2(:,indices) = repmat(-k.^2.*C,1,sum(indices)).*sOrigin;
         else
             fluid.d2pdr2(:,indices) = 0;
         end
     end
     if layer{m}.calc_d2pdt2
         fluid.d2pdt2 = C*Q2.*wZt{1};
-        indices = logical(zeta(1,:) < eps);
         fluid.d2pdt2(:,indices) = 0;
     end
 else
@@ -1515,11 +1530,19 @@ Q1 = sin(theta).*Q1s;
 Q2 = Q_(2,theta,P,dP,d2P);
 
 r2 = r.^2;
-wjxi = w_(n,1,Rt_m*a,xi,nu_a,exponentShift);
-wjeta = w_(n,1,Rt_m*b,eta,nu_a,exponentShift);
+xit_m = Rt_m*a;
+etat_m = Rt_m*b;
+nu = n + 1/2;
+if isSphere
+    indices = logical(r < eps);
+    sOrigin_xi  = exp(exponent_(1,nu,xit_m, nu_a)-exponentShift);
+    sOrigin_eta = exp(exponent_(1,nu,etat_m,nu_a)-exponentShift);
+end
+wjxi = w_(n,1,xit_m,xi,nu_a,exponentShift);
+wjeta = w_(n,1,etat_m,eta,nu_a,exponentShift);
 if ~isSphere
-    wyxi = w_(n,2,Rt_m*a,xi,nu_a,exponentShift);
-    wyeta = w_(n,2,Rt_m*b,eta,nu_a,exponentShift);
+    wyxi = w_(n,2,xit_m,xi,nu_a,exponentShift);
+    wyeta = w_(n,2,etat_m,eta,nu_a,exponentShift);
 end
 if layer{m}.calc_u_r
     Q0r = Q0./r;
@@ -1528,9 +1551,8 @@ if layer{m}.calc_u_r
     	u_r = u_r + B(:,1)*Q0r.*wjeta.*T_(1,1,n,eta,Zeta,geta);
     end
     if isSphere
-        indices = logical(r < eps);
         if n == 1
-            u_r(:,indices) = repmat((a.*A(:,1) - 2*b.*B(:,1))/3,1,sum(indices));
+            u_r(:,indices) = repmat((a.*A(:,1).*sOrigin_xi - 2*b.*B(:,1).*sOrigin_eta)/3,1,sum(indices));
         else
             u_r(:,indices) = 0;
         end
@@ -1566,11 +1588,10 @@ if layer{m}.calc_du_rdr
         du_rdr = du_rdr + B(:,1)*Q0r2.*wjeta.*T_(3,1,n,eta,Zeta,geta);
     end
     if isSphere
-        indices = logical(r < eps);
         if n == 0
-            du_rdr(:,indices) = repmat(G/K*(4*a.^2-3*b.^2).*A(:,1)/9,1,sum(indices));
+            du_rdr(:,indices) = repmat(G/K*(4*a.^2-3*b.^2).*A(:,1).*sOrigin_xi/9,1,sum(indices));
         elseif n == 2
-            du_rdr(:,indices) = repmat(-(a.^2.*A(:,1)-3*b.^2.*B(:,1))/15,1,sum(indices));
+            du_rdr(:,indices) = repmat(-(a.^2.*A(:,1).*sOrigin_xi - 3*b.^2.*B(:,1).*sOrigin_eta)/15,1,sum(indices));
         else
             du_rdr(:,indices) = 0;
         end
@@ -1590,11 +1611,10 @@ if layer{m}.calc_du_rdt
         du_rdt = du_rdt + B(:,1)*Q1sr.*wjeta.*T_(1,1,n,eta,Zeta,geta);
     end
     if isSphere
-        indices = logical(r < eps);
         if n == 0
-            du_rdt(:,indices) = repmat(G/K*(4*a.^2-3*b.^2).*A(:,1)/9,1,sum(indices));
+            du_rdt(:,indices) = repmat(G/K*(4*a.^2-3*b.^2).*A(:,1).*sOrigin_xi/9,1,sum(indices));
         elseif n == 2
-            du_rdt(:,indices) = repmat(-(a.^2.*A(:,1)-3*b.^2.*B(:,1))/15,1,sum(indices));
+            du_rdt(:,indices) = repmat(-(a.^2.*A(:,1).*sOrigin_xi - 3*b.^2.*B(:,1).*sOrigin_eta)/15,1,sum(indices));
         else
             du_rdt(:,indices) = 0;
         end
@@ -1614,11 +1634,10 @@ if layer{m}.calc_du_tdr
         du_tdr = du_tdr + B(:,1)*Q1sr2.*wjeta.*T_(4,1,n,eta,Zeta,geta);
     end
     if isSphere
-        indices = logical(r < eps);
         if n == 0
-            du_tdr(:,indices) = repmat(G/K*(4*a.^2-3*b.^2).*A(:,1)/9,1,sum(indices));
+            du_tdr(:,indices) = repmat(G/K*(4*a.^2-3*b.^2).*A(:,1).*sOrigin_xi/9,1,sum(indices));
         elseif n == 2
-            du_tdr(:,indices) = repmat(2*(a.^2.*A(:,1)-3*b.^2.*B(:,1))/15,1,sum(indices));
+            du_tdr(:,indices) = repmat(2*(a.^2.*A(:,1).*sOrigin_xi - 3*b.^2.*B(:,1).*sOrigin_eta)/15,1,sum(indices));
         else
             du_tdr(:,indices) = 0;
         end
@@ -1655,11 +1674,10 @@ if layer{m}.calc_sigma_rr
         sigma_rr = sigma_rr + B(:,1)*Q0r2.*wjeta.*T_(5,1,n,eta,Zeta,geta);
     end
     if isSphere
-        indices = logical(r < eps);
         if n == 0
-            sigma_rr(:,indices) = repmat(5*(4*a.^2-3*b.^2).*A(:,1)/30,1,sum(indices));
+            sigma_rr(:,indices) = repmat(5*(4*a.^2-3*b.^2).*A(:,1).*sOrigin_xi/30,1,sum(indices));
         elseif n == 2
-            sigma_rr(:,indices) = repmat((-2*a.^2.*A(:,1) + 6*b.^2.*B(:,1))/30,1,sum(indices));
+            sigma_rr(:,indices) = repmat((-2*a.^2.*A(:,1).*sOrigin_xi + 6*b.^2.*B(:,1).*sOrigin_eta)/30,1,sum(indices));
         else
             sigma_rr(:,indices) = 0;
         end
@@ -1683,11 +1701,10 @@ if layer{m}.calc_sigma_tt
                             + B(:,1)*Q2r2.*wjeta.*T_(2,1,n,eta,Zeta,geta);
     end
     if isSphere
-        indices = logical(r < eps);
         if n == 0
-            sigma_tt(:,indices) = repmat(5*(4*a.^2-3*b.^2).*A(:,1)/30,1,sum(indices));
+            sigma_tt(:,indices) = repmat(5*(4*a.^2-3*b.^2).*A(:,1).*sOrigin_xi/30,1,sum(indices));
         elseif n == 2
-            sigma_tt(:,indices) = repmat((-2*a.^2.*A(:,1) + 6*b.^2.*B(:,1))/30,1,sum(indices));
+            sigma_tt(:,indices) = repmat((-2*a.^2.*A(:,1).*sOrigin_xi + 6*b.^2.*B(:,1).*sOrigin_eta)/30,1,sum(indices));
         else
             sigma_tt(:,indices) = 0;
         end
@@ -1713,11 +1730,10 @@ if layer{m}.calc_sigma_pp
                             + B(:,1)*cott_Q1r2.*wjeta.*T_(2,1,n,eta,Zeta,geta);
     end
     if isSphere
-        indices = logical(r < eps);
         if n == 0
-            sigma_pp(:,indices) = repmat(5*(4*a.^2-3*b.^2).*A(:,1)/30,1,sum(indices));
+            sigma_pp(:,indices) = repmat(5*(4*a.^2-3*b.^2).*A(:,1).*sOrigin_xi/30,1,sum(indices));
         elseif n == 2
-            sigma_pp(:,indices) = repmat((4*a.^2.*A(:,1) - 12*b.^2.*B(:,1))/30,1,sum(indices));
+            sigma_pp(:,indices) = repmat((4*a.^2.*A(:,1).*sOrigin_xi - 12*b.^2.*B(:,1).*sOrigin_eta)/30,1,sum(indices));
         else
             sigma_pp(:,indices) = 0;
         end
@@ -1826,10 +1842,9 @@ if layer{m}.calc_navier1 || layer{m}.calc_navier2
     solid.navier1 = dsigma_rr_dr + dsigma_rt_dt + 1./R.*(2*sigma_rr-sigma_tt-sigma_pp+sigma_rt.*cos(Theta));
     solid.navier2 = dsigma_rt_dr + dsigma_diffr + 3./R.*sigma_rt.*sin(Theta);
     if isSphere
-        indices = logical(r < eps);
         if n == 1
             rho = layer{m}.rho;
-            solid.navier1(:,indices) = repmat(-omega.^2*rho.*(a.*A(:,1) - 2*b.*B(:,1))/3,1,sum(indices));
+            solid.navier1(:,indices) = repmat(-omega.^2*rho.*(a.*A(:,1).*sOrigin_xi - 2*b.*B(:,1).*sOrigin_eta)/3,1,sum(indices));
         else
             solid.navier1(:,indices) = 0;
         end

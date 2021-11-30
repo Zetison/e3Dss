@@ -3,7 +3,7 @@ function g = g_(n,i,x,nu_a)
 nu = n + 1/2;
 % indices1 = indices_(i,nu,x,nu_a);
 % indices2 = indices_(i,nu+1,x,nu_a);
-% g = zeros(size(x));
+% g = zeros(size(x),class(x));
 % if i == 1 % Scale for besselj
 %     g(indices1) = nu*zeta23_(x(indices1)/nu);
 %     g(indices2) = g(indices2) - (nu+1)*zeta23_(x(indices2)/(nu+1));

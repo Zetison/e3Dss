@@ -127,14 +127,14 @@ xlabel('Frequency (Hz)')
 ylabel('Target strength')
 printResultsToFile([resultsFolder '/Figure10.6_e3Dss_2'], {'x', f.', 'y', TS.', 'xlabel','f', 'ylabel','TS'})
 options.nu_a = -1;
-% layerSSBC2 = e3Dss(layerSSBC, options);
-% TS = 20*log10(abs(layerSSBC2{1}.p_0));
-% hold on
-% plot(TS_SSBC(:,1),TS_SSBC(:,2),'DisplayName','Ref')
-% plot(f,TS,'DisplayName','Without scaling')
-% legend show
-% printResultsToFile([resultsFolder '/Figure10.6_e3Dss_3'], {'x', f.', 'y', TS.', 'xlabel','f', 'ylabel','TS'})
-% savefig([resultsFolder '/figure2b.fig'])
+layerSSBC2 = e3Dss(layerSSBC, options);
+TS = 20*log10(abs(layerSSBC2{1}.p_0));
+hold on
+plot(TS_SSBC(:,1),TS_SSBC(:,2),'DisplayName','Ref')
+plot(f,TS,'DisplayName','Without scaling')
+legend show
+printResultsToFile([resultsFolder '/Figure10.6_e3Dss_3'], {'x', f.', 'y', TS.', 'xlabel','f', 'ylabel','TS'})
+savefig([resultsFolder '/figure2b.fig'])
 
 if false
     % this case is not perfectly reproducable due to lacking parameters

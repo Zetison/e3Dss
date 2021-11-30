@@ -1,16 +1,15 @@
 function exponent = exponent_(i,nu,x,nu_a)
 
-indices = indices_(i,nu,x,nu_a);
 exponent = zeros(size(x),class(x));
 if nu_a ~= -1
     if i == 1
-        exponent(~indices) = -abs(imag(x(~indices)));
-        exponent(indices) = nu*zeta23_(x(indices)/nu);
+        exponent = nu*zeta23_(x/nu);
     elseif i == 2
-        exponent(~indices) = -abs(imag(x(~indices)));
-        exponent(indices) = -abs(real(nu*zeta23_(x(indices)/nu)));
+        exponent = -abs(real(nu*zeta23_(x/nu)));
     else
-        exponent(~indices) = -1i*x(~indices);
-        exponent(indices) = -nu*zeta23_(x(indices)/nu);
+        zeta23 = zeta23_(x/nu);
+        exponent = -nu.*zeta23;
+        indices = imag(x) < 0;
+        exponent(indices) = -abs(real(nu.*zeta23(indices)));
     end
 end

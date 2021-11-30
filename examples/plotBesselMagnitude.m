@@ -6,13 +6,58 @@ resultsFolder = [folderName '/BesselFunctionsForLargN'];
 if ~exist(resultsFolder, 'dir')
     mkdir(resultsFolder);
 end
-npts = 401;
-npts = 100;
+tic
+npts = 41;
+% npts = 200;
+useHP = 1;
+if useHP
+    prec = 'mp';
+    npts = mp(npts);
+    mp.Digits(100)
+else
+    prec = 'double';
+end
+
+
+if false % This is too time consuming :(
+    noKappa = mp('3');
+    kappa = 10.^linspace(mp('1'),mp('1.01'),noKappa).';
+    fractions = zeros(noKappa,3*2,prec);
+    for i = 1:noKappa
+        bdry = 10000;
+        bdry = mp(bdry);
+        N_max = 2*bdry;
+        n_arr = linspace(mp('0'),N_max,round(kappa(i)));
+        ReZ = bdry*linspace(mp('-1'),mp('1'),round(kappa(i)));
+        ImZ = bdry*linspace(mp('-1'),mp('1'),round(kappa(i)));
+        [X,Y,NN] = ndgrid(ReZ,ImZ,n_arr);
+        NU = NN + 1/2;
+        Z = X+1i*Y;
+        zeta23 = zeta23_(Z./NU);
+        temp1 = besselj(NU,Z)./exp(-NU.*zeta23);
+        temp2 = bessely(NU,Z)./exp(abs(real(NU.*zeta23)));
+        temp = exp(NU.*zeta23);
+        indices = imag(Z) < 0;
+        temp(indices) = exp(abs(real(NU(indices).*zeta23(indices))));
+        temp3 = besselh(NU,1,Z)./temp;
+        fractions(i,1) = min(abs(temp1(:)));
+        fractions(i,2) = min(abs(temp2(:)));
+        fractions(i,3) = min(abs(temp3(:)));
+        fractions(i,4) = max(abs(temp1(:)));
+        fractions(i,5) = max(abs(temp2(:)));
+        fractions(i,6) = max(abs(temp3(:)));
+        fprintf('Completed %d out of %d', i, noKappa)
+    end
+    semilogy(kappa,fractions)
+    return
+end
+
+
 noXiKnots = npts;
 noEtaKnots = npts;
 noZetaKnots = npts;
 noVisElems  = (noXiKnots-1)*(noEtaKnots-1)*(noZetaKnots-1);
-visElements = zeros(noVisElems,8);
+visElements = zeros(noVisElems,8,prec);
 eVis = 1;
 for k = 1:noZetaKnots-1
     for j = 1:noEtaKnots-1
@@ -32,17 +77,29 @@ for k = 1:noZetaKnots-1
 end 
 bdry = 10000;
 % bdry = 1000;
-N_max = 20*bdry;
-% N_max = bdry;
-n_arr = round(N_max*linspace(0,1,noZetaKnots).^2);
-ReZ = bdry*linspace(-1,1,noXiKnots);
-ImZ = bdry*linspace(-1,1,noEtaKnots);
+if useHP
+    bdry = mp(bdry);
+    % N_max = 20*bdry;
+    N_max = 2*bdry;
+    n_arr = round(N_max*linspaceHP(mp('0'),mp('1'),noZetaKnots).^2);
+    % n_arr = linspace(0,noZetaKnots,noZetaKnots);
+    ReZ = bdry*linspace(mp('-1'),mp('1'),noXiKnots);
+    ImZ = bdry*linspace(mp('-1'),mp('1'),noEtaKnots);
+else
+    % N_max = 20*bdry;
+    N_max = 2*bdry;
+%     n_arr = round(N_max*linspaceHP(0,1,noZetaKnots).^2);
+    n_arr = round(linspace(0,N_max,noZetaKnots));
+    % n_arr = linspace(0,noZetaKnots,noZetaKnots);
+    ReZ = bdry*linspace(-1,1,noXiKnots);
+    ImZ = bdry*linspace(-1,1,noEtaKnots);
+end
 [X,Y,NN] = ndgrid(ReZ,ImZ,n_arr);
 NU = NN + 1/2;
 Z = X+1i*Y;
 zeta23 = zeta23_(Z./NU);
 ZETA = zeta_(Z./NU,zeta23);
-if false
+if 0
     [Xi,Yi,Zi] = ndgrid((1:noXiKnots)/noXiKnots,(1:noEtaKnots)/noEtaKnots,(1:noZetaKnots)/noZetaKnots);
 else
     Xi = X;
@@ -53,7 +110,7 @@ VTKdata.nodes = [Xi(:), Yi(:), Zi(:)];
 
 VTKdata.visElements = visElements;
 
-testField = zeros(size(VTKdata.nodes,1),9);
+testField = zeros(size(VTKdata.nodes,1),9,prec);
 temp = besselj(NU,Z);
 if 0
     temp2 = log10(abs(temp));
@@ -64,15 +121,27 @@ if 0
     return
 end
 testField(:,1) = temp(:);
+
 temp = bessely(NU,Z);
 testField(:,2) = temp(:);
+
 temp = besselh(NU,1,Z);
+% temp = besselj(NU,Z) + 1i*bessely(NU,Z);
 testField(:,3) = temp(:);
-temp = exp(-2/3*NU.*ZETA.^(3/2));
+
+temp = exp(-NU.*zeta23); % nu*zeta23_(x/nu)
 testField(:,4) = temp(:);
-temp = exp(abs(2/3*NU.*real(ZETA.^(3/2))));
+
+temp = exp(abs(real(NU.*zeta23))); % -abs(real(nu*zeta23_(x/nu)))
 testField(:,5) = temp(:);
-temp = exp(2/3*NU.*ZETA.^(3/2));
+
+% temp = exp(NU.*zeta23); % -nu*zeta23_(x/nu)
+% temp = exp(NU.*zeta23); % -nu*zeta23_(x/nu)
+% temp = exp(-NU.*zeta23) + 1i*exp(abs(real(NU.*zeta23))); % -nu*zeta23_(x/nu)
+% temp = exp(-real(NU.*zeta23)).*(exp(-1i*imag(NU.*zeta23)) + 1i*exp(abs(real(NU.*zeta23)) + real(NU.*zeta23))); % -nu*zeta23_(x/nu)
+temp = exp(NU.*zeta23);
+indices = imag(Z) < 0;
+temp(indices) = exp(abs(real(NU(indices).*zeta23(indices))));
 testField(:,6) = temp(:);
 
 temp = exp( (NN+0.5).*zeta23_(Z./(NN+0.5)) - (NN+1.5).*zeta23_(Z./(NN+1.5)))./(Z./(2*NN));
@@ -82,11 +151,33 @@ testField(:,8) = temp(:);
 temp = exp( -(NN+0.5).*zeta23_(Z./(NN+0.5)) + (NN+1.5).*zeta23_(Z./(NN+1.5)))./((2*NN)./Z);
 testField(:,9) = temp(:);
 
+temp = testField(:,1)./testField(:,4);
+testField(:,10) = temp(:);
+temp = testField(:,2)./testField(:,5);
+testField(:,11) = temp(:);
+temp = testField(:,3)./testField(:,6);
+testField(:,12) = temp(:);
+
+if useHP
+    for i = 1:3
+        j = i+9;
+        fprintf('%20g < |Z_n^{(%d)}/s_n^{(%d)}| < %g\n', min(abs(testField(:,j))), i, i, max(abs(testField(:,j))))
+    end
+    s1 = sprintf('%.3e',min(abs(testField(:,10:12)),[],'all'));
+    s2 = sprintf('%.3e',max(abs(testField(:,10:12)),[],'all'));
+    fprintf('\\num{%s} \\lessapprox |Z_n^{(i)}(z)/s_n^{(i)}(z)| \\lessapprox \\num{%s}\n', s1, s2)
+    s1 = sprintf('%.3e',max(abs(testField(:,1:3)),[],'all'));
+    fprintf('\\max_{i,n,z}|Z_n^{(i)}(z)| \\approx \\num{%s}\n', s1)
+    toc
+    return
+end
+
 % testField(isinf(testField(:,1)),1) = realmax;
 % testField(isinf(testField(:,2)),2) = realmax;
 % testField(:,1:2) = log10(abs(testField(:,1:2)));
 
 testField(:,1:6) = log10(abs(testField(:,1:6)));
+testField(:,10:12) = log10(abs(testField(:,10:12)));
 testField(testField == Inf) = 3.082547155599167e+02;
 testField(testField == -Inf) = -3.082547155599167e+02;
 VTKdata.testField = testField;

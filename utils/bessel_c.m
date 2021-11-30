@@ -1,20 +1,20 @@
 function f = bessel_c(nu,z,i,nu_a,U_pol,u_k,v_k,Eps)
 
-indices = indices_(i,nu,z,nu_a);
-f = zeros(size(z));
-f(~indices) = bessel_std(nu,z(~indices),i);
+indices = indices_(nu,z,nu_a);
+f = zeros(size(z),class(z));
+f(~indices) = bessel_std(nu,z(~indices),i,nu_a);
 if any(indices)
     f(indices) = bessel_asy(nu,z(indices),i,U_pol,u_k,v_k,Eps);
 end
 end
 
-function f = bessel_std(nu,z,i)
+function f = bessel_std(nu,z,i,nu_a)
 if i == 1 % besselj
-    f = besselj(nu,z,1);
+    f = besselj(nu,z,1).*exp(abs(imag(z)) + exponent_(i,nu,z,nu_a));
 elseif i == 2 % bessely
-    f = bessely(nu,z,1);
+    f = bessely(nu,z,1).*exp(abs(imag(z)) + exponent_(i,nu,z,nu_a));
 else
-    f = besselh(nu,1,z,1); % Hankel function of first kind
+    f = besselh(nu,1,z,1).*exp(1i*z + exponent_(i,nu,z,nu_a)); % Hankel function of first kind
 end
 end
 
@@ -26,8 +26,8 @@ sum1 = zeros(size(z),class(z));
 sum2 = zeros(size(z),class(z));
 useScaling = 1;
 % useScaling = 0;
-% sum1_k_arr = zeros(K+1,max(length(z),length(nu)));
-% sum2_k_arr = zeros(K+1,max(length(z),length(nu)));
+% sum1_k_arr = zeros(K+1,max(length(z),length(nu)),class(z));
+% sum2_k_arr = zeros(K+1,max(length(z),length(nu)),class(z));
 zdnu = z./nu;
 zeta23 = zeta23_(zdnu);
 zeta = zeta_(zdnu,zeta23);

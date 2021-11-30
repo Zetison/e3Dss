@@ -1,18 +1,8 @@
-function indices = indices_(i,nu,z,nu_a)
-% indices = and(nu > abs(z), and(abs(nu.*real(zeta23_(z./nu))) > log(sqrt(realmax(class(z)))), nu > nu_a));
-% indices = and(nu > abs(z), and(abs(nu.*real(zeta23_(z./nu))) > log(realmax(class(z))*eps), nu > nu_a));
+function indices = indices_(nu,z,nu_a)
+% Find indices at which the asymptotic expansion for large orders for the
+% Besselfunctions is supposed to be used
 if nu_a == -1
     indices = false(size(z));
 else
-    if i == 2
-        indices = and(and(abs(nu.*real(zeta23_(z./nu))) > log(sqrt(realmax(class(z)))), nu > nu_a), abs(z) < nu);
-    else
-        indices = and(and(abs(nu.*zeta23_(z./nu)) > log(sqrt(realmax(class(z)))), nu > nu_a), abs(z) < nu);
-    end
+    indices = and(real(-exponent_(1,nu,z,nu_a)) < log(sqrt(realmin(class(z)))), nu > nu_a);
 end
-% if numel(nu) ~= numel(z)
-%     indices = repmat(nu > nu_a,size(z));
-% else
-%     indices = nu > nu_a;
-% end
-

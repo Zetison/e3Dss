@@ -1,7 +1,7 @@
 function yq = interp1_new(x, y, xq)
 
 [M,d,~] = size(y);
-yq = zeros(M,d,length(xq));
+yq = zeros(M,d,length(xq),class(x));
 
 y(:,:,end+1) = y(:,:,1);
 for i = 1:M
