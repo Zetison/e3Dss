@@ -73,4 +73,28 @@ else
 %     err = abs(layer2{1}.p-layer{1}.p)./abs(layer2{1}.p)
 end
 
-
+% 
+%             if 0
+%                 E = layer{m}.E;
+%                 nu = layer{m}.nu;
+%                 rho = layer{m}.rho;
+%                 K = E/(3*(1-2*nu));
+%                 G = E/(2*(1+nu));
+%                 c_l = sqrt((3*K+4*G)/(3*rho));
+%                 c_s = sqrt(G/rho);
+%                 if 0
+%                     c_l = c_l*(1-1i*layer{m}.lossFactor);
+%                     c_s = c_s*(1-1i*layer{m}.lossFactor);
+%                 else
+%                     c_l = c_l*sqrt(1-1i*layer{m}.lossFactor);
+%                     c_s = c_s*sqrt(1-1i*layer{m}.lossFactor);
+%                 end
+%                 
+%                 
+%                 E = c_s^2*rho*(3*c_l^2-4*c_s^2)/(c_l^2-c_s^2);
+%                 nu = (c_l^2-2*c_s^2)/(2*(c_l^2-c_s^2));
+%                 layer{m}.E = E;
+%                 layer{m}.nu = real(nu);
+%             else
+% %                 layer{m}.E = layer{m}.E.*sqrt(1-1i*layer{m}.lossFactor);
+%             end

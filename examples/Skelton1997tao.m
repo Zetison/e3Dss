@@ -30,6 +30,7 @@ d_vec = [0,0,1].';
 options = struct('BC', 'SSBC', ...
                  'd_vec', d_vec, ...
                  'debug', withDebug, ...
+                 'Display', 'final', ...
                  'omega', omega);
 
 layer{1}.X = -options.d_vec.'; % Compute backscattered pressure
@@ -45,7 +46,7 @@ TS = 20*log10(abs(layerCoating{1}.p_0));
 plot(f,TS,'DisplayName','e3Dss with coating')
 hold on
 printResultsToFile([resultsFolder '/Figure10.45_e3Dss_coating'], {'x', f.', 'y', TS.', 'xlabel','f', 'ylabel','TS'})
-
+% return
 layerSSBC = e3Dss(layerSSBC, options);
 TS = 20*log10(abs(layerSSBC{1}.p_0));
 plot(f,TS,'DisplayName','e3Dss without coating')

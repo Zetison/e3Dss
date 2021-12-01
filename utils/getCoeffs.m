@@ -40,15 +40,15 @@ for m = 1:M
         end
     end
     supportAtR_i = ~(singleLayerSupport && options.r_s ~= R_i) && ~isSphere;
-    if IBC
-        zs = options.z/1i*reshape(omega,1,1,numel(omega));
-    end
     if strcmp(layer{m}.media,'fluid')
         k = layer{m}.k_temp;
         if ~strcmp(nextMedia,'origin')
             Z_zeta = layer{m}.Z_zeta_i;
             zeta_i = k.*R_i;
             gzeta_i  = {g_(n,1,zeta_i,nu_a),g_(n,2,zeta_i,nu_a),g_(n,3,zeta_i,nu_a)};
+        end
+        if IBC
+            zs = options.z_temp./(1i.*k.*layer{m}.rho.*layer{m}.c_f);
         end
     end
     if m == m_s && supportAtR_i
@@ -70,7 +70,7 @@ for m = 1:M
         elseif SHBC && M == m_s
             D1{m} = D1_(n,k,R_i,Z_zeta,Z_r_s,rho,omega,options,gzeta_i);
         elseif IBC && M == m_s
-            D1{m} = -D2_(n,k,R_i,Z_zeta,Z_r_s,options) + zs.*D1_(n,k,R_i,Z_zeta,Z_r_s,rho,omega,options,gzeta_i); % Ayres1987ars equation (38)
+            D1{m} = D2_(n,k,R_i,Z_zeta,Z_r_s,options) - reshape(zs,1,1,[]).*D1_(n,k,R_i,Z_zeta,Z_r_s,rho,omega,options,gzeta_i); % Ayres1987ars equation (38)
         else
             D1{m} = cat(1,D1_(n,k,R_i,Z_zeta,Z_r_s,rho,omega,options,gzeta_i),...    
                           D2_(n,k,R_i,Z_zeta,Z_r_s,options));
@@ -109,7 +109,7 @@ for m = 1:M
                     elseif SSBC
                         H1{m} = p_(n,k,R_i,Rt_m,Z_zeta,isSphere,isOuterDomain,nu_a);
                     elseif IBC
-                        H1{m} = p_(n,k,R_i,Rt_m,Z_zeta,isSphere,isOuterDomain,nu_a) + zs.*dp_dr_s_(n,k,R_i,Rt_m,Z_zeta,rho,omega,isSphere,isOuterDomain,nu_a,gzeta_i);
+                        H1{m} = p_(n,k,R_i,Rt_m,Z_zeta,isSphere,isOuterDomain,nu_a) + reshape(zs,1,1,[]).*dp_dr_s_(n,k,R_i,Rt_m,Z_zeta,rho,omega,isSphere,isOuterDomain,nu_a,gzeta_i);
                     end
                 case 'fluid'
                         k2 = layer{m2}.k_temp;
@@ -125,7 +125,7 @@ for m = 1:M
                         H1{m} = cat(1,cat(2, dp_dr_s, -dp_dr_s2),...    
                                       cat(2, p, -p2));
                 case {'solid','viscoelastic'}
-                        G2 = layer{m2}.G;
+                        G2 = layer{m2}.G_temp;
                         a2 = layer{m2}.a_temp;
                         b2 = layer{m2}.b_temp;
                         Z_xi2  = layer{m2}.Z_xi_o;
@@ -151,7 +151,7 @@ for m = 1:M
                 dofs(m) = 2;
             end
         case {'solid','viscoelastic'}
-            G = layer{m}.G;
+            G = layer{m}.G_temp;
             a = layer{m}.a_temp;
             b = layer{m}.b_temp;
 
@@ -195,7 +195,7 @@ for m = 1:M
                                       cat(2, sigma_rr, p2),...
                                       cat(2, u_r,dp_dr_s2));
                 case {'solid','viscoelastic'}
-                        G2 = layer{m2}.G;
+                        G2 = layer{m2}.G_temp;
                         a2 = layer{m2}.a_temp;
                         b2 = layer{m2}.b_temp;
                         Z_xi2  = layer{m2}.Z_xi_o;
@@ -352,7 +352,7 @@ switch options.applyLoad
     otherwise
         error('Not implemented')
 end
-D1 = 1./(rho*omega.^2).*D1;
+D1 = 1./(rho.*omega.^2).*D1;
 D1 = reshape(D1,1,1,numel(D1));
 
 function D2 = D2_(n,k,R,Z,Z_r_s,options)
@@ -528,7 +528,7 @@ else
         H(1,4,:) = w_(n,2,etat_m,eta,nu_a,0).*T_(5, 2, n, eta, Z_eta,geta);
     end
 end
-H = 2*G/R^2*H;
+H = 2*reshape(G,1,1,[])/R^2.*H;
 
 function H = sigma_rt_(n,a,b,R,Rt_m,Z_xi,Z_eta,isSphere,G,nu_a,gxi,geta)
 
@@ -556,7 +556,7 @@ else
         H(1,3,:) = w_(n,1,etat_m,eta,nu_a,0).*T_(7, 1, n, eta, Z_eta,geta);
         H(1,4,:) = w_(n,2,etat_m,eta,nu_a,0).*T_(7, 2, n, eta, Z_eta,geta);
     end
-    H = 2*G/R^2*H;
+    H = 2*reshape(G,1,1,[])/R^2.*H;
 end
 
 

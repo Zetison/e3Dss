@@ -6,12 +6,12 @@ if nargin < 5
 end
 tic
 F = f(x);
-fprintf('Completed initial search in %f seconds.\n', toc)
 
 candidates = or(F(2:end-1) > max(F(1:end-2),F(3:end)), F(2:end-1) < min(F(1:end-2),F(3:end)));
 candidates = find([0 candidates 0]);
 
 II = [x(candidates-1); x(candidates+1)];
+fprintf('Completed initial search in %f seconds (found %d candidate intervals).\n', toc, size(II,2))
 x_extremas2 = zeros(size(II));
 % for i = 1:size(II,2)
 parfor i = 1:size(II,2)

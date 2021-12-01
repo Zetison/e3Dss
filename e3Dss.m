@@ -15,7 +15,7 @@ function [layer,N_eps,flag,relTermMaxArr] = e3Dss(newLayers, newOptions)
 % Release date: 21/03/2020
 
 options = struct('d_vec',           [0;0;1],  ... 	 % Direction of the incident wave
-                'omega',            2*pi*1e3, ...    % Angular frequency
+                'omega',            2*pi*1e3, ...    % Angular frequency (can be an array of angular frequencies)
                 'P_inc',            1,    ...     	 % Amplitude of incident wave
                 'N_max',            Inf,  ...        % Upper limit for the number of terms in the series
                 'Display',          'final', ...     % Print options ('final', 'iter' or 'none')
@@ -23,7 +23,8 @@ options = struct('d_vec',           [0;0;1],  ... 	 % Direction of the incident 
                 'applyLoad',        'planeWave', ... % Incident wave type: I.e. 'planeWave', 'pointCharge', 'mechExcitation', 'surfExcitation', 'radialPulsation'
                 'r_s',              NaN, ...         % Distance to load source (for loads 'pointCharge', 'mechExcitation' and 'surfExcitation')
                 'p_inc_fromSeries', false, ...       % Calculate p_inc by series expansions (in terms of Bessel functions)
-                'nu_a',             100, ...         % Value of nu at which scaled asymptotic expansions are used in bessel_c
+                'nu_a',             100, ...         % Value of nu at which scaled asymptotic expansions are used in bessel_c (set nu_a = -1 to turn off scaling)
+                'z',                1, ...           % Impedance parameter for the case BC = 'IBC'
                 'Eps',              eps,  ...        % Small parameter for series truncation
                 'debug',            false, ...       % Print additional warning messages
                 'saveRelTermMax',   false, ...       % Save the maximum of the relative terms added to the series
@@ -32,7 +33,7 @@ if nargin > 1
     options = updateOptions(options,newOptions);
 end
 
-fieldsToRemove = {'r','theta','phi','a_temp','a','b','b_temp','k','k_temp','Z_r_s','K','G','P','dP','d2P', ...
+fieldsToRemove = {'r','theta','phi','a_temp','a','b','b_temp','k','k_temp','G_temp','K_temp','Z_r_s','K','G','P','dP','d2P', ...
                   'Z_zeta','Z_zeta_i','Z_zeta_o','Z_xi_i','Z_eta_i','Z_xi_o','Z_eta_o','Z_xi_i_s','Z_xi_o_s','Z_eta_i_s','Z_eta_o_s','Z_zeta_i_s','Z_zeta_o_s','Z_r_s', ...
                   'calc_sigma_rr','calc_sigma_tt','calc_sigma_pp','calc_sigma_rt','calcStresses', ...
                   'dpdr','dpdt','d2pdr2','d2pdt2', ...
@@ -87,6 +88,9 @@ if isrow(omega)
     omega = omega.';
     options.omega = omega;
 end
+if isrow(options.z)
+    options.z = options.z.';
+end
 if strcmp(layer{1}.media,'solid') % the outermost unbounded domain is solid
     error('This case is not implemented')
 end
@@ -127,11 +131,11 @@ options.m_s = m_s;
 for m = 1:M
     calc_err_pc = layer{m}.calc_err_pc;
     calc_err_dc = layer{m}.calc_err_dc;
+    if isrow(layer{m}.lossFactor)
+        layer{m}.lossFactor = layer{m}.lossFactor.';
+    end
     switch layer{m}.media
-        case 'fluid'
-            % Modify sound speed to acount for the hysteretic loss factor
-            layer{m}.c_f = layer{m}.c_f*sqrt(1-1i*layer{m}.lossFactor);
-            
+        case 'fluid'            
             calc_err_helmholtz = layer{m}.calc_err_helmholtz;
             calc_dp = or(layer{m}.calc_dp, calc_err_dc);
 
@@ -154,9 +158,6 @@ for m = 1:M
                 layer{m}.calc_dp_inc = or(layer{m}.calc_dp_inc, layer{m}.calc_errors);
             end
         case {'solid','viscoelastic'}
-            % Modify Youngs modulus to acount for the hysteretic loss factor
-            layer{m}.E = layer{m}.E*(1-1i*layer{m}.lossFactor);
-            
             calc_u = layer{m}.calc_u;
             calcCartesianDispDerivatives = any(layer{m}.calc_du(:));
             calc_errNav = any(layer{m}.calc_err_navier);
@@ -899,7 +900,10 @@ for m = 1:M
     besselIndices = getBesselFlags(layer{m},options,m,m_s,isOuterDomain,isSphere,true);
     switch layer{m}.media
         case 'fluid'
-            layer{m}.k = omega*(1./layer{m}.c_f);
+            % Modify sound speed to acount for the hysteretic loss factor
+            layer{m}.c_f = layer{m}.c_f.*sqrt(1-1i*layer{m}.lossFactor);
+            
+            layer{m}.k = omega./layer{m}.c_f;
             
             for i = 1:numel(besselIndices)
                 if besselIndices(i)
@@ -929,16 +933,20 @@ for m = 1:M
             nu = layer{m}.nu;
             rho = layer{m}.rho;
             % Compute derived quantities
-            K = E/(3*(1-2*nu));
-            G = E/(2*(1+nu));
+            
+            % Modify Youngs modulus to acount for the hysteretic loss factor
+            E = E.*(1-1i*layer{m}.lossFactor);
+            
+            K = E./(3*(1-2*nu));
+            G = E./(2*(1+nu));
 
-            c_s_1 = sqrt((3*K+4*G)/(3*rho)); % longitudinal wave velocity 
-            c_s_2 = sqrt(G/rho); % shear wave velocity
+            c_s_1 = sqrt((3*K+4*G)./(3*rho)); % longitudinal wave velocity 
+            c_s_2 = sqrt(G./rho); % shear wave velocity
 
             layer{m}.K = K;
             layer{m}.G = G;
-            layer{m}.a = omega/c_s_1;
-            layer{m}.b = omega/c_s_2;
+            layer{m}.a = omega./c_s_1;
+            layer{m}.b = omega./c_s_2;
 
             for i = 1:numel(besselIndices)
                 if besselIndices(i)
@@ -1040,6 +1048,7 @@ while n <= N_max && ~(singleModeSolution && n > 0)
         tic
     end
     omega_temp = omega(indices);
+    options.z_temp = getSubArray(options.z,indices);
     R_i = inf;
     for m = 1:M
         R_o = R_i;
@@ -1065,6 +1074,8 @@ while n <= N_max && ~(singleModeSolution && n > 0)
             case {'solid','viscoelastic'}
                 layer{m}.a_temp = layer{m}.a(indices,:);
                 layer{m}.b_temp = layer{m}.b(indices,:);
+                layer{m}.G_temp = getSubArray(layer{m}.G,indices);
+                layer{m}.K_temp = getSubArray(layer{m}.K,indices);
                 if ~isSphere
                     xi_i = layer{m}.a_temp*R_i;
                     eta_i = layer{m}.b_temp*R_i;
@@ -1241,6 +1252,13 @@ for i = 1:numel(besselIndices)
         Z{i,1} = Z{i,2}(Zindices,:);
         Z{i,2} = bessel_s(n+1,x,i,nu_a,U_pol,u_k,v_k,Eps);
     end
+end
+
+function x_temp = getSubArray(x,indices)
+if numel(x) > 1
+    x_temp = x(indices,:);
+else
+    x_temp = x;
 end
 
 function besselFlag = getBesselFlags(layer,options,m,m_s,isOuterDomain,isSphere,calcForCoeffs)
@@ -1510,8 +1528,8 @@ function solid = u_(n,m,A,B,xi,eta,Rt_m,isSphere,layer,omega,nu_a,exponentShift)
 % --- sigma_11 =: sigma_rr, sigma_22 =: sigma_tt, sigma_33 =: sigma_pp, 0 =: sigma_rt
 % Also note that u_t, du_tdr and du_rdt are scaled by csc(theta)
 
-G = layer{m}.G;
-K = layer{m}.K;
+G = layer{m}.G_temp;
+K = layer{m}.K_temp;
 a = layer{m}.a_temp;
 b = layer{m}.b_temp;
 P = layer{m}.P(2,:);
@@ -1589,7 +1607,7 @@ if layer{m}.calc_du_rdr
     end
     if isSphere
         if n == 0
-            du_rdr(:,indices) = repmat(G/K*(4*a.^2-3*b.^2).*A(:,1).*sOrigin_xi/9,1,sum(indices));
+            du_rdr(:,indices) = repmat(G./K.*(4*a.^2-3*b.^2).*A(:,1).*sOrigin_xi/9,1,sum(indices));
         elseif n == 2
             du_rdr(:,indices) = repmat(-(a.^2.*A(:,1).*sOrigin_xi - 3*b.^2.*B(:,1).*sOrigin_eta)/15,1,sum(indices));
         else
@@ -1612,7 +1630,7 @@ if layer{m}.calc_du_rdt
     end
     if isSphere
         if n == 0
-            du_rdt(:,indices) = repmat(G/K*(4*a.^2-3*b.^2).*A(:,1).*sOrigin_xi/9,1,sum(indices));
+            du_rdt(:,indices) = repmat(G./K.*(4*a.^2-3*b.^2).*A(:,1).*sOrigin_xi/9,1,sum(indices));
         elseif n == 2
             du_rdt(:,indices) = repmat(-(a.^2.*A(:,1).*sOrigin_xi - 3*b.^2.*B(:,1).*sOrigin_eta)/15,1,sum(indices));
         else
@@ -1635,7 +1653,7 @@ if layer{m}.calc_du_tdr
     end
     if isSphere
         if n == 0
-            du_tdr(:,indices) = repmat(G/K*(4*a.^2-3*b.^2).*A(:,1).*sOrigin_xi/9,1,sum(indices));
+            du_tdr(:,indices) = repmat(G./K.*(4*a.^2-3*b.^2).*A(:,1).*sOrigin_xi/9,1,sum(indices));
         elseif n == 2
             du_tdr(:,indices) = repmat(2*(a.^2.*A(:,1).*sOrigin_xi - 3*b.^2.*B(:,1).*sOrigin_eta)/15,1,sum(indices));
         else
@@ -1687,7 +1705,7 @@ if layer{m}.calc_sigma_rr
         	sigma_rr = sigma_rr + B(:,2)*Q0r2.*wyeta.*T_(5,2,n,eta,Zeta,geta);
         end
     end
-	sigma_rr = 2*G*sigma_rr;
+	sigma_rr = 2*G.*sigma_rr;
     
 	solid.sigma_rr = sigma_rr;
 end
@@ -1716,7 +1734,7 @@ if layer{m}.calc_sigma_tt
                                 + B(:,2)*Q2r2.*wyeta.*T_(2,2,n,eta,Zeta,geta);
         end
     end
-	sigma_tt = 2*G*sigma_tt;
+	sigma_tt = 2*G.*sigma_tt;
     
 	solid.sigma_tt = sigma_tt;
 end
@@ -1745,7 +1763,7 @@ if layer{m}.calc_sigma_pp
                                 + B(:,2)*cott_Q1r2.*wyeta.*T_(2,2,n,eta,Zeta,geta);
         end
     end
-	sigma_pp = 2*G*sigma_pp;
+	sigma_pp = 2*G.*sigma_pp;
     
 	solid.sigma_pp = sigma_pp;
 end
@@ -1763,7 +1781,7 @@ if layer{m}.calc_sigma_rt
             sigma_rt = sigma_rt + B(:,2)*Q1r2.*wyeta.*T_(7,2,n,eta,Zeta,geta);
         end
     end
-	sigma_rt = 2*G*sigma_rt;
+	sigma_rt = 2*G.*sigma_rt;
     
 	solid.sigma_rt = sigma_rt;
 end
@@ -1779,7 +1797,7 @@ if layer{m}.calc_navier1 || layer{m}.calc_navier2
         	sigma_rt = sigma_rt + B(:,2)*Q1sr2.*wyeta.*T_(7,2,n,eta,Zeta,geta);
         end
     end
-	sigma_rt = 2*G*sigma_rt;
+	sigma_rt = 2*G.*sigma_rt;
     
     r3 = r.^3;
     Q0r3 = Q0./r3;
@@ -1795,7 +1813,7 @@ if layer{m}.calc_navier1 || layer{m}.calc_navier2
         	dsigma_rr_dr =  dsigma_rr_dr + B(:,2)*Q0r3.*wyeta.*T_(8,2,n,eta,Zeta,geta);
         end
     end
-	dsigma_rr_dr = 2*G*dsigma_rr_dr;
+	dsigma_rr_dr = 2*G.*dsigma_rr_dr;
       
     dsigma_rt_dr = A(:,1)*Q1r3.*wjxi.*S_(9,1,n,xi,eta,Zxi,gxi);
     if n > 0
@@ -1807,7 +1825,7 @@ if layer{m}.calc_navier1 || layer{m}.calc_navier2
         	dsigma_rt_dr =  dsigma_rt_dr + B(:,2)*Q1r3.*wyeta.*T_(9,2,n,eta,Zeta,geta);
         end
     end
-	dsigma_rt_dr = 2*G*dsigma_rt_dr;
+	dsigma_rt_dr = 2*G.*dsigma_rt_dr;
 
     dsigma_rt_dt = A(:,1)*Q2r3.*wjxi.*S_(7,1,n,xi,eta,Zxi,gxi);
     if n > 0
@@ -1819,7 +1837,7 @@ if layer{m}.calc_navier1 || layer{m}.calc_navier2
         	dsigma_rt_dt = dsigma_rt_dt + B(:,2)*Q2r3.*wyeta.*T_(7,2,n,eta,Zeta,geta);
         end
     end
-	dsigma_rt_dt = 2*G*dsigma_rt_dt;
+	dsigma_rt_dt = 2*G.*dsigma_rt_dt;
 
     dsigma_diffr =   A(:,1)*Q1r3.*wjxi.*S_(6,1,n,xi,eta,Zxi,gxi) ...
                    + (-n^2-n+1)*A(:,1)*Q1r3.*wjxi.*S_(2,1,n,xi,eta,Zxi,gxi);
@@ -1835,7 +1853,7 @@ if layer{m}.calc_navier1 || layer{m}.calc_navier2
                                         + (-n^2-n+1)*B(:,2)*Q1r3.*wyeta.*T_(2,2,n,eta,Zeta,geta);
         end
     end
-	dsigma_diffr = 2*G*dsigma_diffr;
+	dsigma_diffr = 2*G.*dsigma_diffr;
     
     R = repmat(r,size(xi,1),1);
     Theta = repmat(theta,size(xi,1),1);
@@ -1844,7 +1862,7 @@ if layer{m}.calc_navier1 || layer{m}.calc_navier2
     if isSphere
         if n == 1
             rho = layer{m}.rho;
-            solid.navier1(:,indices) = repmat(-omega.^2*rho.*(a.*A(:,1).*sOrigin_xi - 2*b.*B(:,1).*sOrigin_eta)/3,1,sum(indices));
+            solid.navier1(:,indices) = repmat(-omega.^2.*rho.*(a.*A(:,1).*sOrigin_xi - 2*b.*B(:,1).*sOrigin_eta)/3,1,sum(indices));
         else
             solid.navier1(:,indices) = 0;
         end

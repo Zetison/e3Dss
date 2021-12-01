@@ -1,0 +1,42 @@
+close all
+clear all %#ok
+
+startup
+
+k10start = -1;
+k10end = 1;
+c_f = 1500;
+k = 10.^linspace(k10start,k10end,1000);
+
+omega = c_f*k; % Angular frequency
+layer{1} = struct('media', 'fluid', 'c_f', c_f);
+
+layer{1}.X = [0,0,-1];
+layer{1}.calc_p_0 = 1; % Calculate the far field pattern
+
+options = struct('BC', 'IBC', ...
+                 'omega', omega);
+             
+
+figure(1)
+hold on
+for z = 10.^linspace(4,13,10)
+    options.z = 1i*z.*k;
+    layer = e3Dss(layer, options);
+    TS = 20*log10(abs(layer{1}.p_0));
+    TS(54)
+    plot(k, TS, 'DisplayName', ['IBC, z = ' num2str(z)])
+end
+          
+options.BC = 'SSBC';   
+layer = e3Dss(layer, options);
+TS = 20*log10(abs(layer{1}.p_0));
+plot(k, TS, '--', 'DisplayName', 'SSBC')
+
+options.BC = 'SHBC';
+layer = e3Dss(layer, options);
+TS = 20*log10(abs(layer{1}.p_0));
+plot(k, TS, '--', 'DisplayName', 'SHBC')
+
+legend show
+

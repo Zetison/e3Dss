@@ -37,7 +37,8 @@ options = struct('BC','NNBC',...
 layer{1}.X = [0,0,-1]; % Compute backscattered pressure
 
 if 0
-    f = @(k)-objFunc(k,layer,options);
+    startMatlabPool
+    f = @(kR)-objFunc(kR,layer,options);
     specialValues = findExtremas(f, kR(1), kR(end), 100000)';
     delta = 1e-5*kR(end);
     specialValues = sort([specialValues; (specialValues-delta); (specialValues+delta)]);
@@ -105,9 +106,10 @@ semilogy(SPL_Sage(:,1),SPL_Sage(:,2),'color',colors(2,:),'DisplayName','Referenc
 legend off
 legend show
 
-function sigma_s = objFunc(k,layer,options)
+function sigma_s = objFunc(kR,layer,options)
 
-options.omega = k*layer{1}.c_f;
+options.Display = 'none';
+options.omega = kR/layer{1}.R_i*layer{1}.c_f;
 layer = e3Dss(layer, options);
 sigma_s = 4*pi*abs(layer{1}.p).^2/abs(options.P_inc)^2;
 
