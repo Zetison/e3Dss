@@ -19,6 +19,7 @@ end
 rho = 1.13*1e3;    % density of rubber
 c_l = 1.4*1e5/100;
 c_s = 0.94*1e4/100;
+
 c_l = c_l*sqrt(1-1i*(alpha+2*beta)/(rho*c_l^2));
 c_s = c_s*sqrt(1-1i*beta/(rho*c_s^2));
 E = c_s^2*rho*(3*c_l^2-4*c_s^2)/(c_l^2-c_s^2);

@@ -1,100 +1,63 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% This study correspond to Figure 4 in Fillinger2014aen
-% Fillinger2014aen is available at https://repository.tudelft.nl/view/tno/uuid%3A5b611e92-39cf-4c3e-b889-61c7f8d2f1d4
-
 close all
 clear all %#ok
 
 startup
 
-P_inc = 1; % Amplitude of incident wave
-c_f = 1500;
-k10start = -1;
-k10end = 3;
-k = 10.^linspace(k10start,k10end,1000);
-% k = 100;
-% k = 10;
-R = 1; % Outer radius of shell
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% The default example
+% When calling the e3Dss function without any extra options, the default
+% set of parameters will be chosen. In particular, the rigid scattering of
+% a unit sphere impinged by a plane wave traveling along the z-axis is
+% simulated at f=1kHz using c_f = 1500m/s as the speed of sound. 
+% The result is plotted in the far field as a function of the polar angle.
 
-alpha_s = 240*pi/180;
-beta_s = 30*pi/180;
-
-beta_f = beta_s;
-alpha_f = linspace(0,pi,1000);
-alpha_f = 0.443;
-r = 1.3*R;
-% r = R;
-X = r*[cos(beta_f)*cos(alpha_f); cos(beta_f)*sin(alpha_f); sin(beta_f)*ones(size(alpha_f))]';
-
-d_vec = -[cos(beta_s)*cos(alpha_s);
-          cos(beta_s)*sin(alpha_s);
-          sin(beta_s)];
-
-omega = c_f*k; % Angular frequency
-layer{1} = struct('media', 'fluid', ...
-                  'X', X, ...
-                  'R_i', R, ...
-                  'c_f', c_f, ...
-                  'rho', 1500);
-layer{1}.calc_p_0 = 1; % Calculate the far field pattern
-layer{1}.calc_p = 0;
-layer{2} = struct('media', 'fluid', ...
-                  'R_i', 0,...
-                  'c_f', c_f, ...
-                  'rho', 100);
-layer = setS135Parameters('double');
-layer{1}.X = X;
-layer{1}.calc_p_0 = 1; % Calculate the far field pattern
-layer{1}.calc_p = 0;
-
-options = struct('BC', 'NNBC', ...
-                 'd_vec', d_vec,... 
-                 'omega', omega, ...
-                 'P_inc', P_inc);
-             
-             
-[layer,N_eps,flag,relTermMaxArr] = e3Dss(layer, options);
-
-figure(1)
-options.nu_a = -1;
-layer2 = e3Dss(layer, options);
-
-if 1
-    TS = 20*log10(abs(layer{1}.p_0));
-    TS2 = 20*log10(abs(layer2{1}.p_0));
-%     plot(alpha_f*180/pi, TS, alpha_f*180/pi, TS2)
-    plot(k, TS, k, TS2)
-    figure(2)
-%     semilogy(alpha_f*180/pi, abs(layer2{1}.p_0-layer{1}.p_0)./abs(layer2{1}.p_0),'DisplayName','Analytic')
-    semilogy(k, abs(layer2{1}.p_0-layer{1}.p_0)./abs(layer2{1}.p_0),'DisplayName','Analytic')
-else
-    layer{1}.p
-    layer2{1}.p
-%     err = abs(layer2{1}.p-layer{1}.p)./abs(layer2{1}.p)
+alpha = 0;
+beta = 0;
+r = 1;
+v = zeros(length(alpha)*length(beta)*length(r),3);
+counter = 1;
+for l = 1:length(r)
+    for j = 1:length(beta)
+        for i = 1:length(alpha)
+            v(counter,:) = r(l)*([cos(beta(j))*cos(alpha(i)), cos(beta(j))*sin(alpha(i)), sin(beta(j))]);
+            counter = counter + 1;
+        end
+    end
 end
+nu_a = 100;
+% nu_a = -1;
+options = struct('BC', 'SHBC', ...
+               'd_vec', [1;0;0], ...
+               'N_max', Inf, ...
+               'P_inc', 1, ...
+               'omega', 1.524, ...
+           'applyLoad', 'planeWave', ...
+             'Display', 'none', ...
+             'nu_a', nu_a, ...
+    'p_inc_fromSeries', 0);
+% General parameters in layer i
+layer{1}.R_i = 5.075;
+layer{1}.rho = 1000;
+layer{1}.c_f = 1524;
 
-% 
-%             if 0
-%                 E = layer{m}.E;
-%                 nu = layer{m}.nu;
-%                 rho = layer{m}.rho;
-%                 K = E/(3*(1-2*nu));
-%                 G = E/(2*(1+nu));
-%                 c_l = sqrt((3*K+4*G)/(3*rho));
-%                 c_s = sqrt(G/rho);
-%                 if 0
-%                     c_l = c_l*(1-1i*layer{m}.lossFactor);
-%                     c_s = c_s*(1-1i*layer{m}.lossFactor);
-%                 else
-%                     c_l = c_l*sqrt(1-1i*layer{m}.lossFactor);
-%                     c_s = c_s*sqrt(1-1i*layer{m}.lossFactor);
-%                 end
-%                 
-%                 
-%                 E = c_s^2*rho*(3*c_l^2-4*c_s^2)/(c_l^2-c_s^2);
-%                 nu = (c_l^2-2*c_s^2)/(2*(c_l^2-c_s^2));
-%                 layer{m}.E = E;
-%                 layer{m}.nu = real(nu);
-%             else
-% %                 layer{m}.E = layer{m}.E.*sqrt(1-1i*layer{m}.lossFactor);
-%             end
+layer{1}.media 	= 'fluid'; % Media; % solid or fluid (Navier equation or Helmholtz equation)
+layer{1}.X     	= layer{1}.R_i*[-1,0,0];       % Evaluation points
+% layer{1}.X     	= [-1,0,0];       % Evaluation points
+layer{1}.calc_p_0 = true; % Calculate the far field pattern
+
+layer = e3Dss(layer,options); % Compute solution
+
+% Plot real part of the scattered pressure at the surface of the unit sphere
+plot(alpha, real(layer{1}.p_0))
+xlim([0,pi])
+legend('Modulus of scattered field')
+xlabel('$$\theta$$, polar angle','interpreter','latex')
+ylabel('$$\mathrm{real}(p_0)$$, real part of scattered pressure','interpreter','latex')
+
+
+layer{1}.p_0
+layer{1}.X = [-1,0,0];       % Evaluation points
+layer = e3Dss(layer,options); % Compute solution
+layer{1}.p_0
+
+

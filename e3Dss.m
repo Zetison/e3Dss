@@ -326,9 +326,7 @@ for m = 1:M
                                     end
                                     for ii = 1:3
                                         if layer{m}.calc_dp_inc(ii)
-                                            if layer{m}.calc_dp_inc(ii)
-                                                layer{m}.fieldNames.dp_inc{ii} = p_inc.*(1i*k - 1./nXxms).*Xxms(:,ii)./nXxms;
-                                            end
+                                            layer{m}.dp_inc{ii} = p_inc.*(1i*k - 1./nXxms).*Xxms(:,ii)./nXxms;
                                         end
                                     end
                                 end
@@ -1438,7 +1436,7 @@ if isSphere
 end
 if isOuterDomain
     if layer{m}.calc_p_0
-        cs = exp(exponent_(3,nu,zeta,nu_a)-exponentShift);
+        cs = exp(exponent_(3,nu,zetat_m,nu_a)-exponentShift);
         if isinf(cs)
             warning('e3Dss:infWeight','A weight evaluation was too large')
         end
