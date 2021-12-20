@@ -1373,7 +1373,7 @@ if layer{m}.calc_p || layer{m}.calc_dpdr || layer{m}.calc_dpdt || layer{m}.calc_
                 fluid.p_inc(indices)  = (2*n+1)*1i*k*Q0.*wZt{1}(indices).*Z_r_s{3,1}./s3_r_s./s1(indices);
                 fluid.p_inc(~indices) = (2*n+1)*1i*k*Q0.*Z_r_s{1,1}.*wZt{3}(indices)./s1_r_s./s3(indices);
             otherwise
-                fluid.p_inc = zeros(size(j_n),class(zeta));
+                fluid.p_inc = zeros(size(zeta),class(zeta));
         end
     end
     if layer{m}.calc_dp_incdr
@@ -1393,7 +1393,7 @@ if layer{m}.calc_p || layer{m}.calc_dpdr || layer{m}.calc_dpdt || layer{m}.calc_
                 fluid.p_inc(indices)  = (2*n+1)*1i*k*Q0.*dwZt{1}(indices).*Z_r_s{3,1}./s3_r_s./s1(indices);
                 fluid.p_inc(~indices) = (2*n+1)*1i*k*Q0.*Z_r_s{1,1}.*dwZt{3}(~indices)./s1_r_s./s3(indices);
             otherwise
-                fluid.dp_incdr = zeros(size(j_n),class(zeta));
+                fluid.dp_incdr = zeros(size(zeta),class(zeta));
         end
     end
     if layer{m}.calc_dp_incdt
@@ -1413,7 +1413,7 @@ if layer{m}.calc_p || layer{m}.calc_dpdr || layer{m}.calc_dpdt || layer{m}.calc_
                 fluid.p_inc(indices)  = (2*n+1)*1i*k*Q1.*wZt{1}(indices).*Z_r_s{3,1}./s3_r_s./s1(indices);
                 fluid.p_inc(~indices) = (2*n+1)*1i*k*Q1.*Z_r_s{1,1}.*wZt{3}(indices)./s1_r_s./s3(indices);
             otherwise
-                fluid.dp_incdt = zeros(size(j_n),class(zeta));
+                fluid.dp_incdt = zeros(size(zeta),class(zeta));
         end
     end
     for i = 1:numel(besselIndices)
