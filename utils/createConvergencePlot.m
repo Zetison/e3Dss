@@ -40,7 +40,7 @@ switch type
         end
     case '3D'
         %% Create convergence plot
-        R_i = layer{1}.R_i;
+        R = layer{1}.R;
         nFreqs = numel(options.omega);
         Error = zeros(noRuns,nFreqs);
         N_arr = 0:noRuns-1;
@@ -69,7 +69,7 @@ switch type
         B = log10(Error);
         B(B == -Inf) = Inf;
         B(B == Inf) = min(min(B))+min(min(B))/1000;
-        surf(kk*R_i,NN,B.','EdgeColor','none')
+        surf(kk*R,NN,B.','EdgeColor','none')
         
         set(0,'defaulttextinterpreter','latex')
         xlabel('$$k_1R_{0,1}$$')
@@ -80,7 +80,7 @@ switch type
         box on
         
         grid off
-        xlim([0 round(max(k*R_i))])
+        xlim([0 round(max(k*R))])
         ylim([min(N_arr) max(N_arr)])
         view(0,90)
         

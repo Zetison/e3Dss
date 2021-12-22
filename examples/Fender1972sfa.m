@@ -18,7 +18,7 @@ layer = setFenderParameters();
 nFreqs = 3000;
 % nFreqs = 2;
 k = linspace(32/nFreqs,32,nFreqs)';
-R_o = layer{1}.R_i;
+R_o = layer{1}.R;
 c_f = layer{1}.c_f;
 omega = k*c_f(1);
 
@@ -94,8 +94,8 @@ if false
     E = layer{2}.E;
     nu = layer{2}.nu;
     rho_s = layer{2}.rho;
-    R_i = layer{2}.R_i;
-    R_o = layer{1}.R_i;
+    R = layer{2}.R;
+    R_o = layer{1}.R;
     c_f = layer{1}.c_f;
 
     K = E./(3*(1-2*nu));
@@ -103,7 +103,7 @@ if false
     c_s_1 = sqrt((3*K+4*G)./(3*rho_s));
     c_s_2 = sqrt(G./rho_s);
 
-    Upsilon = min([R_i./c_s_1, R_i./c_s_2, R_o./c_f(1:end-1)]);
+    Upsilon = min([R./c_s_1, R./c_s_2, R_o./c_f(1:end-1)]);
 
     NN = 0:600;
     N = zeros(size(x));

@@ -97,7 +97,7 @@ for useSymbolicPrecision = 0 %[0,1]
             BC = 'SHBC';
         elseif ESBC
             layer = layer(1:end-1);
-            layer{end}.R_i = 0;
+            layer{end}.R = 0;
             BC = 'ESBC';
         elseif SSBC
             layer = layer(1:end-1);
@@ -111,7 +111,7 @@ for useSymbolicPrecision = 0 %[0,1]
         nu = [];
         rho_s = [];
         c_f = [];
-        R_i = [];
+        R = [];
         R_o = [];
         for m = 1:M
             switch layer{m}.media
@@ -122,13 +122,13 @@ for useSymbolicPrecision = 0 %[0,1]
                     nu = [nu, layer{m}.nu];
                     rho_s = [rho_s, layer{m}.rho];
                     if ~(strcmp(BC,'ESBC') && m == M)
-                        R_i = [R_i,layer{m}.R_i];
+                        R = [R,layer{m}.R];
                     end
-                    R_o = [R_o,layer{m-1}.R_i];
+                    R_o = [R_o,layer{m-1}.R];
             end
         end
         if strcmp(BC,'SHBC')
-            R_o = [R_o, layer{end}.R_i];
+            R_o = [R_o, layer{end}.R];
         end
         
         npts_r = 4;
@@ -136,9 +136,9 @@ for useSymbolicPrecision = 0 %[0,1]
         npts_phi = 4;
         for m = 1:M
             if m == 1
-                r = linspaceHP(layer{m}.R_i, 2*layer{m}.R_i, npts_r);
+                r = linspaceHP(layer{m}.R, 2*layer{m}.R, npts_r);
             else
-                r = linspaceHP(layer{m}.R_i, layer{m-1}.R_i, npts_r);
+                r = linspaceHP(layer{m}.R, layer{m-1}.R, npts_r);
             end
             theta = linspaceHP(O,PI,npts_theta);
             phi = linspaceHP(O,2*PI,npts_phi);
@@ -163,14 +163,14 @@ for useSymbolicPrecision = 0 %[0,1]
 
         switch BC
             case {'ESBC', 'SHBC'}
-                Upsilon = min([R_i./c_s_1(1:end-1), R_i./c_s_2(1:end-1), R_o./c_f]);
+                Upsilon = min([R./c_s_1(1:end-1), R./c_s_2(1:end-1), R_o./c_f]);
             case 'SSBC'
-                Upsilon = min([R_i./c_s_1, R_i./c_s_2, R_o./c_f]);
+                Upsilon = min([R./c_s_1, R./c_s_2, R_o./c_f]);
             case 'NNBC'
-                Upsilon = min([R_i./c_s_1, R_i./c_s_2, R_o./c_f(1:end-1)]);
+                Upsilon = min([R./c_s_1, R./c_s_2, R_o./c_f(1:end-1)]);
         end
 
-        C = (layer{1}.R_i./layer{1}.c_f)^(3/2)/Upsilon^(1/2);
+        C = (layer{1}.R./layer{1}.c_f)^(3/2)/Upsilon^(1/2);
         if 0
             nFreqs = 2; %
 %             f = 10.^linspaceHP(-log10(1e3*C),-log10(5e2*C),nFreqs);

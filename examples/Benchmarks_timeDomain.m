@@ -49,27 +49,27 @@ switch model
     case 'S15'
         layer = setS15Parameters();
 end
-R_i = layer{1}.R_i;
+R = layer{1}.R;
 defineBCstring
-R_a = 1.5*R_i;
+R_a = 1.5*R;
 P_inc = 1;
 theta_s = NaN(1,2);
-r_s = 2*R_i; 
+r_s = 2*R; 
 if strcmp(applyLoad,'pointCharge')
     if intermediatePointCharge
         d_vec = -[-sqrt(r_s^2-R_a^2), R_a, 0].';  
-        r_s = layer{2}.R_i*1/3 + layer{3}.R_i*2/3;
+        r_s = layer{2}.R*1/3 + layer{3}.R*2/3;
     else
         d_vec = [-sqrt(r_s^2-R_a^2), R_a, 0].'; 
     end
     P_inc = P_inc*r_s;
 elseif strcmp(applyLoad,'surfExcitation')
     d_vec = -[-sqrt(r_s^2-R_a^2), R_a, 0].';  
-    r_s = layer{1}.R_i;
+    r_s = layer{1}.R;
     theta_s = [40,60]*pi/180;
 elseif strcmp(applyLoad,'mechExcitation')
     d_vec = -[-sqrt(r_s^2-R_a^2), R_a, 0].';  
-    r_s = layer{1}.R_i;
+    r_s = layer{1}.R;
 else
     d_vec = [1, 0, 0].';  
 end

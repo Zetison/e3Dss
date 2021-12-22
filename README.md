@@ -12,7 +12,7 @@ The following boundary conditions can be used for the innermost layer:
 The following loads can be used
 - 'planeWave' simulates a plane incident wave
 - 'pointCharge' simulates an incident wave from a point charge (the location of the point source is given by options.d_vec*options.r_s)
-- 'mechExcitation' simulates a point force mechanical excitation at options.d_vec*options.r_s with amplitude P_inc (options.r_s must be at layer{m}.R_i for a given layer m)
+- 'mechExcitation' simulates a point force mechanical excitation at options.d_vec*options.r_s with amplitude P_inc (options.r_s must be at layer{m}.R for a given layer m)
 - 'surfExcitation' simulates a surface excitation over the region theta \in options.theta_s and phi \in [0, 2*pi] at r_s with amplitude P_inc (direction of z-axis given by options.d_vec)
 - 'radialPulsation' simulates a spherical symmetric wave originating from infinity
 
@@ -40,7 +40,7 @@ options.prec             = 'double';     % Precision of the calculations (defaul
 
 % General parameters in layer m
 layer{m}.media       = 'fluid'; % Media; % fluid or solid/viscoelastic (Helmholtz equation or Navier equation)
-layer{m}.R_i         = 1;       % Inner radius of layer
+layer{m}.R           = 1;       % Inner radius of layer
 layer{m}.X           = [0,0,1]; % Evaluation points
 layer{m}.rho         = 1000;    % Mass density
 layer{m}.lossFactor  = 1000;    % Hysteretic loss factor (values around 0.001 for lightly damped materials, values around 0.01 for moderately damped materials and values around 0.1 for heavily damped materials)

@@ -25,7 +25,7 @@ for j = 1:numel(fluids)
     title(sprintf('Figure %d in Ayres1987ars (%s)', i, fluid))
     for i = 1:numel(alpha)
         layer = setAyres1987arsParameters(fluid,alpha(i),beta(i));
-        a = layer{1}.R_i;
+        a = layer{1}.R;
         k1a_max = 20;
         npts = 3000;
         k1a = linspace(k1a_max/npts,k1a_max,npts).';
@@ -37,7 +37,7 @@ for j = 1:numel(fluids)
                          'BC', 'NNBC', ...
                          'N_max', 50-1, ...
                          'omega', omega);
-        layer{1}.X = layer{1}.R_i*[0,0,-1];
+        layer{1}.X = layer{1}.R*[0,0,-1];
         layer{1}.calc_p_0 = true;
 
         if 0
@@ -51,7 +51,7 @@ for j = 1:numel(fluids)
             load(['miscellaneous/Ayres_' fluid '_extremas_' num2str(i)])
         end
         k1a = unique(sort([k1a; specialValues]));
-        options.omega = k1a/layer{1}.R_i*layer{1}.c_f;
+        options.omega = k1a/layer{1}.R*layer{1}.c_f;
         layer = e3Dss(layer, options);
 
         plot(k1a, abs(layer{1}.p_0)*2/a,'DisplayName',sprintf('e3Dss: Rubber sphere $\\alpha$ = %.1e, $\\beta$ = %.1e',alpha(i),beta(i)))
@@ -77,8 +77,8 @@ end
 
 function fs = objFunc(k1a,layer,options)
 options.Display = 'none';
-options.omega = k1a/layer{1}.R_i*layer{1}.c_f;
+options.omega = k1a/layer{1}.R*layer{1}.c_f;
 layer = e3Dss(layer, options);
-fs = abs(layer{1}.p_0)*2/layer{1}.R_i;
+fs = abs(layer{1}.p_0)*2/layer{1}.R;
 
 end

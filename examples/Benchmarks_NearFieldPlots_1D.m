@@ -32,12 +32,12 @@ switch applyLoad
         d_vec = [0;0;1];
         p_inc = @(r) P_inc*exp(1i*k*r);
     case 'radialPulsation'
-        p_inc = @(r) P_inc*layer{1}.R_i*exp(-1i*k*(r-layer{1}.R_i))./r;
+        p_inc = @(r) P_inc*layer{1}.R*exp(-1i*k*(r-layer{1}.R))./r;
 end
 
-r_arr1 = linspace(layer{1}.R_i,2*layer{1}.R_i,npts).';
-r_arr2 = linspace(layer{2}.R_i,layer{1}.R_i,npts).';
-r_arr3 = linspace(layer{3}.R_i,layer{2}.R_i,npts).';
+r_arr1 = linspace(layer{1}.R,2*layer{1}.R,npts).';
+r_arr2 = linspace(layer{2}.R,layer{1}.R,npts).';
+r_arr3 = linspace(layer{3}.R,layer{2}.R,npts).';
 X{1} = r_arr1*[cos(beta_f)*cos(alpha_f), cos(beta_f)*sin(alpha_f), sin(beta_f)*ones(size(alpha_f))];
 X{2} = r_arr2*[cos(beta_f)*cos(alpha_f), cos(beta_f)*sin(alpha_f), sin(beta_f)*ones(size(alpha_f))];
 X{3} = r_arr3*[cos(beta_f)*cos(alpha_f), cos(beta_f)*sin(alpha_f), sin(beta_f)*ones(size(alpha_f))];

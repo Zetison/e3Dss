@@ -16,7 +16,7 @@ end
 nFreqs = 5000;
 layer = setSage1979mriParameters();
 layer{1}.calc_p_0 = true; % Calculate the far field pattern
-R_i = layer{1}.R_i;
+R = layer{1}.R;
 
 %% Calculate dependent parameters
 
@@ -47,7 +47,7 @@ else
     load('miscellaneous/Sage_extremas')
 end
 kR = unique(sort([kR; specialValues]));
-options.omega = kR/layer{1}.R_i*layer{1}.c_f;
+options.omega = kR/layer{1}.R*layer{1}.c_f;
 layer = e3Dss(layer, options);
 colors = get(gca,'colororder');
 
@@ -59,7 +59,7 @@ SPL_Sage = [SPL_Sage1(SPL_Sage1(:,1) < 0.4,1), SPL_Sage1(SPL_Sage1(:,1) < 0.4,2)
      
 figure(1)   
 sigma_s = 4*pi*abs(layer{1}.p_0).^2/abs(options.P_inc)^2;
-loglog(kR, sigma_s/(pi*R_i^2)/pi,'DisplayName','Present work')
+loglog(kR, sigma_s/(pi*R^2)/pi,'DisplayName','Present work')
 hold on
 warning('y axis scaled with another pi which is not consistent with Sage1979mri...')
 set(0,'defaulttextinterpreter','latex')
@@ -67,10 +67,10 @@ xlabel('$$k_1 a$$')
 ylabel('$$\frac{\sigma}{\pi a^2}\frac{1}{\pi}$$')
 xlim([kR(1) kR(end)])
 ylim([1e-4,1e4])
-printResultsToFile([resultsFolder '/NNBC'], {'x', kR, 'y', sigma_s.'/(pi*R_i^2)/pi, 'xlabel','kR', 'ylabel','sigma_s_scaled'})
+printResultsToFile([resultsFolder '/NNBC'], {'x', kR, 'y', sigma_s.'/(pi*R^2)/pi, 'xlabel','kR', 'ylabel','sigma_s_scaled'})
 
 figure(4)
-semilogy(kR, sigma_s/(pi*R_i^2)/pi,'DisplayName','Present work')
+semilogy(kR, sigma_s/(pi*R^2)/pi,'DisplayName','Present work')
 hold on
 set(0,'defaulttextinterpreter','latex')
 xlabel('$$k_1 a$$')
@@ -84,12 +84,12 @@ layer = e3Dss(layer, options);
 
 figure(1) 
 sigma_s = 4*pi*abs(layer{1}.p_0).^2/abs(options.P_inc)^2;
-loglog(kR, sigma_s/(pi*R_i^2)/pi,'--','color','black','DisplayName','SSBC')
+loglog(kR, sigma_s/(pi*R^2)/pi,'--','color','black','DisplayName','SSBC')
 savefig([resultsFolder '/figure1.fig'])
-printResultsToFile([resultsFolder '/SSBC'], {'x', kR, 'y', sigma_s.'/(pi*R_i^2)/pi, 'xlabel','kR', 'ylabel','sigma_s_scaled'})
+printResultsToFile([resultsFolder '/SSBC'], {'x', kR, 'y', sigma_s.'/(pi*R^2)/pi, 'xlabel','kR', 'ylabel','sigma_s_scaled'})
 
 figure(4) 
-semilogy(kR, sigma_s/(pi*R_i^2)/pi,'--','color','black','DisplayName','SSBC')
+semilogy(kR, sigma_s/(pi*R^2)/pi,'--','color','black','DisplayName','SSBC')
 savefig([resultsFolder '/figure4.fig'])
 
 
@@ -109,7 +109,7 @@ legend show
 function sigma_s = objFunc(kR,layer,options)
 
 options.Display = 'none';
-options.omega = kR/layer{1}.R_i*layer{1}.c_f;
+options.omega = kR/layer{1}.R*layer{1}.c_f;
 layer = e3Dss(layer, options);
 sigma_s = 4*pi*abs(layer{1}.p).^2/abs(options.P_inc)^2;
 

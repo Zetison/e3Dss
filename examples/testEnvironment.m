@@ -36,12 +36,12 @@ options = struct('BC', 'SHBC', ...
              'nu_a', nu_a, ...
     'p_inc_fromSeries', 0);
 % General parameters in layer i
-layer{1}.R_i = 5.075;
+layer{1}.R = 5.075;
 layer{1}.rho = 1000;
 layer{1}.c_f = 1524;
 
 layer{1}.media 	= 'fluid'; % Media; % solid or fluid (Navier equation or Helmholtz equation)
-layer{1}.X     	= layer{1}.R_i*[-1,0,0];       % Evaluation points
+layer{1}.X     	= layer{1}.R*[-1,0,0];       % Evaluation points
 % layer{1}.X     	= [-1,0,0];       % Evaluation points
 layer{1}.calc_p_0 = true; % Calculate the far field pattern
 

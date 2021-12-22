@@ -1,7 +1,7 @@
-function [tri, X] = mesh2DDonut(R_o,R_i,d)
+function [tri, X] = mesh2DDonut(R_o,R,d)
 
 
-dR = R_o-R_i;
+dR = R_o-R;
 h = sqrt(3)/2*d;
 Nr = ceil(dR/h)+1;
 dr0 = dR/(Nr-1);
@@ -30,12 +30,12 @@ counterInside2 = 1;
 for i = 1:size(tri,1)
     triInd = tri(i,:);
     x = X(triInd,:);
-    isOutsideCircle = norm2(x) - R_i > 10*eps;
+    isOutsideCircle = norm2(x) - R > 10*eps;
     if sum(isOutsideCircle) == 2
         Xind = triInd(~isOutsideCircle);
         Xinside = X(Xind,:);
         theta = atan2(Xinside(2),Xinside(1));
-        X(Xind,:) = R_i*[cos(theta), sin(theta)];
+        X(Xind,:) = R*[cos(theta), sin(theta)];
         fixedIndices(counterInside2) = Xind;
         counterInside2 = counterInside2 + 1;
     elseif sum(isOutsideCircle) == 1
@@ -43,7 +43,7 @@ for i = 1:size(tri,1)
         Xinside = X(Xind,:);
         theta1 = atan2(Xinside(1,2),Xinside(1,1));
         theta2 = atan2(Xinside(2,2),Xinside(2,1));
-        X(Xind,:) = R_i*[cos(theta1), sin(theta1);
+        X(Xind,:) = R*[cos(theta1), sin(theta1);
                        cos(theta2), sin(theta2)];
         fixedIndices(counterInside2:counterInside2+1) = Xind;
         counterInside2 = counterInside2 + 2;
@@ -76,7 +76,7 @@ X(removeIndices,:) = [];
 % hold on
 % theta = linspace(0,2*pi,1000);
 % plot(R_o*cos(theta),R_o*sin(theta),'red')
-% plot(R_i*cos(theta),R_i*sin(theta),'red')
+% plot(R*cos(theta),R*sin(theta),'red')
 % hold off
 % keyboard
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

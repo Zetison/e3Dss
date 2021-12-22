@@ -7,7 +7,7 @@ if nargin < 3
     beta = 0;
 end
 layer{1}.media = 'fluid';
-layer{1}.R_i = 1;
+layer{1}.R = 1;
 if strcmp(fluid,'water')
     layer{1}.rho = 1.0*1e3;
     layer{1}.c_f = 1.493*1e5/100;
@@ -28,5 +28,5 @@ layer{2}.E = E;
 layer{2}.nu = nu;
 layer{2}.lossFactor = 0;
 layer{2}.media = 'solid';
-layer{2}.R_i = 0;
+layer{2}.R = 0;
 layer{2}.rho = rho;

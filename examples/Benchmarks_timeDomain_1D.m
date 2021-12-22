@@ -103,11 +103,11 @@ switch model
 end
 
 defineBCstring
-R_a = 1.5*layer{1}.R_i;
+R_a = 1.5*layer{1}.R;
 npts = 1000;
-z1 = linspace(layer{1}.R_i,4*layer{1}.R_i,npts).';
-z2 = linspace(layer{2}.R_i,layer{1}.R_i,npts).';
-z3 = linspace(layer{3}.R_i,layer{2}.R_i,npts).';
+z1 = linspace(layer{1}.R,4*layer{1}.R,npts).';
+z2 = linspace(layer{2}.R,layer{1}.R,npts).';
+z3 = linspace(layer{3}.R,layer{2}.R,npts).';
 layer{1}.X = [zeros(npts,1), zeros(npts,1), z1];
 layer{2}.X = [zeros(npts,1), zeros(npts,1), z2];
 layer{3}.X = [zeros(npts,1), zeros(npts,1), z3];
@@ -124,7 +124,7 @@ switch applyLoad
     case 'pointCharge'
         switch model
             case 'S15'
-                options.r_s = mean([layer{2}.R_i,layer{3}.R_i]);
+                options.r_s = mean([layer{2}.R,layer{3}.R]);
                 P_inc = P_inc*options.r_s;
             case 'S5'
                 options.r_s = 0;
@@ -170,7 +170,7 @@ for n = 0:N-1
             totField3(:,n-N/2+1) = PincField(:,n-N/2+1) + layer{3}.p(:,n-N/2);
         elseif strcmp(applyLoad,'radialPulsation')
             k = omega/layer{1}.c_f;
-            PincField(:,n-N/2+1) = options.P_inc(omega)*layer{1}.R_i.*exp(-1i*k*(norm2(layer{1}.X)-layer{1}.R_i))./norm2(layer{1}.X);
+            PincField(:,n-N/2+1) = options.P_inc(omega)*layer{1}.R.*exp(-1i*k*(norm2(layer{1}.X)-layer{1}.R))./norm2(layer{1}.X);
             
             totField1(:,n-N/2+1) = PincField(:,n-N/2+1) + layer{1}.p(:,n-N/2);
             totField2(:,n-N/2+1) = layer{2}.sigma_rr(:,n-N/2);
@@ -215,9 +215,9 @@ for m = m_arr
     end
     ylim([-2,2])
     xlim([z3(1),z1(end)])
-    plot(layer{1}.R_i*[1,1],ylim,'--','color','black')
-    plot(layer{2}.R_i*[1,1],ylim,'--','color','black')
-    plot(layer{3}.R_i*[1,1],ylim,'--','color','black')
+    plot(layer{1}.R*[1,1],ylim,'--','color','black')
+    plot(layer{2}.R*[1,1],ylim,'--','color','black')
+    plot(layer{3}.R*[1,1],ylim,'--','color','black')
     hold off
     titleStr = sprintf('Time step %4d, t = %5.3fs. T = %5.3fs.',m,t,T);
     title(titleStr)

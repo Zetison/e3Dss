@@ -48,7 +48,7 @@ for i = 1:3
                      'd_vec', d_vec, ...
                      'omega', omega, ...
                      'P_inc', 1);
-    R_i = layer{1}.R_i;
+    R = layer{1}.R;
     if SHBC
         specialValues = [];
     else
@@ -72,19 +72,19 @@ for i = 1:3
     omega = k*layer{1}.c_f;   % Wave number for outer fluid domain
     options.omega = omega;
 
-    layer{1}.X = R_i*[cos(pi),0,0;
+    layer{1}.X = R*[cos(pi),0,0;
                       cos(0),0,0];
     layer = e3Dss(layer, options);
 
     figure(3)
     F = layer{1}.p_0;
     TS = 20*log10(abs(F));
-    plot(k*R_i, TS(1,:),'DisplayName',legendEntry,'color',color)
+    plot(k*R, TS(1,:),'DisplayName',legendEntry,'color',color)
     set(0,'defaulttextinterpreter','latex')
     hold on
     title('Ihlenburg (1998) example, $$\theta = 180^\circ$$')
     xlabel('$$k_1 R_{0,1}$$')
-    xlim([0, max(k*R_i)])
+    xlim([0, max(k*R)])
     ylim([-50, 35])
     ylabel('TS [dB]')  
     legend('off');
@@ -94,12 +94,12 @@ for i = 1:3
     figure(4)
     F = layer{1}.p_0;
     TS = 20*log10(abs(F));
-    plot(k*R_i, TS(2,:),'DisplayName',legendEntry,'color',color)
+    plot(k*R, TS(2,:),'DisplayName',legendEntry,'color',color)
     set(0,'defaulttextinterpreter','latex')
     hold on
     title('Ihlenburg (1998) example, $$\theta = 0^\circ$$')
     xlabel('$$k_1 R_{0,1}$$')
-    xlim([0, max(k*R_i)])
+    xlim([0, max(k*R)])
     ylim([-50, 35])
     ylabel('TS [dB]')  
     legend('off');

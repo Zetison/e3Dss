@@ -109,7 +109,7 @@ else
     layer = setS5Parameters();
 
     npts = 1000;
-    R_o = layer{1}.R_i;
+    R_o = layer{1}.R;
     R_a = 1.5*R_o(1);
 %     z = linspace(-1.3*R_a,-R_o(1),npts).';
     z = linspace(R_o(1),20,npts).';

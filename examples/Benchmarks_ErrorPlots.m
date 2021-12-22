@@ -119,7 +119,7 @@ for nu_a = [-1, 100]
                         BC = 'SHBC';
                     elseif ESBC
                         layer = layer(1:end-1);
-                        layer{end}.R_i = 0;
+                        layer{end}.R = 0;
                         BC = 'ESBC';
                     elseif SSBC
                         layer = layer(1:end-1);
@@ -144,9 +144,9 @@ for nu_a = [-1, 100]
 %             npts_phi = 1;
             for m = 1:M
                 if m == 1
-                    r = linspaceHP(layer{m}.R_i, 2*layer{m}.R_i, npts_r);
+                    r = linspaceHP(layer{m}.R, 2*layer{m}.R, npts_r);
                 else
-                    r = linspaceHP(layer{m}.R_i, layer{m-1}.R_i, npts_r);
+                    r = linspaceHP(layer{m}.R, layer{m-1}.R, npts_r);
                 end
 %                 if m == M
 %                     r(1) = 0.001;
@@ -167,7 +167,7 @@ for nu_a = [-1, 100]
                 [~, I, ~] = uniquetol(double(pts),10*eps,'ByRows',true, 'DataScale',max(max(abs(double(pts)))));
                 layer{m}.X = pts(I,:);
             end
-            R_1 = layer{1}.R_i;
+            R_1 = layer{1}.R;
             if 1
                 nFreqs = 100;
 %                 nFreqs = 4;
@@ -218,7 +218,7 @@ for nu_a = [-1, 100]
             err_pc = zeros(1,nFreqs,class(PI));
             err_dc = zeros(1,nFreqs,class(PI));
             for m = 1:M
-                isSphere = layer{m}.R_i == 0;
+                isSphere = layer{m}.R == 0;
                 if ~isSphere && ~(m == M && SHBC)
                     err_pc = max([err_pc; layer{m}.err_pc],[],1);
                 end

@@ -23,10 +23,10 @@ h = 2*s*R_a/(round(extraPts*s*R_a)-1);
 tic
 nodes = cell(M,1);
 visElements = cell(M,1);
-R_i = Inf;
+R = Inf;
 for m = 1:M
-    R_o = R_i;
-    R_i = layer{m}.R_i;
+    R_o = R;
+    R = layer{m}.R;
     switch layer{m}.media
         case 'fluid'
             layer{m}.calc_p = true;
@@ -34,13 +34,13 @@ for m = 1:M
             layer{m}.calc_p_inc = true;
             layer{m}.calc_dp_inc = plotDisplacementVectors*[1,1,1];
             if m == 1
-                [visElements{m}, nodes{m}] = meshRectangleWcircHole([-s*R_a, -R_a],[s*R_a, R_a],R_i,h);
+                [visElements{m}, nodes{m}] = meshRectangleWcircHole([-s*R_a, -R_a],[s*R_a, R_a],R,h);
                 nodes{m} = [nodes{m}, zeros(size(nodes{m},1),1)];
-            elseif R_i == 0
+            elseif R == 0
                 [visElements{m}, nodes{m}] = mesh2DDisk(R_o,h);
                 nodes{m} = [nodes{m}, zeros(size(nodes{m},1),1)];
             else
-                [visElements{m}, nodes{m}] = mesh2DDonut(R_o,R_i,h);
+                [visElements{m}, nodes{m}] = mesh2DDonut(R_o,R,h);
                 nodes{m} = [nodes{m}, zeros(size(nodes{m},1),1)];
             end
         case 'solid'
@@ -58,7 +58,7 @@ for m = 1:M
                     [x,y,z] = sphere(round(2*pi*R_o/h));
                     surfObj = surf2patch(x,y,z,'triangles');
                     visElements{m} = [surfObj.faces, surfObj.faces+size(surfObj.vertices,1)];
-                    nodes{m} = [R_i*surfObj.vertices; R_o*surfObj.vertices];
+                    nodes{m} = [R*surfObj.vertices; R_o*surfObj.vertices];
                 end
             end
     end
@@ -127,12 +127,12 @@ switch options.applyLoad
         m_s = 1;
     case {'pointCharge','mechExcitation','surfExcitation'}
         if ~isfield(options,'r_s')
-            options.r_s = 2*layer{1}.R_i;
+            options.r_s = 2*layer{1}.R;
         end
         r_s = options.r_s;
         m_s = 1;
         for m = 1:M
-            if r_s < layer{m}.R_i
+            if r_s < layer{m}.R
                 m_s = m_s + 1;
             else
                 break

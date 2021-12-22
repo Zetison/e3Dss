@@ -59,7 +59,7 @@ for SHBC = 0 %[0, 1]
         parfor i = 1:length(k_arr)
             k = k_arr(i);
             omega = k*layer{1}.c_f;
-            R_a = 2*layer{1}.R_i;
+            R_a = 2*layer{1}.R;
             
             alpha_s = pi;
             beta_s = 0;

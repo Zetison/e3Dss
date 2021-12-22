@@ -34,14 +34,14 @@ fminsearchOptions = optimset('TolX',eps, 'TolFun', eps, 'MaxIter', 1000,'MaxFunE
 k_extremas = findExtremas(f, 2/nFreqs, 2, 100000,fminsearchOptions)';
 k = unique(sort([k; k_extremas]));
 
-R_i = layer{1}.R_i;
+R = layer{1}.R;
 omega = k*layer{1}.c_f;   % Wave number for outer fluid domain
 options.omega = omega;
 
 layer = e3Dss(layer, options);
 
 F = abs(layer{1}.p_0);
-plot(k*R_i, F)
+plot(k*R, F)
 set(0,'defaulttextinterpreter','latex')
 hold on
 omega = k_extremas*layer{1}.c_f;   % Wave number for outer fluid domain
@@ -50,9 +50,9 @@ layer = e3Dss(layer, options);
 Fspecial = abs(layer{1}.p_0);
 k_resonansFrequencies = k_extremas(Fspecial>10);
 F_resonansFrequencies = Fspecial(Fspecial>10);
-plot(R_i*k_resonansFrequencies, F_resonansFrequencies,'x')
+plot(R*k_resonansFrequencies, F_resonansFrequencies,'x')
 xlabel('$$k_1 R_{0,1}$$')
-xlim([0, max(k*R_i)])
+xlim([0, max(k*R)])
 ylim([0, 30])
 ylabel('$$|F(k)|$$')  
 savefig([resultsFolder '/Figure5'])

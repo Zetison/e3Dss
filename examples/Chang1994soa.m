@@ -19,8 +19,8 @@ P_inc = 1; % Amplitude of incident wave
 %%%%%%%%%
 layer = setChangParameters();
 k = [15, 20];
-a = layer{1}.R_i;
-h = layer{1}.R_i-layer{2}.R_i;
+a = layer{1}.R;
+h = layer{1}.R-layer{2}.R;
 omega = k*layer{1}.c_f;
 
 d_vec = [0,0,1].';
@@ -29,7 +29,7 @@ p_tot_Chang15 = importdata('../models/Chang1994voa2/Figure16.csv');
 p_tot_Chang20 = importdata('../models/Chang1994voa2/Figure17.csv');
 theta = linspace(0,pi,2000).';
 phi = 0;
-X = layer{1}.R_i*[sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta)];
+X = layer{1}.R*[sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta)];
 options = struct('d_vec', d_vec, ...
                  'BC', 'SSBC', ...
                  'omega', omega, ...

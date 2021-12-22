@@ -103,9 +103,9 @@ switch options.applyLoad
     case {'pointCharge','mechExcitation','surfExcitation','custom'}
         if ~isfield(options,'r_s')
             if strcmp(options.applyLoad, 'pointCharge')
-                options.r_s = 2*layer{1}.R_i;
+                options.r_s = 2*layer{1}.R;
             elseif strcmp(options.applyLoad, 'surfExcitation') || strcmp(options.applyLoad, 'custom')
-                options.r_s = layer{1}.R_i;
+                options.r_s = layer{1}.R;
             end
         end
         if strcmp(options.applyLoad, 'surfExcitation') && ~isfield(options,'theta_s')
@@ -117,7 +117,7 @@ switch options.applyLoad
         r_s = options.r_s;
         m_s = 1;
         for m = 1:M
-            if r_s < layer{m}.R_i
+            if r_s < layer{m}.R
                 m_s = m_s + 1;
             else
                 break
@@ -213,7 +213,7 @@ if any(omega == 0) && ( strcmp(options.applyLoad, 'mechExcitation') || ...
     omega(omega == 0) = [];
     options.omega = omega;
 end
-if any([options.SHBC,options.SSBC,options.IBC]) && layer{end}.R_i == 0
+if any([options.SHBC,options.SSBC,options.IBC]) && layer{end}.R == 0
     error('Boundary conditions may not be used at the origin')
 end
 
@@ -335,7 +335,7 @@ for m = 1:M
                     case 'radialPulsation' 
                         if layer{m}.calc_p_inc
                             k = omega/layer{1}.c_f;
-                            layer{m}.p_inc = P_inc.*exp(1i*k.*(R-layer{1}.R_i))./R;
+                            layer{m}.p_inc = P_inc.*exp(1i*k.*(R-layer{1}.R))./R;
                         end
                     otherwise
                         if any(layer{m}.calc_dp_inc) || layer{m}.calc_p_inc
@@ -553,8 +553,8 @@ for m = 1:M
     if layer{m}.calc_errors
         m2 = m + 1;
         Eps = options.Eps;
-        R_i = layer{m}.R_i;
-        isSphere = R_i == 0;
+        R = layer{m}.R;
+        isSphere = R == 0;
         n_X = size(layer{m}.X,1);
         X = layer{m}.X;
         
@@ -591,7 +591,7 @@ for m = 1:M
                 X2 = layer{m+1}.X;
                 [indices, indices2] = findMatchingPoints(X,X2,Eps);
             else
-                indices = abs(norm2(X) - R_i) < 10*Eps;
+                indices = abs(norm2(X) - R) < 10*Eps;
             end
             X_s = X(indices,:);
             switch layer{m}.media
@@ -693,7 +693,7 @@ for m = 1:M
                 X2 = layer{m+1}.X;
                 [indices, indices2] = findMatchingPoints(X,X2,Eps);
             else
-                indices = abs(norm2(X) - R_i) < 10*Eps;
+                indices = abs(norm2(X) - R) < 10*Eps;
             end
             switch layer{m}.media
                 case 'fluid'
@@ -781,7 +781,7 @@ for m = 1:M
     end
     if M > 1 && ~(strcmp(nextMedia,'void') || strcmp(nextMedia,'origin'))
         if m+1 == M
-            if layer{end}.R_i == 0
+            if layer{end}.R == 0
                 nextMedia = 'origin';
             else
                 nextMedia = 'void';
@@ -826,7 +826,7 @@ end
 function layer = getDefaultParameters(layer)
 
 for m = 1:numel(layer)
-    layer{m}.R_i         = 1;       % Inner radius of layer
+    layer{m}.R         = 1;       % Inner radius of layer
     layer{m}.rho         = 1000;    % Mass density
     layer{m}.lossFactor  = 0;       % Hysteretic loss factor (values around 0.001 for lightly damped materials, values around 0.01 for moderately damped materials and values around 0.1 for heavily damped materials)
     layer{m}.calc_err_dc = false;   % Calculate the errors for the displacement conditions
@@ -881,12 +881,12 @@ else
 end
 load(['miscellaneous/U_pol_' prec '.mat'],'U_pol','u_k','v_k')
 
-R_i = inf;
+R = inf;
 for m = 1:M
-    R_o = R_i;
-    R_i = layer{m}.R_i;
+    R_o = R;
+    R = layer{m}.R;
     isOuterDomain = m == 1;
-    isSphere = R_i == 0;
+    isSphere = R == 0;
     if isfield(layer{m} ,'X')
         n_X = size(layer{m}.X,1);
     else
@@ -1047,11 +1047,11 @@ while n <= N_max && ~(singleModeSolution && n > 0)
     end
     omega_temp = omega(indices);
     options.z_temp = getSubArray(options.z,indices);
-    R_i = inf;
+    R = inf;
     for m = 1:M
-        R_o = R_i;
-        R_i = layer{m}.R_i;
-        isSphere = R_i == 0;
+        R_o = R;
+        R = layer{m}.R;
+        isSphere = R == 0;
         isOuterDomain = m == 1;
         besselIndices = getBesselFlags(layer{m},options,m,m_s,isOuterDomain,isSphere,true);
         switch layer{m}.media
@@ -1059,7 +1059,7 @@ while n <= N_max && ~(singleModeSolution && n > 0)
                 evalPointCharge = strcmp(options.applyLoad,'pointCharge') && m == m_s;
                 layer{m}.k_temp = layer{m}.k(indices,:);
                 if ~isSphere
-                    zeta_i = layer{m}.k_temp*R_i;
+                    zeta_i = layer{m}.k_temp*R;
                     layer{m}.Z_zeta_i = iterate_Z(n,zeta_i,layer{m}.Z_zeta_i,Zindices,besselIndices,nu_a,U_pol,u_k,v_k,Eps);
                 end
                 if ~isOuterDomain
@@ -1075,8 +1075,8 @@ while n <= N_max && ~(singleModeSolution && n > 0)
                 layer{m}.G_temp = getSubArray(layer{m}.G,indices);
                 layer{m}.K_temp = getSubArray(layer{m}.K,indices);
                 if ~isSphere
-                    xi_i = layer{m}.a_temp*R_i;
-                    eta_i = layer{m}.b_temp*R_i;
+                    xi_i = layer{m}.a_temp*R;
+                    eta_i = layer{m}.b_temp*R;
                     layer{m}.Z_xi_i  = iterate_Z(n,xi_i, layer{m}.Z_xi_i, Zindices,besselIndices,nu_a,U_pol,u_k,v_k,Eps);
                     layer{m}.Z_eta_i = iterate_Z(n,eta_i,layer{m}.Z_eta_i,Zindices,besselIndices,nu_a,U_pol,u_k,v_k,Eps);
                 end
@@ -1116,7 +1116,7 @@ while n <= N_max && ~(singleModeSolution && n > 0)
     hasDvrgdTmp = zeros(length(indices),M); % temporary hasDvrgd matrix
     relTermMax = -Inf(nFreqs,1,prec);
     for m = 1:M
-        isSphere = layer{m}.R_i == 0;
+        isSphere = layer{m}.R == 0;
         isOuterDomain = m == 1;
         besselIndices = getBesselFlags(layer{m},options,m,m_s,isOuterDomain,isSphere);
         hasCnvrgdTmp2 = ones(size(indices)); % temporary hasCnvrgd vector  
@@ -1307,11 +1307,11 @@ relTermMax(indices2) = maxRelTerm(indices2);
 
 function Rt_m = getIntermediateRadius(layer,m,isSphere,isOuterDomain)
 if isOuterDomain
-    Rt_m = layer{1}.R_i;
+    Rt_m = layer{1}.R;
 elseif isSphere
-    Rt_m = layer{m-1}.R_i;
+    Rt_m = layer{m-1}.R;
 else
-    Rt_m = (layer{m}.R_i+layer{m-1}.R_i)/2;
+    Rt_m = (layer{m}.R+layer{m-1}.R)/2;
 end
 
 function fluid = p_(m,n,zeta,C,Rt_m,layer,isSphere,isOuterDomain,applyLoad,besselIndices,nu_a,exponentShift)

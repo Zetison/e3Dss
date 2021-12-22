@@ -42,7 +42,7 @@ for SHBC = 1 %[0, 1]
         defineBCstring
         for f = 1000
             omega = 2*pi*f;
-            R_a = 2*layer{1}.R_i;
+            R_a = 2*layer{1}.R;
                   
             options = struct('BC', BC, ...
                              'd_vec', d_vec, ...

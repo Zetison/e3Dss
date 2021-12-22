@@ -98,7 +98,7 @@ layer{1}.calc_p_inc = false;
 
 defineBCstring
 
-layer{1}.X = [0, 0, 2*layer{1}.R_i];
+layer{1}.X = [0, 0, 2*layer{1}.R];
 
 if ~exist('options','var')
     options = struct('BC', BC,...

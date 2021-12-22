@@ -36,7 +36,7 @@ options = struct('BC', 'SSBC', ...
 layer{1}.X = -options.d_vec.'; % Compute backscattered pressure
 
 layerSSBC = layer([1,3]);
-layerSSBC{1}.R_i = layer{2}.R_i;
+layerSSBC{1}.R = layer{2}.R;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Run simulation

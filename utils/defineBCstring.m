@@ -4,7 +4,7 @@ if SHBC
     BC = 'SHBC';
 elseif ESBC
     layer = layer(1:end-1);
-    layer{end}.R_i = 0;
+    layer{end}.R = 0;
     BC = 'ESBC';
 elseif SSBC
     layer = layer(1:end-1);
