@@ -28,5 +28,4 @@ for m = 1:numel(layer)
     VTKdata.visElements = visElements;
     VTKoptions = struct('name',[resultsFolder '/domain' num2str(m)], 'celltype', 'VTK_WEDGE'); 
     makeVTKfile(VTKdata, VTKoptions);
-
 end

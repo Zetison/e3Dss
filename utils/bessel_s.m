@@ -9,7 +9,7 @@ elseif isa(z,'mp')
 else
     tiny = eps;
 end
-PI = getPI(class(z));
+PI = getC(class(z),'pi');
 if i == 1
     indices = logical(abs(z) < tiny);
     z(indices) = ones(1,class(z)); % Avoid symbolic division by zero. These values will be replaced anyways

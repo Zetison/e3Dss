@@ -7,12 +7,13 @@ resultsFolder = [folderName '/Benchmarks_ErrorPlots'];
 if ~exist(resultsFolder, 'dir')
     mkdir(resultsFolder);
 end
-
+calcStressErrors = 0;
+calcResiduals = 1;
 % startMatlabPool
 % mp = NaN;
 %% Calculate errors
-for nu_a = [-1, 100]
-    for useSymbolicPrecision = 0 %[0,1]
+for nu_a = 100 %[-1, 100]
+    for useSymbolicPrecision = 1 %[0,1]
         if useSymbolicPrecision
             prec = 'mp';
     %         prec = 'sym';
@@ -25,14 +26,14 @@ for nu_a = [-1, 100]
 %         models = {'Skelton1997tao'};
 %         models = {'Hetmaniuk2012raa'};
 %         models = {'Sage1979mri'};
-%         models = {'S135'};
+        models = {'S135'};
 %         models = {'S35'};
 %         models = {'S1'};
         counter = 1;
         for i_model = 1:length(models)
-            for ESBC = [0, 1]
-                for SHBC = [0, 1]
-                    for SSBC = [0, 1]
+            for ESBC = 0 % [0, 1]
+                for SHBC = 1 %[0, 1]
+                    for SSBC = 0 % [0, 1]
                         if ~(ESBC + SHBC + SSBC > 1)
                             tasks(counter).model = models{i_model};
                             tasks(counter).ESBC = ESBC;
@@ -66,7 +67,7 @@ for nu_a = [-1, 100]
     %                 mp.Digits(2000);
                     O = mp('0');
             end
-            PI = getPI(prec);
+            PI = getC(prec,'pi');
             model = tasks(i).model;
             ESBC = tasks(i).ESBC;
             SHBC = tasks(i).SHBC;
@@ -148,9 +149,6 @@ for nu_a = [-1, 100]
                 else
                     r = linspaceHP(layer{m}.R, layer{m-1}.R, npts_r);
                 end
-%                 if m == M
-%                     r(1) = 0.001;
-%                 end
                 theta = linspaceHP(O,PI,npts_theta);
                 phi = linspaceHP(O,2*PI,npts_phi);
                 pts = zeros(length(r)*length(theta)*length(phi),3,class(PI));
@@ -171,9 +169,12 @@ for nu_a = [-1, 100]
             if 1
                 nFreqs = 100;
 %                 nFreqs = 4;
+
                 kR_start = 1e-1;
+                
                 kR_end = 1e4;
 %                 kR_end = 1e0;
+
                 kR = 10.^linspaceHP(log10(kR_start),log10(kR_end),nFreqs);
                 k = kR/R_1;
                 omega = k*layer{1}.c_f;
@@ -187,6 +188,7 @@ for nu_a = [-1, 100]
                 k = omega/layer{1}.c_f;
                 kR = k*R_1;
             end
+            nFreqs = numel(f);
 %             N_max = 1122;
             N_max = Inf;
             options = struct('BC', BC, ...
@@ -194,12 +196,11 @@ for nu_a = [-1, 100]
                              'omega', omega, ...
                              'P_inc', ones(1,class(O)), ...
                              'prec', prec, ...
-                             'Display','final',...
-                             'debug',0, ...
-                             'nu_a',nu_a, ...
+                             'Display', 'iter',...
+                             'debug', 0, ...
+                             'nu_a', nu_a, ...
                              'N_max', N_max, ...
                              'Eps', Eps);
-    %         options.N_max = 2;
             for m = 1:M
                 layer{m}.calc_err_pc = true; 
                 layer{m}.calc_err_dc = true;  
@@ -208,70 +209,158 @@ for nu_a = [-1, 100]
                         layer{m}.calc_err_helmholtz = true;  
                     case 'solid'
                         layer{m}.calc_err_navier = true(1,2);
+                        layer{m}.calc_du = true(3,3);
+                        layer{m}.calc_sigma = true(1,6);
                 end
+                layer{m}.K = NaN; % Ensures temporal variable G being stored in "layer"
+                layer{m}.G = NaN; % Ensures temporal variable G being stored in "layer"
             end
-            [layer,N_eps,flag,relTermMaxArr] = e3Dss(layer, options);
+            if calcResiduals
+                [layer,N_eps,flag,relTermMaxArr] = e3Dss(layer, options);
 
-            err_navier1 = zeros(1,nFreqs,class(PI));
-            err_navier2 = zeros(1,nFreqs,class(PI));
-            err_helmholtz = zeros(1,nFreqs,class(PI));
-            err_pc = zeros(1,nFreqs,class(PI));
-            err_dc = zeros(1,nFreqs,class(PI));
-            for m = 1:M
-                isSphere = layer{m}.R == 0;
-                if ~isSphere && ~(m == M && SHBC)
-                    err_pc = max([err_pc; layer{m}.err_pc],[],1);
+                err_navier1 = zeros(1,nFreqs,class(PI));
+                err_navier2 = zeros(1,nFreqs,class(PI));
+                err_helmholtz = zeros(1,nFreqs,class(PI));
+                err_pc = zeros(1,nFreqs,class(PI));
+                err_dc = zeros(1,nFreqs,class(PI));
+                for m = 1:M
+                    isSphere = layer{m}.R == 0;
+                    if ~isSphere && ~(m == M && SHBC)
+                        err_pc = max([err_pc; layer{m}.err_pc],[],1);
+                    end
+                    if ~isSphere && ~(m == M && SSBC)
+                        err_dc = max([err_dc; layer{m}.err_dc],[],1);
+                    end
+                    switch layer{m}.media
+                        case 'fluid'
+                            err_helmholtz = max([err_helmholtz; layer{m}.err_helmholtz],[],1);
+                        case 'solid'
+                            err_navier1 = max([err_navier1; layer{m}.err_navier{1}],[],1);
+                            err_navier2 = max([err_navier2; layer{m}.err_navier{2}],[],1);
+                    end
                 end
-                if ~isSphere && ~(m == M && SSBC)
-                    err_dc = max([err_dc; layer{m}.err_dc],[],1);
-                end
-                switch layer{m}.media
-                    case 'fluid'
-                        err_helmholtz = max([err_helmholtz; layer{m}.err_helmholtz],[],1);
-                    case 'solid'
-                        err_navier1 = max([err_navier1; layer{m}.err_navier{1}],[],1);
-                        err_navier2 = max([err_navier2; layer{m}.err_navier{2}],[],1);
-                end
-            end
 
-            figure
-            if M == 1 && SHBC
-                loglog(kR, err_helmholtz,'color',[0,70,147]/255,'DisplayName','Helmholtz')
-                hold on
-                loglog(kR, err_dc,'color',[149,49,157]/255,'DisplayName','Displacenemnt condition')
-                legendArr = {'Helmholtz', 'DisplacementCond'};
-                err = [err_helmholtz; err_dc];
-            else
-                loglog(kR, err_helmholtz,'color',[0,70,147]/255,'DisplayName','Helmholtz')
-                hold on
-                loglog(kR, err_navier1,'color',[178,0,0]/255,'DisplayName', 'Navier - $1^{\mathrm{st}}$ component')
-                loglog(kR, err_navier2,'color',[59,124,37]/255,'DisplayName','Navier - $2^{\mathrm{nd}}$ component')
-                loglog(kR, err_dc,'color',[149,49,157]/255,'DisplayName','Displacenemnt condition')
-                loglog(kR, err_pc,'color',[247, 158,30]/255,'DisplayName','Pressure condition')
-                legendArr = {'Helmholtz', 'Navier1', 'Navier2', 'DisplacementCond', 'PressureCond'};
-                err = [err_helmholtz; err_navier1; err_navier2; err_dc; err_pc];
-            end
-            leg1 = legend('show','Location','northwest');
-            set(leg1,'Interpreter','latex');
-            useScaling = nu_a ~= -1;
-            
-            filename = [resultsFolder '/errors_' model '_' BC '_Symbolic' num2str(useSymbolicPrecision) '_Scaling' num2str(useScaling)];
+                figure
+                if M == 1 && SHBC
+                    loglog(kR, err_helmholtz,'color',[0,70,147]/255,'DisplayName','Helmholtz')
+                    hold on
+                    loglog(kR, err_dc,'color',[149,49,157]/255,'DisplayName','Displacenemnt condition')
+                    legendArr = {'Helmholtz', 'DisplacementCond'};
+                    err = [err_helmholtz; err_dc];
+                else
+                    loglog(kR, err_helmholtz,'color',[0,70,147]/255,'DisplayName','Helmholtz')
+                    hold on
+                    loglog(kR, err_navier1,'color',[178,0,0]/255,'DisplayName', 'Navier - $1^{\mathrm{st}}$ component')
+                    loglog(kR, err_navier2,'color',[59,124,37]/255,'DisplayName','Navier - $2^{\mathrm{nd}}$ component')
+                    loglog(kR, err_dc,'color',[149,49,157]/255,'DisplayName','Displacenemnt condition')
+                    loglog(kR, err_pc,'color',[247, 158,30]/255,'DisplayName','Pressure condition')
+                    legendArr = {'Helmholtz', 'Navier1', 'Navier2', 'DisplacementCond', 'PressureCond'};
+                    err = [err_helmholtz; err_navier1; err_navier2; err_dc; err_pc];
+                end
+                leg1 = legend('show','Location','northwest');
+                set(leg1,'Interpreter','latex');
+                useScaling = nu_a ~= -1;
 
-            printResultsToFile(filename, {'x',double(kR.'), 'y', double(err.'), 'xlabel','kR', 'ylabel',legendArr})
-            xlabel('$k_1 R_1$','interpreter','latex')
-            ylabel('Relative residual error')
-            title(['Errors for model ' model '_' BC '_Symbolic' num2str(useSymbolicPrecision) '_Scaling' num2str(useScaling)], 'interpreter', 'none')
-            hold off
-            if ~useSymbolicPrecision
-                ylim([0.1*eps 1e2])
+                filename = [resultsFolder '/errors_' model '_' BC '_Symbolic' num2str(useSymbolicPrecision) '_Scaling' num2str(useScaling)];
+
+                printResultsToFile(filename, {'x',double(kR.'), 'y', double(err.'), 'xlabel','kR', 'ylabel',legendArr})
+                xlabel('$k_1 R_1$','interpreter','latex')
+                ylabel('Relative residual error')
+                title(['Errors for model ' model '_' BC '_Symbolic' num2str(useSymbolicPrecision) '_Scaling' num2str(useScaling)], 'interpreter', 'none')
+                hold off
+                if ~useSymbolicPrecision
+                    ylim([0.1*eps 1e2])
+                end
+                xlim([double(kR(1)), double(kR(end))])
+                drawnow
+                savefig([filename '.fig'])
+                fprintf('Finished a case in %f seconds!\n\n', toc)
+                flags = find(flag);
+                if any(flags)
+                    fprintf('Flags at f > %f kHz (kR > %f)\n\n', f(flags(1))/1000, kR(flags(1)))
+                end
             end
-            xlim([double(kR(1)), double(kR(end))])
-            drawnow
-            savefig([filename '.fig'])
-            fprintf('Finished a case in %f seconds!\n\n', toc)
-            flags = find(flag);
-            if any(flags)
-                fprintf('Flags at f > %f kHz (kR > %f)\n\n', f(flags(1))/1000, kR(flags(1)))
+            if calcStressErrors
+                layer = e3Dss(layer, options);
+
+                err_stress_xx = zeros(M,nFreqs);
+                err_stress_yy = zeros(M,nFreqs);
+                err_stress_zz = zeros(M,nFreqs);
+                err_stress_yz = zeros(M,nFreqs);
+                err_stress_xz = zeros(M,nFreqs);
+                err_stress_xy = zeros(M,nFreqs);
+                for m = 1:M
+                    n_X = size(layer{m}.X,1);
+                    if strcmp(layer{m}.media, 'solid')
+                        strain = cell(6,1);
+                        for ii = 1:6
+                            strain{ii} = zeros(n_X,nFreqs,class(PI));
+                        end                         
+                        stress = strain;             
+                        du_X = layer{m}.du;
+                        vgtinv = [1 6 5;
+                                  6 2 4;
+                                  5 4 3];
+                        for ii = 1:3
+                            for jj = ii:3
+                                strain{vgtinv(ii,jj)} = 0.5*(du_X{ii,jj}+du_X{jj,ii});
+                            end
+                        end
+                        for ii = 1:3
+                            for jj = 1:3
+                                if ii == jj
+                                    stress{ii} = stress{ii} + (layer{m}.K+4*layer{m}.G/3)*strain{jj};
+                                else
+                                    stress{ii} = stress{ii} + (layer{m}.K-2*layer{m}.G/3)*strain{jj};
+                                end
+                            end
+                        end
+                        for ii = 4:6
+                            stress{ii} = 2*layer{m}.G*strain{ii};
+                        end
+                        err_stress_xx(m,:) = max(abs(stress{1} - layer{m}.sigma{1}),[],1)./max(abs(layer{m}.sigma{1}),[],1);
+                        err_stress_yy(m,:) = max(abs(stress{2} - layer{m}.sigma{2}),[],1)./max(abs(layer{m}.sigma{2}),[],1);
+                        err_stress_zz(m,:) = max(abs(stress{3} - layer{m}.sigma{3}),[],1)./max(abs(layer{m}.sigma{3}),[],1);
+                        err_stress_yz(m,:) = max(abs(stress{4} - layer{m}.sigma{4}),[],1)./max(abs(layer{m}.sigma{4}),[],1);
+                        err_stress_xz(m,:) = max(abs(stress{5} - layer{m}.sigma{5}),[],1)./max(abs(layer{m}.sigma{5}),[],1);
+                        err_stress_xy(m,:) = max(abs(stress{6} - layer{m}.sigma{6}),[],1)./max(abs(layer{m}.sigma{6}),[],1);
+                    end
+                end
+                err_stress_xx = max(err_stress_xx,[],1);
+                err_stress_yy = max(err_stress_yy,[],1);
+                err_stress_zz = max(err_stress_zz,[],1);
+                err_stress_yz = max(err_stress_yz,[],1);
+                err_stress_xz = max(err_stress_xz,[],1);
+                err_stress_xy = max(err_stress_xy,[],1);
+
+                figure
+                if ~(M == 1 && SHBC)
+                    loglog(kR, err_stress_xx,'color',[0,70,147]/255,'DisplayName', 'Error in $\sigma_{xx}$')
+                    hold on
+                    loglog(kR, err_stress_yy,'color',[178,0,0]/255,'DisplayName', 'Error in $\sigma_{yy}$')
+                    loglog(kR, err_stress_zz,'color',[59,124,37]/255,'DisplayName', 'Error in $\sigma_{zz}$')
+                    loglog(kR, err_stress_yz,'color',[149,49,157]/255,'DisplayName', 'Error in $\sigma_{yz}$')
+                    loglog(kR, err_stress_xz,'color',[247, 158,30]/255,'DisplayName', 'Error in $\sigma_{xz}$')
+                    loglog(kR, err_stress_xy,'color',[0,172,239]/255,'DisplayName', 'Error in $\sigma_{xy}$')
+                    err = [err_stress_xx; err_stress_yy; err_stress_zz; err_stress_yz; err_stress_xz; err_stress_xy];
+                else
+                    continue
+                end
+                leg1 = legend('show','Location','northwest');
+                set(leg1,'Interpreter','latex');
+                filename = [resultsFolder '/sigmaErrors_' model '_' BC '_Symbolic' num2str(useSymbolicPrecision)];
+
+                xlabel('$k_1 R_1$','interpreter','latex')
+                ylabel('Relative error')
+                title(['Errors for model ' model '_' BC], 'interpreter', 'none')
+                hold off
+                if ~useSymbolicPrecision
+                    ylim([0.1*eps 1e2])
+                end
+                xlim([double(kR(1)), double(kR(end))])
+                drawnow
+                savefig([filename '.fig'])
+                fprintf('Finished a case in %f seconds!\n\n', toc)
             end
         end
     end

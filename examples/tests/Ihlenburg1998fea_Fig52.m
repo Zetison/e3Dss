@@ -1,12 +1,13 @@
+function tasks = Ihlenburg1998fea_Fig52(plotResults)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % This study correspond to Figure9a, Figure 9b, Figure 10, Figure 11 and Figure 12 in Venas2019e3s
 % Venas2019e3s is available at https://doi.org/10.1016/j.cma.2018.02.015 (open access version at http://hdl.handle.net/11250/2493754)
 % It is based on the example in Ihlenburg1998fea Figure 5.2
 % Ihlenburg1998fea is available at https://books.google.no/books?id=JrMPBwAAQBAJ
 
-close all
-clear all %#ok
-
+if nargin < 1
+    plotResults = false;
+end
 startup
 resultsFolder = [folderName '/Ihlenburg1998fea'];
 if ~exist(resultsFolder, 'dir')
@@ -15,7 +16,8 @@ end
 
 %% Ihlenburg (1998) example
 BCarr = {'SHBC','SSBC','NNBC'};
-for i = 1:3
+for i = 1:numel(BCarr)
+    BC = BCarr{i};
     if i == 1
         nFreqs = 2000;
         color = [0,70,147]/255;
@@ -41,6 +43,7 @@ for i = 1:3
     d_vec = [1;0;0];
     options = struct('BC', BC,...
                      'd_vec', d_vec, ...
+                     'Display', 'none', ...
                      'omega', omega, ...
                      'P_inc', 1);
     R = layer{1}.R;
@@ -70,48 +73,47 @@ for i = 1:3
     layer{1}.X = R*[cos(pi),0,0;
                       cos(0),0,0];
     layer = e3Dss(layer, options);
-
-    figure(3)
     F = layer{1}.p_0;
     TS = 20*log10(abs(F));
-    plot(k*R, TS(1,:),'DisplayName',legendEntry,'color',color)
-    set(0,'defaulttextinterpreter','latex')
-    hold on
-    title('Ihlenburg (1998) example, $$\theta = 180^\circ$$')
-    xlabel('$$k_1 R_{0,1}$$')
-    xlim([0, max(k*R)])
-    ylim([-50, 35])
-    ylabel('TS [dB]')  
-    legend('off');
-    legend('show','location','southeast');
-    savefig([resultsFolder '/Figure9a'])
+    if plotResults
+        figure(3)
+        plot(k*R, TS(1,:),'DisplayName',legendEntry,'color',color)
+        set(0,'defaulttextinterpreter','latex')
+        hold on
+        title('Ihlenburg (1998) example, $$\theta = 180^\circ$$')
+        xlabel('$$k_1 R_{0,1}$$')
+        xlim([0, max(k*R)])
+        ylim([-50, 35])
+        ylabel('TS [dB]')  
+        legend('off');
+        legend('show','location','southeast');
 
-    figure(4)
-    F = layer{1}.p_0;
-    TS = 20*log10(abs(F));
-    plot(k*R, TS(2,:),'DisplayName',legendEntry,'color',color)
-    set(0,'defaulttextinterpreter','latex')
-    hold on
-    title('Ihlenburg (1998) example, $$\theta = 0^\circ$$')
-    xlabel('$$k_1 R_{0,1}$$')
-    xlim([0, max(k*R)])
-    ylim([-50, 35])
-    ylabel('TS [dB]')  
-    legend('off');
-    legend('show','location','southeast');
-    savefig([resultsFolder '/Figure9b'])
-    
+        figure(4)
+        plot(k*R, TS(2,:),'DisplayName',legendEntry,'color',color)
+        set(0,'defaulttextinterpreter','latex')
+        hold on
+        title('Ihlenburg (1998) example, $$\theta = 0^\circ$$')
+        xlabel('$$k_1 R_{0,1}$$')
+        xlim([0, max(k*R)])
+        ylim([-50, 35])
+        ylabel('TS [dB]')  
+        legend('off');
+        legend('show','location','southeast');
+    end
+    tasks(1).TS = TS;
     
     if 1
-        figure(40+i)
+        if plotResults
+            figure(40+i)
+        end
         nFreqs = 500;
         k = linspace(2/nFreqs,2,nFreqs)'; % wave number
         k = unique(sort([k; specialValues]));
         omega = k*layer{1}.c_f;   % Wave number for outer fluid domain
         options.omega = omega;
 
-        createConvergencePlot('3D',layer,options,35, []);
-        savefig([resultsFolder '/Figure' num2str(9+i)])
+        Error = createConvergencePlot('3D',layer,options,35, [],plotResults);
+        tasks(1).Error = Error;
     end
 end
 
@@ -123,4 +125,3 @@ options.omega = k*layer{1}.c_f;
 layer = e3Dss(layer, options);
 TS = 20*log10(abs(layer{1}.p_0));
 
-end

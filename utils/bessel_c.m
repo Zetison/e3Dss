@@ -2,9 +2,16 @@ function f = bessel_c(nu,z,i,nu_a,U_pol,u_k,v_k,Eps)
 
 indices = indices_(nu,z,nu_a);
 f = zeros(size(z),class(z));
-f(~indices) = bessel_std(nu,z(~indices),i,nu_a);
-if any(indices)
-    f(indices) = bessel_asy(nu,z(indices),i,U_pol,u_k,v_k,Eps);
+if numel(nu) > numel(z)
+    f(~indices) = bessel_std(nu(~indices),z,i,nu_a);
+    if any(indices(:))
+        f(indices) = bessel_asy(nu(indices),z,i,U_pol,u_k,v_k,Eps);
+    end
+else
+    f(~indices) = bessel_std(nu,z(~indices),i,nu_a);
+    if any(indices(:))
+        f(indices) = bessel_asy(nu,z(indices),i,U_pol,u_k,v_k,Eps);
+    end
 end
 end
 
@@ -20,7 +27,11 @@ end
 
 function f = bessel_asy(nu,z,i,U_pol,u_k,v_k,Eps)
 % Reference: https://dlmf.nist.gov/10.20
-PI = getPI(class(z));
+prec = class(z);
+PI = getC(prec,'pi');
+oneThirds = getC(prec,'1/3');
+twoThirds = getC(prec,'2/3');
+fiveThirds = getC(prec,'5/3');
 K = numel(U_pol)/2-1;
 sum1 = zeros(size(z),class(z));
 sum2 = zeros(size(z),class(z));
@@ -48,15 +59,15 @@ end
 if k == K
     error('e3Dss:divergeBessel','Series did not converge')
 end
-nu23zeta = nu.^(2/3).*zeta;
+nu23zeta = nu.^twoThirds.*zeta;
 if i == 3
     nu23zeta = nu23zeta*exp(2*PI*1i/3);
     airytype = 0;
 else
     airytype = 2*(i-1);
 end
-sum1 = airy(airytype,  nu23zeta,useScaling)./nu.^(1/3).*sum1;
-sum2 = airy(airytype+1,nu23zeta,useScaling)./nu.^(5/3).*sum2;
+sum1 = airy(airytype,  nu23zeta,useScaling)./nu.^oneThirds.*sum1;
+sum2 = airy(airytype+1,nu23zeta,useScaling)./nu.^fiveThirds.*sum2;
 if i == 3
     sum2 = sum2*exp(2*PI*1i/3);
 end

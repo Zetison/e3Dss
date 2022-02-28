@@ -20,12 +20,13 @@ options = struct('BC', 'IBC', ...
 
 figure(1)
 hold on
-for z = 10.^linspace(4,13,10)
+for z = 10.^linspace(4,18,15)
     options.z = 1i*z.*k;
     layer = e3Dss(layer, options);
     TS = 20*log10(abs(layer{1}.p_0));
-    TS(54)
-    plot(k, TS, 'DisplayName', ['IBC, z = ' num2str(z)])
+%     TS(54)
+    legendStr = sprintf('IBC, z = %g', z);
+    plot(k, TS, 'DisplayName', legendStr)
 end
           
 options.BC = 'SSBC';   

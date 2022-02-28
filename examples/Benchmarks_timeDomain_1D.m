@@ -85,24 +85,21 @@ end
 %             return
 %%%%%%%%%%%%%%%%%%%%%%%%%%
 % Plot dynamic time domain solution in 1D
-SSBC = 1;
-ESBC = 0; 
+BC = 'SSBC';
 switch model
     case 'S15'
         layer = setS15Parameters();
-        SHBC = 0;
         layer{2}.calc_sigma_s = [1,0,0,0,0,0];
         layer{1}.calc_p = true;
         layer{3}.calc_p = true;
     case 'S5'
         layer = setS5Parameters();
-        SHBC = 0;
         layer{2}.calc_sigma_s = [1,0,0,0,0,0];
         layer{1}.calc_p = true;
         layer{3}.calc_p = true;
 end
 
-defineBCstring
+layer = defineBCstring(layer,BC);
 R_a = 1.5*layer{1}.R;
 npts = 1000;
 z1 = linspace(layer{1}.R,4*layer{1}.R,npts).';
@@ -166,14 +163,14 @@ for n = 0:N-1
             PincField(:,n-N/2+1) = options.P_inc(omega)*exp(1i*k*r(layer{3}.X))./r(layer{3}.X);
             
             totField1(:,n-N/2+1) = layer{1}.p(:,n-N/2);
-            totField2(:,n-N/2+1) = layer{2}.sigma_rr(:,n-N/2);
+            totField2(:,n-N/2+1) = layer{2}.sigma_s{1}(:,n-N/2);
             totField3(:,n-N/2+1) = PincField(:,n-N/2+1) + layer{3}.p(:,n-N/2);
         elseif strcmp(applyLoad,'radialPulsation')
             k = omega/layer{1}.c_f;
             PincField(:,n-N/2+1) = options.P_inc(omega)*layer{1}.R.*exp(-1i*k*(norm2(layer{1}.X)-layer{1}.R))./norm2(layer{1}.X);
             
             totField1(:,n-N/2+1) = PincField(:,n-N/2+1) + layer{1}.p(:,n-N/2);
-            totField2(:,n-N/2+1) = layer{2}.sigma_rr(:,n-N/2);
+            totField2(:,n-N/2+1) = layer{2}.sigma_s{1}(:,n-N/2);
             totField3(:,n-N/2+1) = layer{3}.p(:,n-N/2);
         else
             k = omega/layer{1}.c_f;

@@ -34,9 +34,9 @@ if nargin > 1
 end
 
 fieldsToRemove = {'r','theta','phi','a_temp','a','b','b_temp','k','k_temp','G_temp','K_temp','Z_r_s','K','G','P','dP','d2P', ...
-                  'Z_zeta','Z_zeta_i','Z_zeta_o','Z_xi_i','Z_eta_i','Z_xi_o','Z_eta_o','Z_xi_i_s','Z_xi_o_s','Z_eta_i_s','Z_eta_o_s','Z_zeta_i_s','Z_zeta_o_s','Z_r_s', ...
+                  'Z_xi','Z_eta','Z_zeta','Z_zeta_i','Z_zeta_o','Z_xi_i','Z_eta_i','Z_xi_o','Z_eta_o','Z_xi_i_s','Z_xi_o_s','Z_eta_i_s','Z_eta_o_s','Z_zeta_i_s','Z_zeta_o_s','Z_r_s', ...
                   'calc_sigma_rr','calc_sigma_tt','calc_sigma_pp','calc_sigma_rt','calcStresses', ...
-                  'dpdr','dpdt','d2pdr2','d2pdt2', ...
+                  'dpdr','dpdt','d2pdr2','d2pdt2','dp_incdr','dp_incdt','u_r','u_t','sigma_rr','sigma_tt','sigma_pp','sigma_rt', ...
                   'calcCartesianDispDerivatives','calc_errors', ...
                   'calc_u_r','calc_u_t','calc_du_rdr','calc_du_rdt','calc_du_tdr','calc_du_tdt','calc_navier1','calc_navier2', ...
                   'calc_dpdr','calc_dpdt','calc_d2pdr2','calc_d2pdt2','calc_dp_incdr','calc_dp_incdt','calc_farFieldOnly'};
@@ -54,6 +54,7 @@ end
 layer = getDefaultParameters(newLayers);
 
 layer = updateOptions(layer,newLayers);
+
 
 % Supress warning for ill-conditioned matrices in getCoeffs.m
 if options.debug
@@ -82,6 +83,7 @@ else
     pctRunOnAll(['warning(''' debugStr ''', ''e3Dss:singularK'')'])
 end
 prec = options.prec;
+PI = getC(prec,'pi');
 
 omega = options.omega;
 if isrow(omega)
@@ -131,8 +133,8 @@ options.m_s = m_s;
 for m = 1:M
     calc_err_pc = layer{m}.calc_err_pc;
     calc_err_dc = layer{m}.calc_err_dc;
-    if isrow(layer{m}.lossFactor)
-        layer{m}.lossFactor = layer{m}.lossFactor.';
+    if size(layer{m}.lossFactor,2) == 1
+        layer{m}.lossFactor(:,2) = layer{m}.lossFactor(:,1);
     end
     switch layer{m}.media
         case 'fluid'            
@@ -143,8 +145,6 @@ for m = 1:M
 
             layer{m}.calc_p = layer{m}.calc_p || calc_err_pc;
             layer{m}.calc_dpdr = any(calc_dp) || calc_p_laplace;
-            layer{m}.calc_dp_incdr = any(layer{m}.calc_dp_inc);
-            layer{m}.calc_dp_incdt = any(layer{m}.calc_dp_inc);
             layer{m}.calc_dp = calc_dp;
             layer{m}.calc_p_laplace = calc_p_laplace || calc_err_helmholtz;
             layer{m}.calc_dpdt = layer{m}.calc_dpdr;
@@ -153,17 +153,21 @@ for m = 1:M
             layer{m}.calc_errors = calc_err_dc || calc_err_pc || calc_err_helmholtz;
             layer{m}.calc_farFieldOnly = ~any([layer{m}.calc_p, layer{m}.calc_dpdr, layer{m}.calc_dpdt, layer{m}.calc_d2pdr2, layer{m}.calc_d2pdt2]);
             
-            if m == m_s
-                layer{m}.calc_p_inc = layer{m}.calc_p_inc || layer{m}.calc_errors;
-                layer{m}.calc_dp_inc = or(layer{m}.calc_dp_inc, layer{m}.calc_errors);
-            end
+            layer{m}.calc_p_inc = (layer{m}.calc_p_inc || layer{m}.calc_errors) && m == m_s;
+            layer{m}.calc_dp_inc = and(or(layer{m}.calc_dp_inc, layer{m}.calc_errors), m == m_s);
+            layer{m}.calc_dp_incdr = and(any(layer{m}.calc_dp_inc), options.p_inc_fromSeries);
+            layer{m}.calc_dp_incdt = and(any(layer{m}.calc_dp_inc), options.p_inc_fromSeries);
         case {'solid','viscoelastic'}
             calc_u = layer{m}.calc_u;
             calcCartesianDispDerivatives = any(layer{m}.calc_du(:));
             calc_errNav = any(layer{m}.calc_err_navier);
             layer{m}.calc_u = or(calc_u, calc_err_dc);
-            layer{m}.calc_u_r = calc_err_dc || calcCartesianDispDerivatives || any(calc_u) || calc_errNav;
-            layer{m}.calc_u_t = calc_err_dc || calcCartesianDispDerivatives || any(calc_u) || calc_errNav;
+            if ~(isfield(layer{m},'calc_u_r') && layer{m}.calc_u_r)
+                layer{m}.calc_u_r = calc_err_dc || calcCartesianDispDerivatives || any(calc_u) || calc_errNav;
+            end
+            if ~(isfield(layer{m},'calc_u_t') && layer{m}.calc_u_t)
+                layer{m}.calc_u_t = calc_err_dc || calcCartesianDispDerivatives || any(calc_u) || calc_errNav;
+            end
             layer{m}.calc_du_rdr = calcCartesianDispDerivatives;
             layer{m}.calc_du_rdt = calcCartesianDispDerivatives;
             layer{m}.calc_du_tdr = calcCartesianDispDerivatives;
@@ -174,10 +178,11 @@ for m = 1:M
                 error('Not yet implemented')
             end
             calcStresses = any(calc_sigma) || any(calc_sigma_s) || calc_errNav || calc_err_pc;
-            layer{m}.calc_sigma_rr = calcStresses;
-            layer{m}.calc_sigma_tt = calcStresses;
-            layer{m}.calc_sigma_pp = calcStresses;
-            layer{m}.calc_sigma_rt = calcStresses;
+            for stressField = {'calc_sigma_rr','calc_sigma_tt','calc_sigma_pp','calc_sigma_rt'}
+                if ~(isfield(layer{m},stressField{1}) && layer{m}.(stressField{1}))
+                    layer{m}.(stressField{1}) = calcStresses;
+                end
+            end
             layer{m}.calcStresses = calcStresses;
             layer{m}.calc_navier1 = calc_errNav;
             layer{m}.calc_navier2 = calc_errNav;
@@ -208,7 +213,7 @@ end
 
 if any(omega == 0) && ( strcmp(options.applyLoad, 'mechExcitation') || ...
                        (strcmp(options.applyLoad, 'pointCharge') && options.r_s ~= 0) || ...
-                       (strcmp(options.applyLoad, 'surfExcitation') && abs(options.theta_s - pi) > options.Eps))
+                       (strcmp(options.applyLoad, 'surfExcitation') && abs(options.theta_s - PI) > options.Eps))
     warning('This case has no unique solution for omega=0, these values will be removed from the computation.')
     omega(omega == 0) = [];
     options.omega = omega;
@@ -310,7 +315,7 @@ for m = 1:M
                                 k = omega/layer{1}.c_f;
                                 if strcmp(options.applyLoad,'planeWave')
                                     k_vec = k*options.d_vec.';
-                                    layer{1}.p_inc = P_inc*exp(1i*k_vec*layer{1}.X.');
+                                    layer{1}.p_inc = P_inc.*exp(1i*k_vec*layer{1}.X.');
                                     for ii = 1:3
                                         if layer{m}.calc_dp_inc(ii)
                                             layer{m}.dp_inc{ii} = 1i*k_vec(:,ii).*layer{1}.p_inc;
@@ -319,14 +324,14 @@ for m = 1:M
                                 else
                                     x_s = r_s*options.d_vec.';
                                     Xxms = layer{m}.X-x_s;
-                                    nXxms = norm2(Xxms);
+                                    nXxms = norm2(Xxms).';
                                     p_inc = P_inc.*exp(1i*k.*nXxms)./nXxms;
                                     if layer{m}.calc_p_inc
                                         layer{m}.p_inc = p_inc;
                                     end
                                     for ii = 1:3
                                         if layer{m}.calc_dp_inc(ii)
-                                            layer{m}.dp_inc{ii} = p_inc.*(1i*k - 1./nXxms).*Xxms(:,ii)./nXxms;
+                                            layer{m}.dp_inc{ii} = p_inc.*(1i*k - 1./nXxms).*Xxms(:,ii).'./nXxms;
                                         end
                                     end
                                 end
@@ -535,6 +540,9 @@ for m = 1:M
                                 end
                             end
                         end
+                    end
+                    if layer{m}.calc_sigma_s(1)
+                        layer{m}.sigma_s{1} = layer{m}.sigma_rr;
                     end
                 end
         end
@@ -795,7 +803,7 @@ end
 % Remove temporary fields
 for m = 1:M
     for i = 1:numel(fieldsToRemove)
-        if isfield(layer{m},fieldsToRemove{i}) && ~fieldExist{m}(i)
+        if isfield(layer{m},fieldsToRemove{i}) && ~fieldExist{m}(i) && ~(isfield(layer{m},['calc_' fieldsToRemove{i}]) && layer{m}.(['calc_' fieldsToRemove{i}]))
             layer{m} = rmfield(layer{m},fieldsToRemove{i});
         end
     end
@@ -828,7 +836,6 @@ function layer = getDefaultParameters(layer)
 for m = 1:numel(layer)
     layer{m}.R         = 1;       % Inner radius of layer
     layer{m}.rho         = 1000;    % Mass density
-    layer{m}.lossFactor  = 0;       % Hysteretic loss factor (values around 0.001 for lightly damped materials, values around 0.01 for moderately damped materials and values around 0.1 for heavily damped materials)
     layer{m}.calc_err_dc = false;   % Calculate the errors for the displacement conditions
     layer{m}.calc_err_pc = false;   % Calculate the errors for the pressure conditions
     switch layer{m}.media
@@ -840,6 +847,7 @@ for m = 1:numel(layer)
             layer{m}.calc_p_laplace	    = false;      % Toggle calculation of the Laplace operator of the scattered pressure fields
             layer{m}.calc_err_helmholtz	= false;      % Toggle calculation of the errors for the Helmholtz equation
             layer{m}.calc_p_inc         = false;      % Toggle calculation of the incident pressure
+            layer{m}.lossFactor         = 0;          % Hysteretic loss factor (values around 0.001 for lightly damped materials, values around 0.01 for moderately damped materials and values around 0.1 for heavily damped materials)
             layer{m}.calc_dp_inc        = false(1,3); % Toggle calculation of the three components of the gradient of the incident pressure
         case {'solid','viscoelastic'}
             layer{m}.E                = 200e9;      % Youngs modulus for solid layers
@@ -851,6 +859,7 @@ for m = 1:numel(layer)
             layer{m}.calc_sigma       = false(1,6); % Toggle calculation of the six components of the stress field (cartesian coordinates) [sigma_xx sigma_yy sigma_zz sigma_yz sigma_xz sigma_xy]
             layer{m}.calc_sigma_s     = false(1,6); % Toggle calculation of the six components of the stress field (spherical coordinates) [sigma_rr sigma_tt sigma_pp sigma_tp sigma_rp sigma_rt]
             layer{m}.calc_err_navier  = false(1,2); % Toggle calculation of the errors for the Navier equation
+            layer{m}.lossFactor       = [0,0];      % Hysteretic loss factor (first component for longitudinal velocities and second component for transverse velocities)
     end
 end
 
@@ -899,9 +908,9 @@ for m = 1:M
     switch layer{m}.media
         case 'fluid'
             % Modify sound speed to acount for the hysteretic loss factor
-            layer{m}.c_f = layer{m}.c_f.*sqrt(1-1i*layer{m}.lossFactor);
+            c_f = layer{m}.c_f.*sqrt(1-1i*layer{m}.lossFactor(:,1));
             
-            layer{m}.k = omega./layer{m}.c_f;
+            layer{m}.k = omega./c_f;
             
             for i = 1:numel(besselIndices)
                 if besselIndices(i)
@@ -922,7 +931,7 @@ for m = 1:M
                 end
             end
             for fieldName = fluidFieldNames
-                if layer{m}.(['calc_' fieldName{1}])
+                if layer{m}.(['calc_' fieldName{1}]) && ~(strcmp(fieldName{1},'p_inc') && ~options.p_inc_fromSeries)
                     layer{m}.(fieldName{1}) = zeros(nFreqs,n_X,prec);
                 end
             end
@@ -930,17 +939,21 @@ for m = 1:M
             E = layer{m}.E;
             nu = layer{m}.nu;
             rho = layer{m}.rho;
-            % Compute derived quantities
             
-            % Modify Youngs modulus to acount for the hysteretic loss factor
-            E = E.*(1-1i*layer{m}.lossFactor);
-            
+            % Compute derived quantities            
             K = E./(3*(1-2*nu));
             G = E./(2*(1+nu));
 
             c_s_1 = sqrt((3*K+4*G)./(3*rho)); % longitudinal wave velocity 
             c_s_2 = sqrt(G./rho); % shear wave velocity
-
+            
+            % Add hysteris damping
+            c_s_1 = c_s_1.*sqrt(1-1i*layer{m}.lossFactor(:,1));
+            c_s_2 = c_s_2.*sqrt(1-1i*layer{m}.lossFactor(:,2));
+            
+            G = rho.*c_s_2.^2;
+            K = rho.*c_s_1.^2 - 4*G/3;
+            
             layer{m}.K = K;
             layer{m}.G = G;
             layer{m}.a = omega./c_s_1;
@@ -963,7 +976,7 @@ for m = 1:M
                 end
             end
             for fieldName = solidFieldNames
-                if layer{m}.(['calc_' fieldName{1}])
+                if layer{m}.(['calc_' fieldName{1}]) && ~(strcmp(fieldName{1},'p_inc') && ~options.p_inc_fromSeries)
                     layer{m}.(fieldName{1}) = zeros(nFreqs,n_X,prec);
                 end
             end
@@ -1131,7 +1144,7 @@ while n <= N_max && ~(singleModeSolution && n > 0)
                     if ~layer{m}.calc_farFieldOnly
                         layer{m}.Z_zeta = iterate_Z(n,zeta,layer{m}.Z_zeta,Zindices,besselIndices,nu_a,U_pol,u_k,v_k,Eps);
                     end
-                    media = p_(m,n,zeta,C{m},Rt_m,layer,isSphere,isOuterDomain,options.applyLoad,besselIndices,nu_a,exponentShift);
+                    media = p_(m,n,zeta,C{m},Rt_m,layer,isSphere,isOuterDomain,options.applyLoad,besselIndices,nu_a,exponentShift,options);
                     fieldNames = fluidFieldNames;
                 case {'solid','viscoelastic'}
                     xi = layer{m}.a_temp*layer{m}.r;
@@ -1159,8 +1172,8 @@ while n <= N_max && ~(singleModeSolution && n > 0)
             
             % Update fields
             for fieldName = fieldNames
-                if layer{m}.(['calc_' fieldName{1}])
-                    [layer,hasCnvrgdTmp2,hasDvrgdTmp2,relTermMax] = updateSum(layer,m,media,fieldName{1},indices,hasCnvrgdTmp2,hasDvrgdTmp2,relTermMax,tiny,Eps,prec);
+                if layer{m}.(['calc_' fieldName{1}]) && ~(strcmp(fieldName{1},'p_inc') && ~options.p_inc_fromSeries)
+                    [layer,hasCnvrgdTmp2,hasDvrgdTmp2,relTermMax] = updateSum(layer,m,media,fieldName{1},indices,hasCnvrgdTmp2,hasDvrgdTmp2,relTermMax,tiny,Eps,prec,n);
                 end
             end
         end
@@ -1184,7 +1197,7 @@ while n <= N_max && ~(singleModeSolution && n > 0)
         break;
     end
     if displayIter
-        fprintf('n = %5d, Relative term: %10.5g, Elapsed time: %g seconds.\n', n, double(max(relTermMax)), toc)
+        fprintf('n = %5d, Relative term: %10.5g, Elapsed time: %8.6g seconds.\n', n, double(max(relTermMax)), toc)
     end
     n = n + 1;
 end
@@ -1225,7 +1238,7 @@ for m = 1:M
             fieldNames = solidFieldNames;
     end
     for fieldName = fieldNames
-        if layer{m}.(['calc_' fieldName{1}])
+        if layer{m}.(['calc_' fieldName{1}]) && ~(strcmp(fieldName{1},'p_inc') && ~options.p_inc_fromSeries)
             if P_incIsVec
                 layer{m}.(fieldName{1}) = repmat(P_inc,1,size(layer{m}.(fieldName{1}),2)).*layer{m}.(fieldName{1});
             else
@@ -1283,7 +1296,7 @@ elseif strcmp(options.applyLoad,'pointCharge')
 end
 besselFlag = or(besselFlag, calcForP_inc);
 
-function [layer,hasCnvrgd,hasDvrgd,relTermMax] = updateSum(layer,m,media,fieldName,indices,hasCnvrgd,hasDvrgd,relTermMax,tiny,Eps,prec)
+function [layer,hasCnvrgd,hasDvrgd,relTermMax] = updateSum(layer,m,media,fieldName,indices,hasCnvrgd,hasDvrgd,relTermMax,tiny,Eps,prec,n)
 % Track any Inf/NaN in next term
 hasDvrgdSub = or(hasDvrgd,or(any(isinf(media.(fieldName)),2),any(isnan(media.(fieldName)),2)));
 
@@ -1314,12 +1327,13 @@ else
     Rt_m = (layer{m}.R+layer{m-1}.R)/2;
 end
 
-function fluid = p_(m,n,zeta,C,Rt_m,layer,isSphere,isOuterDomain,applyLoad,besselIndices,nu_a,exponentShift)
+function fluid = p_(m,n,zeta,C,Rt_m,layer,isSphere,isOuterDomain,applyLoad,besselIndices,nu_a,exponentShift,options)
 % Note that in the case of isSphere and zeta = 0: 
 % --- dpdz =: dpdr and dpdx = dpdy = dpdt = 0, with same convention for p_inc
 % --- nabla p =: d2pdr2, d2pdt2 := 0
 % Also note that dpdt and dp_incdt are scaled by csc(theta)
-              
+
+fluid = [];
 k = layer{m}.k_temp;
 P = layer{m}.P(2,:);
 dP = layer{m}.dP(2,:);
@@ -1338,7 +1352,6 @@ if layer{m}.calc_d2pdt2
 end
 zetat_m = Rt_m*k;
 nu = n + 1/2;
-
 if layer{m}.calc_p || layer{m}.calc_dpdr || layer{m}.calc_dpdt || layer{m}.calc_d2pdr2 || layer{m}.calc_d2pdr2 ...
         || layer{m}.calc_p_inc || layer{m}.calc_dp_incdr || layer{m}.calc_dp_incdt
     w = cell(1,3);
@@ -1356,7 +1369,7 @@ if layer{m}.calc_p || layer{m}.calc_dpdr || layer{m}.calc_dpdt || layer{m}.calc_
             end
         end
     end
-    if layer{m}.calc_p_inc
+    if layer{m}.calc_p_inc && options.p_inc_fromSeries
         switch applyLoad
             case 'planeWave'
                 s1 = exp(exponent_(1,nu,zeta,nu_a));
@@ -1370,13 +1383,15 @@ if layer{m}.calc_p || layer{m}.calc_dpdr || layer{m}.calc_dpdt || layer{m}.calc_
                 s3_r_s = exp(exponent_(3,nu,k*r_s,nu_a));
                 fluid.p_inc = zeros(size(zeta),class(zeta));
                 indices = repmat(r < r_s,numel(k),1);
-                fluid.p_inc(indices)  = (2*n+1)*1i*k*Q0.*wZt{1}(indices).*Z_r_s{3,1}./s3_r_s./s1(indices);
-                fluid.p_inc(~indices) = (2*n+1)*1i*k*Q0.*Z_r_s{1,1}.*wZt{3}(indices)./s1_r_s./s3(indices);
+                temp = (2*n+1)*1i*k*Q0.*wZt{1}.*Z_r_s{3,1}./s3_r_s./s1;
+                fluid.p_inc(indices)  = temp(indices);
+                temp = (2*n+1)*1i*k*Q0.*Z_r_s{1,1}.*wZt{3}./s1_r_s./s3;
+                fluid.p_inc(~indices) = temp(~indices);
             otherwise
                 fluid.p_inc = zeros(size(zeta),class(zeta));
         end
     end
-    if layer{m}.calc_dp_incdr
+    if layer{m}.calc_dp_incdr && options.p_inc_fromSeries
         switch applyLoad
             case 'planeWave'
                 s1 = exp(exponent_(1,nu,zeta,nu_a));
@@ -1388,15 +1403,17 @@ if layer{m}.calc_p || layer{m}.calc_dpdr || layer{m}.calc_dpdt || layer{m}.calc_
                 r_s = options.r_s;
                 s1_r_s = exp(exponent_(1,nu,k*r_s,nu_a));
                 s3_r_s = exp(exponent_(3,nu,k*r_s,nu_a));
-                fluid.p_inc = zeros(size(zeta),class(zeta));
+                fluid.dp_incdr = zeros(size(zeta),class(zeta));
                 indices = repmat(r < r_s,numel(k),1);
-                fluid.p_inc(indices)  = (2*n+1)*1i*k*Q0.*dwZt{1}(indices).*Z_r_s{3,1}./s3_r_s./s1(indices);
-                fluid.p_inc(~indices) = (2*n+1)*1i*k*Q0.*Z_r_s{1,1}.*dwZt{3}(~indices)./s1_r_s./s3(indices);
+                temp = (2*n+1)*1i*k*Q0.*dwZt{1}.*Z_r_s{3,1}./s3_r_s./s1;
+                fluid.dp_incdr(indices)  = temp(indices);
+                temp = (2*n+1)*1i*k*Q0.*Z_r_s{1,1}.*dwZt{3}./s1_r_s./s3;
+                fluid.dp_incdr(~indices) = temp(~indices);
             otherwise
                 fluid.dp_incdr = zeros(size(zeta),class(zeta));
         end
     end
-    if layer{m}.calc_dp_incdt
+    if layer{m}.calc_dp_incdt && options.p_inc_fromSeries
         switch applyLoad
             case 'planeWave'
                 s1 = exp(exponent_(1,nu,zeta,nu_a));
@@ -1408,10 +1425,12 @@ if layer{m}.calc_p || layer{m}.calc_dpdr || layer{m}.calc_dpdt || layer{m}.calc_
                 r_s = options.r_s;
                 s1_r_s = exp(exponent_(1,nu,k*r_s,nu_a));
                 s3_r_s = exp(exponent_(3,nu,k*r_s,nu_a));
-                fluid.p_inc = zeros(size(zeta),class(zeta));
+                fluid.dp_incdt = zeros(size(zeta),class(zeta));
                 indices = repmat(r < r_s,numel(k),1);
-                fluid.p_inc(indices)  = (2*n+1)*1i*k*Q1.*wZt{1}(indices).*Z_r_s{3,1}./s3_r_s./s1(indices);
-                fluid.p_inc(~indices) = (2*n+1)*1i*k*Q1.*Z_r_s{1,1}.*wZt{3}(indices)./s1_r_s./s3(indices);
+                temp = (2*n+1)*1i*k*Q1.*wZt{1}.*Z_r_s{3,1}./s3_r_s./s1;
+                fluid.dp_incdt(indices)  = temp(indices);
+                temp = (2*n+1)*1i*k*Q1.*Z_r_s{1,1}.*wZt{3}./s1_r_s./s3;
+                fluid.dp_incdt(~indices) = temp(~indices);
             otherwise
                 fluid.dp_incdt = zeros(size(zeta),class(zeta));
         end
@@ -1526,6 +1545,7 @@ function solid = u_(n,m,A,B,xi,eta,Rt_m,isSphere,layer,omega,nu_a,exponentShift)
 % --- sigma_11 =: sigma_rr, sigma_22 =: sigma_tt, sigma_33 =: sigma_pp, 0 =: sigma_rt
 % Also note that u_t, du_tdr and du_rdt are scaled by csc(theta)
 
+solid = [];
 G = layer{m}.G_temp;
 K = layer{m}.K_temp;
 a = layer{m}.a_temp;

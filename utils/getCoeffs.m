@@ -45,7 +45,7 @@ for m = 1:M
         if ~strcmp(nextMedia,'origin')
             Z_zeta = layer{m}.Z_zeta_i;
             zeta_i = k.*R;
-            gzeta_i  = {g_(n,1,zeta_i,nu_a),g_(n,2,zeta_i,nu_a),g_(n,3,zeta_i,nu_a)};
+            gzeta_i = {g_(n,1,zeta_i,nu_a),g_(n,2,zeta_i,nu_a),g_(n,3,zeta_i,nu_a)};
         end
         if IBC
             zs = options.z_temp./(1i.*k.*layer{m}.rho.*layer{m}.c_f);
@@ -53,7 +53,7 @@ for m = 1:M
     end
     if m == m_s && supportAtR
         rho = layer{m}.rho;
-        if singleLayerSupport
+        if singleLayerSupport && ~strcmp(layer{m}.media,'fluid')
             k = NaN(size(layer{1}.k_temp)); % Not used
             Z_zeta = NaN;                   % Not used
         else
@@ -82,7 +82,7 @@ for m = 1:M
         else
             Z_r_s2 = NaN;
         end
-        if singleLayerSupport
+        if singleLayerSupport && ~strcmp(layer{m2}.media,'fluid')
             k2 = NaN(size(layer{1}.k_temp)); % Not used
             Z_zeta2 = NaN;                 % Not used
         else
@@ -261,7 +261,12 @@ systemSize = sum(dofs);
 CC = zeros(length(omega),systemSize,prec);
 
 % The matrix H and vector D should be allocated outside the for-loop if parfor is not used
-H = zeros(systemSize,prec); % global matrix
+switch prec
+    case 'double'
+        H = sparse(systemSize,systemSize); % global matrix
+    otherwise
+        H = zeros(systemSize,prec); % global matrix
+end
 D = zeros(systemSize,1,prec); % righ hand side
 for j = 1:length(omega)
 % parfor j = 1:length(omega)
@@ -292,7 +297,7 @@ for j = 1:length(omega)
         warning('e3Dss:singularK','The modal matrix, K, was singular.')
     end
     
-    % Uncomment the following to get the spy matrix in the paper
+%     % Uncomment the following to get the spy matrix in the paper
 %     if n == 300
 %         fileName = 'results/spy_H';
 %         figure(1)

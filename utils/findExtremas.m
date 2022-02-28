@@ -21,10 +21,9 @@ parfor i = 1:size(II,2)
     x_min = fminsearchbnd(f, x0, I(1), I(2), options);
     x_max = fminsearchbnd(@(x)-f(x), x0, I(1), I(2), options);
     x_res = zeros(2,1);
-    if min(abs(x_min-I)) > 1e6*options.TolX
+    if min(abs(x_min-I)) > 1e6*options.TolX*x_min
         x_res(1) = x_min;
-    end
-    if min(abs(x_max-I)) > 1e6*options.TolX
+    elseif min(abs(x_max-I)) > 1e6*options.TolX*x_max
         x_res(2) = x_max;
     end
     x_extremas2(:,i) = x_res;

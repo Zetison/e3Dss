@@ -12,7 +12,6 @@ if ~exist(resultsFolder, 'dir')
     mkdir(resultsFolder);
 end
 
-withDebug = true;
 
 %% Define parameters
 theta = 180*pi/180;
@@ -27,6 +26,7 @@ f = linspace(f_max/npts,f_max,npts);
 omega = 2*pi*f;
 d_vec = [0,0,1].';
 
+withDebug = true;
 options = struct('BC', 'SSBC', ...
                  'd_vec', d_vec, ...
                  'debug', withDebug, ...
@@ -38,9 +38,21 @@ layer{1}.X = -options.d_vec.'; % Compute backscattered pressure
 layerSSBC = layer([1,3]);
 layerSSBC{1}.R = layer{2}.R;
 
+if 0
+    startMatlabPool
+    fObj = @(f)-objFunc(f,layerSSBC,options);
+    specialValues = findExtremas(fObj, 25e3/2000, 25e4, 100000)';
+    save('miscellaneous/Skelton_extremas', 'specialValues')
+    return
+else
+    load('miscellaneous/Skelton_extremas')
+end
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Run simulation
 figure(1)
+f = sort(unique([f, specialValues(specialValues <= f_max).']));
+options.omega = 2*pi*f;
 layerCoating = e3Dss(layer, options);
 TS = 20*log10(abs(layerCoating{1}.p_0));
 plot(f,TS,'DisplayName','e3Dss with coating')
@@ -83,6 +95,7 @@ npts = 2000;
 % npts = 100;
 f_max = 25e3;
 f = linspace(f_max/npts,f_max,npts);
+f = sort(unique([f, specialValues(specialValues <= f_max).']));
 omega = 2*pi*f;
 options = struct('BC', 'SSBC', ...
                  'd_vec', d_vec, ...
@@ -114,6 +127,7 @@ f_max = 25e4;
 % f_max = 16e4;
 % npts = 2*npts;
 f = [f, linspace(f(end)+(f_max-f(end))/npts,f_max,npts)];
+f = sort(unique([f, specialValues(specialValues <= f_max).']));
 omega = 2*pi*f;
 k = omega./layer{1}.c_f;
 options = struct('BC', 'SSBC', ...
@@ -128,16 +142,16 @@ xlabel('Frequency (Hz)')
 ylabel('Target strength')
 printResultsToFile([resultsFolder '/Figure10.6_e3Dss_2'], {'x', f.', 'y', TS.', 'xlabel','f', 'ylabel','TS'})
 options.nu_a = -1;
-layerSSBC2 = e3Dss(layerSSBC, options);
-TS = 20*log10(abs(layerSSBC2{1}.p_0));
+[layerSSBC2,~,flag] = e3Dss(layerSSBC, options);
+TS2 = 20*log10(abs(layerSSBC2{1}.p_0));
 hold on
 plot(TS_SSBC(:,1),TS_SSBC(:,2),'DisplayName','Ref')
-plot(f,TS,'DisplayName','Without scaling')
+plot(f(~flag),TS2(~flag),'DisplayName','Without scaling')
 legend show
-printResultsToFile([resultsFolder '/Figure10.6_e3Dss_3'], {'x', f.', 'y', TS.', 'xlabel','f', 'ylabel','TS'})
+printResultsToFile([resultsFolder '/Figure10.6_e3Dss_3'], {'x', f.', 'y', TS2.', 'xlabel','f', 'ylabel','TS'})
 savefig([resultsFolder '/figure2b.fig'])
 
-if false
+if 0
     % this case is not perfectly reproducable due to lacking parameters
     figure(3)
     f_c = 15e3; % pulse center freq.
@@ -217,3 +231,12 @@ if false
 
 end
 
+
+function TS = objFunc(f,layer,options)
+
+options.Display = 'none';
+options.omega = 2*pi*f;
+layer = e3Dss(layer, options);
+TS = 20*log10(abs(layer{1}.p_0));
+
+end

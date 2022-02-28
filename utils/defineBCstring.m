@@ -1,15 +1,9 @@
-
-if SHBC
+function layer = defineBCstring(layer,BC)
+if strcmp(BC,'SHBC')
     layer = layer(1:end-2);
-    BC = 'SHBC';
-elseif ESBC
+elseif strcmp(BC,'ESBC')
     layer = layer(1:end-1);
     layer{end}.R = 0;
-    BC = 'ESBC';
-elseif SSBC
+elseif strcmp(BC,'SSBC')
     layer = layer(1:end-1);
-    BC = 'SSBC';
-else
-    BC = 'NNBC';
 end
-M = length(layer);

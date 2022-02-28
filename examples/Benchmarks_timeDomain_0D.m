@@ -81,9 +81,7 @@ end
 %             return
 %%%%%%%%%%%%%%%%%%%%%%%%%%
 % Plot dynamic time domain solution in 1D
-SSBC = 0;
-ESBC = 0; 
-SHBC = 0;
+BC = 'NNBC';
 switch model
     case 'S15'
         layer = setS15Parameters();
@@ -96,7 +94,7 @@ layer{1}.calc_p_0 = false;
 layer{1}.calc_p = true;
 layer{1}.calc_p_inc = false;
 
-defineBCstring
+layer = defineBCstring(layer,BC);
 
 layer{1}.X = [0, 0, 2*layer{1}.R];
 

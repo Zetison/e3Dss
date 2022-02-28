@@ -25,8 +25,8 @@ omega = k*layer{1}.c_f;
 
 d_vec = [0,0,1].';
 p_inc = @(v) P_inc*exp(1i*dot3(v,d_vec)*k);
-p_tot_Chang15 = importdata('../models/Chang1994voa2/Figure16.csv');
-p_tot_Chang20 = importdata('../models/Chang1994voa2/Figure17.csv');
+p_tot_Chang15 = importdata('models/Chang1994voa2/Figure16.csv');
+p_tot_Chang20 = importdata('models/Chang1994voa2/Figure17.csv');
 theta = linspace(0,pi,2000).';
 phi = 0;
 X = layer{1}.R*[sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta)];
@@ -66,21 +66,13 @@ xtickformat('degrees')
 savefig([resultsFolder '/Figure7b'])
 
 
-folderName = '../results';
-if ~exist(folderName, 'dir')
-    mkdir(folderName);
-end
-
 aspect = '0';
 elevation = 'm90';
 waveNumber = num2str(15);
 BC = 'SSBC';
 
-varCol.alpha_s = 0;
-varCol.beta_s = -90;
 scatteringCase = 'BI';
 model = 'Chang';
-varCol.scatteringCase = scatteringCase;
 
 
 
@@ -88,5 +80,5 @@ saveName = [model '_' BC '_' scatteringCase '_A'  aspect '_E' elevation];
 filename = [folderName '/' saveName];
 filename = [];
 figure(42)
-createConvergencePlot('2D',layer,options,60,filename)
+createConvergencePlot('2D',layer,options,60,filename);
 savefig([resultsFolder '/Figure8'])
