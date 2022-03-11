@@ -102,7 +102,7 @@ function C = conv(A,B)
 
 p = numel(A)-1;
 q = numel(B)-1;
-C = zeros(p+q+1,1,class(A));
+C = zeros(1,p+q+1,class(A));
 for i = 1:p+1
     for j = 1:q+1
         k = i+j-1;
