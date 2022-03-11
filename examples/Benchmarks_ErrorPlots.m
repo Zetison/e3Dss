@@ -12,15 +12,18 @@ calcResiduals = 1;
 % startMatlabPool
 % mp = NaN;
 %% Calculate errors
-for nu_a = 100 %[-1, 100]
+for nu_a = [-1, 100]
     for useSymbolicPrecision = 1 %[0,1]
         if useSymbolicPrecision
-            prec = 'mp';
-    %         prec = 'sym';
-            mpstartup
+            %prec = 'mp';
+            prec = 'sym';
+
         else
             prec = 'double';
         end
+	if strcmp(prec,'mp')
+            mpstartup
+	end
         models = {'S1','S3','S5','S13','S15','S35','S135'};
     %     models = {'S13','S15','S35','S135'};
 %         models = {'Skelton1997tao'};

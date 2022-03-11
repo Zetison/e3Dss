@@ -7,7 +7,9 @@ switch prec
     case 'double'
         C = str2num(constant); %#ok: see comment above
     case 'sym'
-        C = vpa(constant,digits);
+        if strcmp(constant,'pi')
+	    C = vpa(pi);
+	end
     case 'mp'
         C = mp(constant);
 end
