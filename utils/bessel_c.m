@@ -17,11 +17,23 @@ end
 
 function f = bessel_std(nu,z,i,nu_a)
 if i == 1 % besselj
-    f = besselj(nu,z,1).*exp(abs(imag(z)) + exponent_(i,nu,z,nu_a));
+    if isa(z,'sym')
+        f = besselj(nu,z).*exp(exponent_(i,nu,z,nu_a));
+    else
+        f = besselj(nu,z,1).*exp(abs(imag(z)) + exponent_(i,nu,z,nu_a));
+    end
 elseif i == 2 % bessely
-    f = bessely(nu,z,1).*exp(abs(imag(z)) + exponent_(i,nu,z,nu_a));
+    if isa(z,'sym')
+        f = bessely(nu,z).*exp(exponent_(i,nu,z,nu_a));
+    else
+        f = bessely(nu,z,1).*exp(abs(imag(z)) + exponent_(i,nu,z,nu_a));
+    end
 else
-    f = besselh(nu,1,z,1).*exp(1i*z + exponent_(i,nu,z,nu_a)); % Hankel function of first kind
+    if isa(z,'sym')
+        f = besselh(nu,1,z).*exp(exponent_(i,nu,z,nu_a)); % Hankel function of first kind
+    else
+        f = besselh(nu,1,z,1).*exp(1i*z + exponent_(i,nu,z,nu_a)); % Hankel function of first kind
+    end
 end
 end
 

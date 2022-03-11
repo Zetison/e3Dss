@@ -50,7 +50,6 @@ for nu_a = [-1, 100]
         end
         for i = 1:length(tasks)
     %     parfor i = 1:length(tasks)
-            nosymdigits = 40;
             switch prec
                 case 'single'
                     Eps = 1e-7;
@@ -59,11 +58,11 @@ for nu_a = [-1, 100]
                     Eps = eps;
                     O = 0;
                 case 'sym'
-                    Eps = vpa('1e-40');
-    %                 digits(2000);
-                    digits(nosymdigits);
+                    digits(32);
+                    Eps = vpa('1e-32');
                     O = vpa('0');
                 case 'mp'
+                    nosymdigits = 34;
                     Eps = 10^(-mp(nosymdigits));
     %                 Eps = 1e-30;
                     mp.Digits(nosymdigits);
