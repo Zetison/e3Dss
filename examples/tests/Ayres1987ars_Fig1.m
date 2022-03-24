@@ -32,7 +32,7 @@ for j = 1:numel(fluids)
         npts = 3000;
         k1a = linspace(k1a_max/npts,k1a_max,npts).';
         k = k1a/a;
-        omega = k*layer{1}.c_f;
+        omega = k*layer{1}.c;
         d_vec = [0,0,1].';
         options = struct('applyLoad', 'planeWave', ...
                          'Display', 'none', ...
@@ -54,7 +54,7 @@ for j = 1:numel(fluids)
             load(['miscellaneous/Ayres_' fluid '_extremas_' num2str(i)])
         end
         k1a = unique(sort([k1a; specialValues]));
-        options.omega = k1a/layer{1}.R*layer{1}.c_f;
+        options.omega = k1a/layer{1}.R*layer{1}.c;
         layer = e3Dss(layer, options);
 
         if plotResults
@@ -89,7 +89,7 @@ end
 
 function fs = objFunc(k1a,layer,options)
 options.Display = 'none';
-options.omega = k1a/layer{1}.R*layer{1}.c_f;
+options.omega = k1a/layer{1}.R*layer{1}.c;
 layer = e3Dss(layer, options);
 fs = abs(layer{1}.p_0)*2/layer{1}.R;
 

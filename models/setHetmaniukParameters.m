@@ -3,7 +3,7 @@ if nargin < 1
     noDomains = 2;
 end
 rho_f = 1000; % Density of outer fluid
-c_f = 1500;   % Speed of sound in outer (exterior) fluid domain
+c = 1500;   % Speed of sound in outer (exterior) fluid domain
 rho_s = 7850; % Density of solid
 t = 0.05; % The thickness of the sphere
 R_o = 1; % Outer radius of shell

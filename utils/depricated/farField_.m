@@ -1,6 +1,6 @@
 function p = farField_(v,options)
 error('Depricated, use e3Dss directly instead')
-options.calc_farField = true;
+options.ca.carField = true;
 d_vec = options.d_vec;
 if size(d_vec,2) > 1
     nPts = size(v,1);

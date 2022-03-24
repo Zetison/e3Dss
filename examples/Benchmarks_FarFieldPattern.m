@@ -125,7 +125,7 @@ for scatteringCase = {'Sweep'} %,'Sweep'}
                 if any(~flag)
                     figure(30+ii)
                     TS_plot = TS(logical(~flag));
-                    kR_01 = 2*pi*f(logical(~flag))/layer{1}.c_f*layer{1}.R;
+                    kR_01 = 2*pi*f(logical(~flag))/layer{1}.c*layer{1}.R;
                     printResultsToFile(filename, {'x',kR_01.', 'y', TS_plot, 'task',task})
                     plot(kR_01, TS_plot,'color',colorArr,'DisplayName', [model ' with ' BC{1}]);
                     hold on

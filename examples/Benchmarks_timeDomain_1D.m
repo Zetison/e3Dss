@@ -39,8 +39,8 @@ T
 dt = T/N;
 d_vec = -[0,0,1].';
 omega_c = 2*pi*f_c;
-c_f = 1500;
-k_c = omega_c/c_f;
+c = 1500;
+k_c = omega_c.c;
 P_inc = 1;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -157,7 +157,7 @@ for n = 0:N-1
     if n >= N/2+1
         if strcmp(applyLoad,'pointCharge')
             r_s = options.r_s;
-            k = omega/layer{3}.c_f;
+            k = omega/layer{3}.c;
             x_s = r_s*options.d_vec.';
             r = @(y) norm2(repmat(x_s,size(y,1),1)-y);
             PincField(:,n-N/2+1) = options.P_inc(omega)*exp(1i*k*r(layer{3}.X))./r(layer{3}.X);
@@ -166,14 +166,14 @@ for n = 0:N-1
             totField2(:,n-N/2+1) = layer{2}.sigma_s{1}(:,n-N/2);
             totField3(:,n-N/2+1) = PincField(:,n-N/2+1) + layer{3}.p(:,n-N/2);
         elseif strcmp(applyLoad,'radialPulsation')
-            k = omega/layer{1}.c_f;
+            k = omega/layer{1}.c;
             PincField(:,n-N/2+1) = options.P_inc(omega)*layer{1}.R.*exp(-1i*k*(norm2(layer{1}.X)-layer{1}.R))./norm2(layer{1}.X);
             
             totField1(:,n-N/2+1) = PincField(:,n-N/2+1) + layer{1}.p(:,n-N/2);
             totField2(:,n-N/2+1) = layer{2}.sigma_s{1}(:,n-N/2);
             totField3(:,n-N/2+1) = layer{3}.p(:,n-N/2);
         else
-            k = omega/layer{1}.c_f;
+            k = omega/layer{1}.c;
             k_vec = options.d_vec*k;
             PincField(:,n-N/2+1) = options.P_inc(omega)*exp(1i*dot3(layer{1}.X, k_vec));
             

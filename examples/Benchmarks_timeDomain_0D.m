@@ -2,10 +2,15 @@ close all
 clear all %#ok
 
 startup
+folderName = [homeDir '/Dropbox/Apps/Overleaf/PML/data'];
+resultsFolder = [folderName '/Benchmark_timeDomain_0D'];
+if ~exist(resultsFolder, 'dir')
+    mkdir(resultsFolder);
+end
 
 set(0,'defaultTextInterpreter','latex');
 startMatlabPool
-plotP_inc = 0;
+plotP_inc = 1;
 playP_inc = 1;
 
 % applyLoad = 'pointCharge';
@@ -35,8 +40,8 @@ dt = T/N;
 type = 4;
 d_vec = -[0,0,1].';
 omega_c = 2*pi*f_c;
-c_f = 1500;
-k_c = omega_c/c_f;
+c = 1500;
+k_c = omega_c.*c;
 P_inc = 1;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -151,7 +156,7 @@ temp = PincFieldTime;
 PincFieldTime(:,1:N-startIdx+1) = temp(:,startIdx:end);
 PincFieldTime(:,N-startIdx+2:end) = temp(:,1:startIdx-1);
 
-filename = ['../../results/e3Dss/' model '.wav'];
+filename = [folderName '/' model '.wav'];
 y = real(totFieldTime(end,:));
 figure
 plot(y)

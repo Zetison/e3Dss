@@ -19,7 +19,7 @@ layer = setChangParameters();
 k = [15, 20];
 a = layer{1}.R;
 h = layer{1}.R-layer{2}.R;
-omega = k*layer{1}.c_f;
+omega = k*layer{1}.c;
 
 d_vec = [0,0,1].';
 p_inc = @(v) P_inc*exp(1i*dot3(v,d_vec)*k);

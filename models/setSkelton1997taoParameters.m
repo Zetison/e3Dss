@@ -7,7 +7,7 @@ t_coating = 0.02;
 layer{1}.media = 'fluid';
 layer{1}.R = R+t_coating;
 layer{1}.rho = 1000;
-layer{1}.c_f = 1500;
+layer{1}.c = 1500;
 
 rho = 800;    % density of coating
 layer{2}.lossFactor = 0.1;

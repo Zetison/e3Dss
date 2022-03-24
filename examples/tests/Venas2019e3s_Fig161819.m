@@ -86,7 +86,7 @@ for modelCell = modelCellArr
                 layer = defineBCstring(layer,BC);
                 extraPts = 1; % 40
                 k_arr = 6;
-                omega_arr = k_arr*layer{1}.c_f;
+                omega_arr = k_arr*layer{1}.c;
                 f_arr = omega_arr/(2*pi);
                 applyLoad = 'planeWave';
             case 'S35' % Figure 16e,f
@@ -95,7 +95,7 @@ for modelCell = modelCellArr
                 plotInTimeDomain = false;
                 extraPts = 1;
                 k_arr = 6;
-                omega_arr = k_arr*layer{1}.c_f;
+                omega_arr = k_arr*layer{1}.c;
                 f_arr = omega_arr/(2*pi);
                 applyLoad = 'planeWave';
             case 'S135' % Figure 16g,h
@@ -104,7 +104,7 @@ for modelCell = modelCellArr
                 plotInTimeDomain = false;
                 extraPts = 1;
                 k_arr = 6;
-                omega_arr = k_arr*layer{1}.c_f;
+                omega_arr = k_arr*layer{1}.c;
                 f_arr = omega_arr/(2*pi);
                 applyLoad = 'planeWave';
         end

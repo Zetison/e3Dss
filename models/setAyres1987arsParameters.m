@@ -10,10 +10,10 @@ layer{1}.media = 'fluid';
 layer{1}.R = 1;
 if strcmp(fluid,'water')
     layer{1}.rho = 1.0*1e3;
-    layer{1}.c_f = 1.493*1e5/100;
+    layer{1}.c = 1.493*1e5/100;
 elseif strcmp(fluid,'air')
     layer{1}.rho = 0.0012*1e3;
-    layer{1}.c_f = 0.334*1e5/100;
+    layer{1}.c = 0.334*1e5/100;
 end
 
 rho = 1.13*1e3;    % density of rubber

@@ -69,7 +69,7 @@ switch type
         N_arr = 0:N_max;
         Error = Error(1:N_max+1,:);
         
-        k = options.omega/layer{1}.c_f;
+        k = options.omega/layer{1}.c;
         [NN,kk] = meshgrid(N_arr,k);
         B = log10(Error);
         B(B == -Inf) = Inf;

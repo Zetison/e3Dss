@@ -22,8 +22,8 @@ R = layer{1}.R;
 
 kR = [10.^linspace(-3,0,nFreqs)'; linspace(1+5/nFreqs,5,nFreqs)'];
 % k = 1;
-c_f = layer{1}.c_f;
-omega = kR*c_f;
+c = layer{1}.c;
+omega = kR*c;
 
 d_vec = [0,0,1].';
 
@@ -47,7 +47,7 @@ else
     load('miscellaneous/Sage_extremas')
 end
 kR = unique(sort([kR; specialValues]));
-options.omega = kR/layer{1}.R*layer{1}.c_f;
+options.omega = kR/layer{1}.R*layer{1}.c;
 layer = e3Dss(layer, options);
 colors = get(gca,'colororder');
 
@@ -109,7 +109,7 @@ legend show
 function sigma_s = objFunc(kR,layer,options)
 
 options.Display = 'none';
-options.omega = kR/layer{1}.R*layer{1}.c_f;
+options.omega = kR/layer{1}.R*layer{1}.c;
 layer = e3Dss(layer, options);
 sigma_s = 4*pi*abs(layer{1}.p).^2/abs(options.P_inc)^2;
 

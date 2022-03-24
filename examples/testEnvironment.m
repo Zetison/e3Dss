@@ -9,7 +9,7 @@ if false
 
     % k = (6:0.05:18)';
     k = 18;
-    omega = k*layer{1}.c_f;
+    omega = k*layer{1}.c;
     f = omega/(2*pi);
     d_vec = [0,0,1].';
     applyLoad = 'mechExcitation';
@@ -58,12 +58,12 @@ if true
     layer{1}.media = 'fluid';
     layer{1}.R = a;
     layer{1}.rho = 1.225;
-    layer{1}.c_f = 343;
+    layer{1}.c = 343;
     for i = 2:noLayers
         j = noLayers-i+1;
         if c_s(j) == 0
             layer{i}.media = 'fluid';
-            layer{i}.c_f = c_l(j);
+            layer{i}.c = c_l(j);
         else
             layer{i}.media = 'solid';
             layer{i}.E = E(j);

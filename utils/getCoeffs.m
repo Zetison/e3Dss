@@ -48,7 +48,7 @@ for m = 1:M
             gzeta_i = {g_(n,1,zeta_i,nu_a),g_(n,2,zeta_i,nu_a),g_(n,3,zeta_i,nu_a)};
         end
         if IBC
-            zs = options.z_temp./(1i.*k.*layer{m}.rho.*layer{m}.c_f);
+            zs = options.z_temp./(1i.*k.*layer{m}.rho.*layer{m}.c);
         end
     end
     if m == m_s && supportAtR
@@ -89,7 +89,7 @@ for m = 1:M
             k2 = layer{m2}.k_temp;
             Z_zeta2 = layer{m2}.Z_zeta_o;
         end
-        if strcmp(layer{m}.media,'solid') || strcmp(layer{m}.media,'viscoelastic')
+        if strcmp(layer{m}.media,'solid')
             void = zeros(n > 0,1,numel(omega),prec);
             D1{m} = cat(1,void,...
                           D2_(n,k2,R,Z_zeta2,Z_r_s2,options),...    
@@ -100,57 +100,7 @@ for m = 1:M
         end
     end
     switch layer{m}.media
-        case 'fluid'
-            rho = layer{m}.rho;
-            switch nextMedia
-                case 'void'
-                    if SHBC
-                        H1{m} = dp_dr_s_(n,k,R,Rt_m,Z_zeta,rho,omega,isSphere,isOuterDomain,nu_a,gzeta_i);
-                    elseif SSBC
-                        H1{m} = p_(n,k,R,Rt_m,Z_zeta,isSphere,isOuterDomain,nu_a);
-                    elseif IBC
-                        H1{m} = p_(n,k,R,Rt_m,Z_zeta,isSphere,isOuterDomain,nu_a) + reshape(zs,1,1,[]).*dp_dr_s_(n,k,R,Rt_m,Z_zeta,rho,omega,isSphere,isOuterDomain,nu_a,gzeta_i);
-                    end
-                case 'fluid'
-                        k2 = layer{m2}.k_temp;
-                        rho2 = layer{m2}.rho;
-                        Z_zeta2 = layer{m2}.Z_zeta_o;
-                        zeta2 = k2.*R;
-                        gzeta2  = {g_(n,1,zeta2,nu_a),g_(n,2,zeta2,nu_a)};
-                        dp_dr_s  = dp_dr_s_(n,k, R,Rt_m,Z_zeta, rho, omega, isSphere,isOuterDomain,nu_a,gzeta_i);
-                        dp_dr_s2 = dp_dr_s_(n,k2,R,Rt_m2,Z_zeta2,rho2,omega,isSphere2,false,nu_a,gzeta2);
-                        p  = p_(n,k, R,Rt_m, Z_zeta, isSphere, isOuterDomain,nu_a);
-                        p2 = p_(n,k2,R,Rt_m2,Z_zeta2,isSphere2,false,        nu_a);
-                        
-                        H1{m} = cat(1,cat(2, dp_dr_s, -dp_dr_s2),...    
-                                      cat(2, p, -p2));
-                case {'solid','viscoelastic'}
-                        G2 = layer{m2}.G_temp;
-                        a2 = layer{m2}.a_temp;
-                        b2 = layer{m2}.b_temp;
-                        Z_xi2  = layer{m2}.Z_xi_o;
-                        Z_eta2 = layer{m2}.Z_eta_o;
-                        xi2 = a2.*R;
-                        eta2 = b2.*R;
-                        gxi2  = {g_(n,1,xi2,nu_a),g_(n,2,xi2,nu_a)};
-                        geta2  = {g_(n,1,eta2,nu_a),g_(n,2,eta2,nu_a)};
-                        dp_dr_s = dp_dr_s_(n,k,R,Rt_m,Z_zeta,rho,omega,isSphere,isOuterDomain,nu_a,gzeta_i);
-                        p = p_(n,k,R,Rt_m,Z_zeta,isSphere,isOuterDomain,nu_a);
-                        u_r2 = u_r_(n,a2,b2,R,Rt_m2,Z_xi2,Z_eta2,isSphere2,nu_a,gxi2,geta2);
-                        sigma_rr2 = sigma_rr_(n,a2,b2,R,Rt_m2,Z_xi2,Z_eta2,isSphere2,G2,nu_a,gxi2,geta2);
-                        sigma_rt2 = sigma_rt_(n,a2,b2,R,Rt_m2,Z_xi2,Z_eta2,isSphere2,G2,nu_a,gxi2,geta2);
-                        void = zeros(size(sigma_rt2,1),size(p,2),size(sigma_rt2,3),prec);
-                        
-                        H1{m} = cat(1,cat(2, dp_dr_s,u_r2),...
-                                      cat(2, p, sigma_rr2),... 
-                                      cat(2, void,sigma_rt2));
-            end
-            if isSphere || isOuterDomain
-                dofs(m) = 1;
-            else
-                dofs(m) = 2;
-            end
-        case {'solid','viscoelastic'}
+        case {'solid'}
             G = layer{m}.G_temp;
             a = layer{m}.a_temp;
             b = layer{m}.b_temp;
@@ -194,7 +144,7 @@ for m = 1:M
                         H1{m} = cat(1,cat(2, sigma_rt,void),...
                                       cat(2, sigma_rr, p2),...
                                       cat(2, u_r,dp_dr_s2));
-                case {'solid','viscoelastic'}
+                case {'solid'}
                         G2 = layer{m2}.G_temp;
                         a2 = layer{m2}.a_temp;
                         b2 = layer{m2}.b_temp;
@@ -218,17 +168,25 @@ for m = 1:M
                                       cat(2, sigma_rt,-sigma_rt2),...
                                       cat(2, u_t,-u_t2));
             end
-            if isSphere || isOuterDomain
-                if n == 0
+            if layer{m}.mu == 0 && layer{m}.mu_b_m
+                if isSphere || isOuterDomain
                     dofs(m) = 1;
                 else
                     dofs(m) = 2;
                 end
             else
-                if n == 0
-                    dofs(m) = 2;
+                if isSphere || isOuterDomain
+                    if n == 0
+                        dofs(m) = 1;
+                    else
+                        dofs(m) = 2;
+                    end
                 else
-                    dofs(m) = 4;
+                    if n == 0
+                        dofs(m) = 2;
+                    else
+                        dofs(m) = 4;
+                    end
                 end
             end
     end
@@ -293,6 +251,9 @@ for j = 1:length(omega)
     Pinv2 = diag(1./max(abs(H2),[],2));
     H2 = Pinv2*H2;
     CC(j,:) = diag(Pinv).*(H2\(Pinv2*D));
+    if any(isinf(CC(j,:))) || any(isnan(CC(j,:)))
+        CC(j,:) = H\D;
+    end
     if any(isinf(CC(j,:))) || any(isnan(CC(j,:)))
         warning('e3Dss:singularK','The modal matrix, K, was singular.')
     end
@@ -393,23 +354,7 @@ switch options.applyLoad
         error('Not implemented')
 end
 D2 = reshape(-D2,1,1,numel(D2));
-                    
-function H = p_(n,k,R,Rt_m,Z,isSphere,isOuterDomain,nu_a)
 
-zeta = k*R;
-zetat_m = k*Rt_m;
-if isSphere
-    H = zeros(1,1,length(k),class(R));
-    H(1,1,:) = w_(n,1,zetat_m,zeta,nu_a,0).*Z{1,1}; 
-elseif isOuterDomain
-    H = zeros(1,1,length(k),class(R));
-    H(1,1,:) = w_(n,3,zetat_m,zeta,nu_a,0).*Z{3,1}; 
-else
-    H = zeros(1,2,length(k),class(R));
-
-    H(1,1,:) = w_(n,1,zetat_m,zeta,nu_a,0).*Z{1,1};
-    H(1,2,:) = w_(n,2,zetat_m,zeta,nu_a,0).*Z{2,1};
-end
 
 function H = dp_dr_s_(n,k,R,Rt_m,Z,rho,omega,isSphere,isOuterDomain,nu_a,gzeta)
 

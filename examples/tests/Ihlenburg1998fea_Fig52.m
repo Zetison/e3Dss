@@ -37,7 +37,7 @@ for i = 1:numel(BCarr)
     layer = defineBCstring(layer,BC);
 
     k = linspace(2/nFreqs,2,nFreqs)'; % wave number
-    omega = k*layer{1}.c_f;   % Wave number for outer fluid domain
+    omega = k*layer{1}.c;   % Wave number for outer fluid domain
 
     theta = 180*pi/180;
     d_vec = [1;0;0];
@@ -67,7 +67,7 @@ for i = 1:numel(BCarr)
         specialValues = sort([specialValues; (specialValues-delta); (specialValues+delta)]);
     end
     k = unique(sort([k; specialValues]));
-    omega = k*layer{1}.c_f;   % Wave number for outer fluid domain
+    omega = k*layer{1}.c;   % Wave number for outer fluid domain
     options.omega = omega;
 
     layer{1}.X = R*[cos(pi),0,0;
@@ -109,7 +109,7 @@ for i = 1:numel(BCarr)
         nFreqs = 500;
         k = linspace(2/nFreqs,2,nFreqs)'; % wave number
         k = unique(sort([k; specialValues]));
-        omega = k*layer{1}.c_f;   % Wave number for outer fluid domain
+        omega = k*layer{1}.c;   % Wave number for outer fluid domain
         options.omega = omega;
 
         Error = createConvergencePlot('3D',layer,options,35, [],plotResults);
@@ -121,7 +121,7 @@ end
 function TS = objFunc(k,layer,options)
 
 options.Display = 'none';
-options.omega = k*layer{1}.c_f;
+options.omega = k*layer{1}.c;
 layer = e3Dss(layer, options);
 TS = 20*log10(abs(layer{1}.p_0));
 

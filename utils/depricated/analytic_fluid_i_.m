@@ -1,4 +1,4 @@
-function p = analytic_fluid_i_(v,options)
+function p = analyt.cluid_i_(v,options)
 error('Depricated')
 d_vec = options.d_vec;
 if size(d_vec,2) > 1

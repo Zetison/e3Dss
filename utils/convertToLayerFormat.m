@@ -6,7 +6,7 @@ for m = 1:M
         md2 = (m+1)/2;
         layer{m}.media 	= 'fluid'; % Media; % solid or fluid (Navier equation or Helmholtz equation)
         layer{m}.R = R_o(md2);
-        layer{m}.c_f = c_f(md2);
+        layer{m}.c = c(md2);
         layer{m}.rho = rho_f(md2);
     else
         md2 = m/2;

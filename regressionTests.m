@@ -10,12 +10,12 @@ if 1
 %     studyName = {'Venas2019e3s_Fig161819'};
     stringShift = 60;
     noFailedTests = 0;
-    for i = 1:numel(studyName)
-        fprintf(['\n%-' num2str(stringShift) 's'], ['Running test ''' studyName{i} ''' ...'])
+    for i_study = 1:numel(studyName)
+        fprintf(['\n%-' num2str(stringShift) 's'], ['Running test ''' studyName{i_study} ''' ...'])
         testFailed = false;
         try
-            eval(['tasks = ' studyName{i} ';']);
-            tasks_ref = load([testFolder studyName{i} '.mat'],'tasks');
+            eval(['tasks = ' studyName{i_study} ';']);
+            tasks_ref = load([testFolder studyName{i_study} '.mat'],'tasks');
             for i_task = 1:numel(tasks)
                 if iscell(tasks)
                     task = tasks{i_task};
@@ -70,10 +70,10 @@ if 0
     studyName = {'Chang1994soa_Fig1617','Fender1972sfa_Fig23','Ayres1987ars_Fig1','Ihlenburg1998fea_Fig52','Skelton1997tao_Fig10567','Hetmaniuk2012raa_Fig81217','Sage1979mri_Fig14','Venas2019e3s_Fig161819'};
     studyName = {'Venas2019e3s_Fig161819'};
 
-    for i = 1:numel(studyName)
+    for i_study = 1:numel(studyName)
         close all
-        eval(['tasks = ' studyName{i} '(true);']);
-        save([testFolder studyName{i} '.mat'],'tasks')
+        eval(['tasks = ' studyName{i_study} '(true);']);
+        save([testFolder studyName{i_study} '.mat'],'tasks')
     %     keyboard
     end
 end

@@ -8,7 +8,7 @@ startup
 % When calling the e3Dss function without any extra options, the default
 % set of parameters will be chosen. In particular, the rigid scattering of
 % a unit sphere impinged by a plane wave traveling along the z-axis is
-% simulated at f=1kHz using c_f = 1500m/s as the speed of sound. 
+% simulated at f=1kHz using c = 1500m/s as the speed of sound. 
 % The result is plotted in the far field as a function of the polar angle.
 
 theta_arr = linspace(0,pi,2000)'; % Set of angles used for plotting

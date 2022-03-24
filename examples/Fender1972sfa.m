@@ -19,8 +19,8 @@ nFreqs = 3000;
 % nFreqs = 2;
 k = linspace(32/nFreqs,32,nFreqs)';
 R_o = layer{1}.R;
-c_f = layer{1}.c_f;
-omega = k*c_f(1);
+c = layer{1}.c;
+omega = k*c(1);
 
 d_vec = -[0,0,1].';
 options = struct('d_vec', d_vec, ...
@@ -50,7 +50,7 @@ if true
     X = [0,0,R_o*cos(0);
          0,0,R_o*cos(pi)];
     layer{1}.X = X;
-    options.omega = k*c_f(1);
+    options.omega = k*c(1);
     tic
     [layer,N_eps] = e3Dss(layer, options);
     toc
@@ -85,7 +85,7 @@ if 1
     nFreqs = 2000;
     k_max = 450;
     k = [linspace(1e-300,k_max/nFreqs,200), linspace((k_max+1)/nFreqs,k_max,nFreqs)];
-    omega = k*c_f(1);   % Wave number for outer fluid domain
+    omega = k*c(1);   % Wave number for outer fluid domain
 
     x = k*R_o(1);
 
@@ -94,14 +94,14 @@ if 1
     rho_s = layer{2}.rho;
     R = layer{2}.R;
     R_o = layer{1}.R;
-    c_f = layer{1}.c_f;
+    c = layer{1}.c;
 
     K = E./(3*(1-2*nu));
     G = E./(2*(1+nu));
     c_s_1 = sqrt((3*K+4*G)./(3*rho_s));
     c_s_2 = sqrt(G./rho_s);
 
-    Upsilon = min([R./c_s_1, R./c_s_2, R_o./c_f(1:end-1)]);
+    Upsilon = min([R./c_s_1, R./c_s_2, R_o..c(1:end-1)]);
 
     NN = 0:600;
     N = zeros(size(x));
@@ -118,7 +118,7 @@ if 1
 
     k_max = 1000;
     k = linspace(k_max/nFreqs,k_max,nFreqs);
-    omega = k*c_f(1);   % Wave number for outer fluid domain
+    omega = k*c(1);   % Wave number for outer fluid domain
     options.omega = omega;
     options.nu_a = -1;
     layer{1}.X = [0,0,R_o*cos(0);
@@ -138,7 +138,7 @@ end
 function SPL = objFunc(k,layer,options)
 
 options.Display = 'none';
-options.omega = k*layer{1}.c_f;
+options.omega = k*layer{1}.c;
 layer = e3Dss(layer, options);
 p_inc = @(v) exp(1i*dot3(v,options.d_vec)*k);
 p_tot = layer{1}.p + p_inc(layer{1}.X);

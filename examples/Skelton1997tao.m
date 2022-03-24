@@ -129,7 +129,7 @@ f_max = 25e4;
 f = [f, linspace(f(end)+(f_max-f(end))/npts,f_max,npts)];
 f = sort(unique([f, specialValues(specialValues <= f_max).']));
 omega = 2*pi*f;
-k = omega./layer{1}.c_f;
+k = omega./layer{1}.c;
 options = struct('BC', 'SSBC', ...
                  'd_vec', d_vec, ...
                  'debug', withDebug, ...
@@ -176,7 +176,7 @@ if 0
     options.P_inc = @(omega) P_inc_(omega, omega_c,P_inc,type);
 
     if plotP_inc
-        k_c = omega_c/layer{1}.c_f;
+        k_c = omega_c/layer{1}.c;
         %             t = linspace(-1/f_c,6/f_c,1000);
         tt = linspace(0,1/f_c,1000);
         tt = [-1e-3,tt,3e-3];
@@ -205,7 +205,7 @@ if 0
         f_n = f_L + (f_R-f_L)/N*n;
         omega_n = 2*pi*f_n;
         if n >= N/2+1
-            k = omega_n/layer{1}.c_f;
+            k = omega_n/layer{1}.c;
             k_vec = options.d_vec*k;
             p_0(:,n-N/2+1) = layerSSBC{1}.p_0(:,n-N/2);
         end

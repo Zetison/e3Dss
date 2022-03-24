@@ -5,11 +5,11 @@ startup
 
 k10start = -1;
 k10end = 1;
-c_f = 1500;
+c = 1500;
 k = 10.^linspace(k10start,k10end,1000);
 
-omega = c_f*k; % Angular frequency
-layer{1} = struct('media', 'fluid', 'c_f', c_f);
+omega =.c*k; % Angular frequency
+layer{1} = struct('media', 'fluid', .c',.c);
 
 layer{1}.X = [0,0,-1];
 layer{1}.calc_p_0 = 1; % Calculate the far field pattern

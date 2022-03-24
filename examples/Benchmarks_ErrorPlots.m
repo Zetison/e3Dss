@@ -177,7 +177,7 @@ for nu_a = 100 %[-1, 100]
 
                 kR = 10.^linspaceHP(log10(kR_start),log10(kR_end),nFreqs);
                 k = kR/R_1;
-                omega = k*layer{1}.c_f;
+                omega = k*layer{1}.c;
                 f = omega/(2*PI);
             else
                 nFreqs = 100;
@@ -185,7 +185,7 @@ for nu_a = 100 %[-1, 100]
                 f_max = 10000;
                 f = linspace(f_max/nFreqs,f_max,nFreqs);
                 omega = 2*PI*f;
-                k = omega/layer{1}.c_f;
+                k = omega/layer{1}.c;
                 kR = k*R_1;
             end
             nFreqs = numel(f);

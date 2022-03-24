@@ -19,7 +19,7 @@ BC = 'SHBC';
 layer = layer(1:end-1);
 
 k = (9:0.05:36)';
-omega = k*layer{1}.c_f;
+omega = k*layer{1}.c;
 d_vec = [0,0,1].';
 options = struct('applyLoad', 'planeWave', ...
                  'd_vec', d_vec, ...
@@ -56,10 +56,10 @@ BC = 'SSBC';
 if false
     f = (1430:12:4290)';
     omega = 2*pi*f;   % Wave number for outer fluid domain
-    k = omega/layer{1}.c_f;
+    k = omega/layer{1}.c;
 else
     k = (6:0.05:18)';
-    omega = k*layer{1}.c_f;
+    omega = k*layer{1}.c;
     f = omega/(2*pi);
 end
 options = struct('applyLoad', 'mechExcitation', ...
