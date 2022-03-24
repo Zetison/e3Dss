@@ -8,9 +8,9 @@ folderName = [homeDir '/results/e3Dss'];
 if ~exist(folderName, 'dir')
     error('The folder in which results should be stored does not exist. Please make such a folder and alter the variable folderName in startup.m accordingly.')
 end
-keyboard
-if ~isfile('miscellaneous/U_pol_double.mat') || ~isfile('miscellaneous/U_pol_mp.mat') || ~isfile('miscellaneous/U_pol_sym.mat')
-    for prec = {'double', 'mp', 'sym'}
+% keyboard
+if 1 %~isfile('miscellaneous/U_pol_double.mat') || ~isfile('miscellaneous/U_pol_mp.mat') || ~isfile('miscellaneous/U_pol_sym.mat')
+    for prec = {'double', 'mp'} %, 'sym'}
         switch prec{1}
             case 'double'
                 i_max = 64;
@@ -27,7 +27,7 @@ if ~isfile('miscellaneous/U_pol_double.mat') || ~isfile('miscellaneous/U_pol_mp.
             u_k(i) = u_K(i-1);
             v_k(i) = v_K(i-1);
         end
-        save(['miscellaneous/U_pol_' prec{1} '.mat'],'U_pol','u_k','v_k')
+%         save(['miscellaneous/U_pol_' prec{1} '.mat'],'U_pol','u_k','v_k')
     %     load(['miscellaneous/U_pol_' prec '.mat'],'U_pol','u_k','v_k')
 
         switch prec{1}
@@ -91,22 +91,22 @@ end
 function v = v_K(k)
 v = (6*k+1)./(1-6*k).*u_K(k);
 end
-
-function Q = polyder(P)
-
-p = numel(P)-1;
-Q = (p+1-(1:p)).*P(1:end-1);
-end
-
-function C = conv(A,B)
-
-p = numel(A)-1;
-q = numel(B)-1;
-C = zeros(1,p+q+1,class(A));
-for i = 1:p+1
-    for j = 1:q+1
-        k = i+j-1;
-        C(k) = C(k) + A(i)*B(j);
-    end
-end
-end
+% 
+% function Q = polyder(P)
+% 
+% p = numel(P)-1;
+% Q = (p+1-(1:p)).*P(1:end-1);
+% end
+% 
+% function C = conv(A,B)
+% 
+% p = numel(A)-1;
+% q = numel(B)-1;
+% C = zeros(1,p+q+1,class(A));
+% for i = 1:p+1
+%     for j = 1:q+1
+%         k = i+j-1;
+%         C(k) = C(k) + A(i)*B(j);
+%     end
+% end
+% end
