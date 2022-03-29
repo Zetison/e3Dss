@@ -57,6 +57,7 @@ layerCoating = e3Dss(layer, options);
 TS = 20*log10(abs(layerCoating{1}.p_0));
 plot(f,TS,'DisplayName','e3Dss with coating')
 hold on
+
 printResultsToFile([resultsFolder '/Figure10.45_e3Dss_coating'], {'x', f.', 'y', TS.', 'xlabel','f', 'ylabel','TS'})
 % return
 layerSSBC = e3Dss(layerSSBC, options);

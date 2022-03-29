@@ -12,7 +12,7 @@ calcResiduals = 1;
 % startMatlabPool
 % mp = NaN;
 %% Calculate errors
-for nu_a = 100 %[-1, 100]
+for nu_a = -1 %[-1, 100]
     for useSymbolicPrecision = 1 %[0,1]
         if useSymbolicPrecision
             prec = 'mp';

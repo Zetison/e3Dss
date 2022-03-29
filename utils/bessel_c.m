@@ -2,7 +2,7 @@ function f = bessel_c(nu,z,i,nu_a,U_pol,u_k,v_k,Eps)
 
 indices = indices_(nu,z,nu_a);
 f = zeros(size(z),class(z));
-if numel(nu) > numel(z)
+if numel(nu) > 1
     f(~indices) = bessel_std(nu(~indices),z,i,nu_a);
     if any(indices(:))
         f(indices) = bessel_asy(nu(indices),z,i,U_pol,u_k,v_k,Eps);

@@ -14,8 +14,8 @@ startMatlabPool
 
 plotTimeOscillation = 0;
 % applyLoad = 'planeWave';
-applyLoad = 'pointCharge';
-% applyLoad = 'surfExcitation';
+% applyLoad = 'pointCharge';
+applyLoad = 'surfExcitation';
 % applyLoad = 'mechExcitation';
 % applyLoad = 'radialPulsation';
 extraPts = 8;
@@ -38,8 +38,8 @@ f = linspace(0,f_R-df,N/2);
 modelCellArr = {'S5', 'S35', 'S135'};
 modelCellArr = {'S135'};
 modelCellArr = {'S15'};
-modelCellArr = {'S5'};
-modelCellArr = {'S1'};
+% modelCellArr = {'S5'};
+% modelCellArr = {'S1'};
 % modelCellArr = {'Skelton1997tao'};
 for modelCell = modelCellArr
     model = modelCell{1};
@@ -80,10 +80,11 @@ for modelCell = modelCellArr
             case 'S15' % Figure 19
                 f_arr = 1000;
                 layer = setS15Parameters();
-                extraPts = 16; % 40
+                extraPts = 2; % 40
                 layer = defineBCstring(layer,BC);
                 plotInTimeDomain = true;
-                applyLoad = 'pointCharge';
+%                 applyLoad = 'pointCharge';
+                applyLoad = 'surfExcitation';
             case 'S5' % Figure 16a,b,c,d
                 layer = setS5Parameters();
                 layer = defineBCstring(layer,BC);
@@ -194,6 +195,7 @@ for modelCell = modelCellArr
                          'compDisplacementDers', false, ...
                          'applyLoad', applyLoad, ...
                          'r_s', r_s, ...
+                         'type', 1, ...
                          'Display','iter', ...
                          'theta_s', theta_s, ...
                          'f_c', f_c, ...

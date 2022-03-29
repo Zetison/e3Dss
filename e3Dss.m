@@ -18,7 +18,7 @@ options = struct('d_vec',           [0;0;1],  ... 	 % Direction of the incident 
                 'omega',            2*pi*1e3, ...    % Angular frequency (can be an array of angular frequencies)
                 'P_inc',            1,    ...     	 % Amplitude of incident wave
                 'N_max',            Inf,  ...        % Upper limit for the number of terms in the series
-                'Display',          'final', ...     % Print options ('final', 'iter' or 'none')
+                'Display',          'iter', ...     % Print options ('final', 'iter' or 'none')
                 'BC',               'SHBC', ...      % Boundary condition at the innermost layer: 'IBC', 'SHBC', 'SSBC' or 'NNBC'
                 'applyLoad',        'planeWave', ... % Incident wave type: I.e. 'planeWave', 'pointCharge', 'mechExcitation', 'surfExcitation', 'radialPulsation'
                 'r_s',              NaN, ...         % Distance to load source (for loads 'pointCharge', 'mechExcitation' and 'surfExcitation')
@@ -153,8 +153,8 @@ for m = 1:M
             layer{m}.calc_errors = calc_err_dc || calc_err_pc || calc_err_helmholtz;
             layer{m}.calc_farFieldOnly = ~any([layer{m}.calc_p, layer{m}.calc_dpdr, layer{m}.calc_dpdt, layer{m}.calc_d2pdr2, layer{m}.calc_d2pdt2]);
             
-            layer{m}.calc_p_inc = (layer{m}.calc_p_inc || layer{m}.calc_errors) && m == m_s;
-            layer{m}.calc_dp_inc = and(or(layer{m}.calc_dp_inc, layer{m}.calc_errors), m == m_s);
+            layer{m}.calc_p_inc = (layer{m}.calc_p_inc || layer{m}.calc_errors);
+            layer{m}.calc_dp_inc = or(layer{m}.calc_dp_inc, layer{m}.calc_errors);
             layer{m}.calc_dp_incdr = and(any(layer{m}.calc_dp_inc), options.p_inc_fromSeries);
             layer{m}.calc_dp_incdt = and(any(layer{m}.calc_dp_inc), options.p_inc_fromSeries);
         case {'solid','viscoelastic'}
@@ -201,6 +201,9 @@ for m = 1:M
         layer{m}.phi = phi.';
     end
 end
+if isempty(omega)
+    error('omega cannot be an empty array')
+end
 if noEvaluationPts
     error('No evaluation point (layer{m}.X) was provided')
 end
@@ -211,9 +214,9 @@ if options.IBC && ~isfield(options,'z')
     options.z = 1;
 end
 
-if any(omega == 0) && ( strcmp(options.applyLoad, 'mechExcitation') || ...
-                       (strcmp(options.applyLoad, 'pointCharge') && options.r_s ~= 0) || ...
-                       (strcmp(options.applyLoad, 'surfExcitation') && abs(options.theta_s - PI) > options.Eps))
+if any(omega == 0) && (strcmp(options.applyLoad, 'mechExcitation') || ...
+                      (strcmp(options.applyLoad, 'pointCharge') && options.r_s ~= 0) || ...
+                      (strcmp(options.applyLoad, 'surfExcitation') && all(abs(options.theta_s - [0,PI]) < options.Eps)))
     warning('This case has no unique solution for omega=0, these values will be removed from the computation.')
     omega(omega == 0) = [];
     options.omega = omega;
@@ -284,68 +287,98 @@ for m = 1:M
                 else
                     P_inc = options.P_inc;
                 end
-                switch options.applyLoad
-                    case {'planeWave','pointCharge'}
-                        if any(layer{m}.calc_dp_inc) && m == m_s
-                            if options.p_inc_fromSeries
-                                dp_incdr = layer{m}.dp_incdr;
-                                dp_incdt = sin(Theta).*layer{m}.dp_incdt; % rescale dp_incdt
-                                dp_incdX_m = cell(3,1);
+                if m == m_s
+                    switch options.applyLoad
+                        case {'planeWave','pointCharge'}
+                            if any(layer{m}.calc_dp_inc) || layer{m}.calc_p_inc
+                                if options.p_inc_fromSeries
+                                    if any(layer{m}.calc_dp_inc)
+                                        dp_incdr = layer{m}.dp_incdr;
+                                        dp_incdt = sin(Theta).*layer{m}.dp_incdt; % rescale dp_incdt
+                                        dp_incdX_m = cell(3,1);
 
-                                dp_incdX_m{1} = dp_incdr.*sin(Theta).*cos(Phi) + dp_incdt.*cos(Theta).*cos(Phi)./R;
-                                dp_incdX_m{1}(indices) = 0;
+                                        dp_incdX_m{1} = dp_incdr.*sin(Theta).*cos(Phi) + dp_incdt.*cos(Theta).*cos(Phi)./R;
+                                        dp_incdX_m{1}(indices) = 0;
 
-                                dp_incdX_m{2} = dp_incdr.*sin(Theta).*sin(Phi) + dp_incdt.*cos(Theta).*sin(Phi)./R;
-                                dp_incdX_m{2}(indices) = 0;
+                                        dp_incdX_m{2} = dp_incdr.*sin(Theta).*sin(Phi) + dp_incdt.*cos(Theta).*sin(Phi)./R;
+                                        dp_incdX_m{2}(indices) = 0;
 
-                                dp_incdX_m{3} = dp_incdr.*cos(Theta) - dp_incdt.*sin(Theta)./R;
-                                dp_incdX_m{3}(indices) = dp_incdr(indices);
-                                layer{m}.dp_inc{ii} = cell(3,1);
-                                layer{m}.dp_inc{1} = zeros(nFreqs,n_X,prec);
-                                layer{m}.dp_inc{2} = zeros(nFreqs,n_X,prec);
-                                layer{m}.dp_inc{3} = zeros(nFreqs,n_X,prec);
-                                for ii = 1:3
-                                    if layer{m}.calc_dp_inc(ii)
-                                        for jj = 1:3
-                                            layer{m}.dp_inc{ii} = layer{m}.dp_inc{ii} + A(ii,jj)*dp_incdX_m{jj};
-                                        end
-                                    end
-                                end
-                            else
-                                k = omega/layer{1}.c_f;
-                                if strcmp(options.applyLoad,'planeWave')
-                                    k_vec = k*options.d_vec.';
-                                    layer{1}.p_inc = P_inc.*exp(1i*k_vec*layer{1}.X.');
-                                    for ii = 1:3
-                                        if layer{m}.calc_dp_inc(ii)
-                                            layer{m}.dp_inc{ii} = 1i*k_vec(:,ii).*layer{1}.p_inc;
+                                        dp_incdX_m{3} = dp_incdr.*cos(Theta) - dp_incdt.*sin(Theta)./R;
+                                        dp_incdX_m{3}(indices) = dp_incdr(indices);
+                                        layer{m}.dp_inc{ii} = cell(3,1);
+                                        layer{m}.dp_inc{1} = zeros(nFreqs,n_X,prec);
+                                        layer{m}.dp_inc{2} = zeros(nFreqs,n_X,prec);
+                                        layer{m}.dp_inc{3} = zeros(nFreqs,n_X,prec);
+                                        for ii = 1:3
+                                            if layer{m}.calc_dp_inc(ii)
+                                                for jj = 1:3
+                                                    layer{m}.dp_inc{ii} = layer{m}.dp_inc{ii} + A(ii,jj)*dp_incdX_m{jj};
+                                                end
+                                            end
                                         end
                                     end
                                 else
-                                    x_s = r_s*options.d_vec.';
-                                    Xxms = layer{m}.X-x_s;
-                                    nXxms = norm2(Xxms).';
-                                    p_inc = P_inc.*exp(1i*k.*nXxms)./nXxms;
-                                    if layer{m}.calc_p_inc
-                                        layer{m}.p_inc = p_inc;
-                                    end
-                                    for ii = 1:3
-                                        if layer{m}.calc_dp_inc(ii)
-                                            layer{m}.dp_inc{ii} = p_inc.*(1i*k - 1./nXxms).*Xxms(:,ii).'./nXxms;
+                                    k = omega/layer{m}.c_f;
+                                    if strcmp(options.applyLoad,'planeWave')
+                                        k_vec = k*options.d_vec.';
+                                        if layer{m}.calc_p_inc
+                                            layer{m}.p_inc = P_inc.*exp(1i*k_vec*layer{m}.X.');
+                                        end
+                                        for ii = 1:3
+                                            if layer{m}.calc_dp_inc(ii)
+                                                layer{m}.dp_inc{ii} = 1i*k_vec(:,ii).*layer{m}.p_inc;
+                                            end
+                                        end
+                                    else
+                                        x_s = r_s*options.d_vec.';
+                                        Xxms = layer{m}.X-x_s;
+                                        nXxms = norm2(Xxms).';
+                                        p_inc = P_inc.*exp(1i*k.*nXxms)./nXxms;
+                                        if layer{m}.calc_p_inc
+                                            layer{m}.p_inc = p_inc;
+                                        end
+                                        for ii = 1:3
+                                            if layer{m}.calc_dp_inc(ii)
+                                                layer{m}.dp_inc{ii} = p_inc.*(1i*k - 1./nXxms).*Xxms(:,ii).'./nXxms;
+                                            end
                                         end
                                     end
                                 end
                             end
-                        end
-                    case 'radialPulsation' 
-                        if layer{m}.calc_p_inc
+                        case 'radialPulsation' 
                             k = omega/layer{1}.c_f;
-                            layer{m}.p_inc = P_inc.*exp(1i*k.*(R-layer{1}.R))./R;
+                            if layer{m}.calc_p_inc
+                                layer{m}.p_inc = P_inc.*exp(1i*k.*(R-layer{1}.R))./R;
+                            end
+                            for ii = 1:3
+                                if layer{m}.calc_dp_inc(ii)
+                                    layer{m}.dp_inc{ii} = p_inc.*(1i*k - 1./R).*layer{m}.X(:,ii).'./R;
+                                end
+                            end
+                        case 'surfExcitation'
+                            if layer{m}.calc_p_inc
+                                layer{m}.p_inc = zeros(nFreqs,n_X,prec);
+                                layer{m}.p_inc(and(and(R == options.r_s,options.theta_s(1) < Theta), Theta > options.theta_s(2))) = 1;
+                            end
+                            for ii = 1:3
+                                if layer{m}.calc_dp_inc(ii)
+                                    layer{m}.dp_inc{ii} = zeros(nFreqs,n_X,prec);
+                                end
+                            end
+                        otherwise
+                            if any(layer{m}.calc_dp_inc) || layer{m}.calc_p_inc
+                                error('Not valid')
+                            end
+                    end
+                else
+                    if layer{m}.calc_p_inc
+                        layer{m}.p_inc = zeros(nFreqs,n_X,prec);
+                    end
+                    for ii = 1:3
+                        if layer{m}.calc_dp_inc(ii)
+                            layer{m}.dp_inc{ii} = zeros(nFreqs,n_X,prec);
                         end
-                    otherwise
-                        if any(layer{m}.calc_dp_inc) || layer{m}.calc_p_inc
-                            error('Not valid')
-                        end
+                    end
                 end
             case {'solid','viscoelastic'}
                 if any(layer{m}.calc_u)
@@ -1167,13 +1200,16 @@ while n <= N_max && ~(singleModeSolution && n > 0)
                         end
                     end
                     media = u_(n,m,A,B,xi,eta,Rt_m,isSphere,layer,omega_temp,nu_a,exponentShift);
+%                     if n == 79
+%                         keyboard
+%                     end
                     fieldNames = solidFieldNames;
             end
             
             % Update fields
             for fieldName = fieldNames
                 if layer{m}.(['calc_' fieldName{1}]) && ~(strcmp(fieldName{1},'p_inc') && ~options.p_inc_fromSeries)
-                    [layer,hasCnvrgdTmp2,hasDvrgdTmp2,relTermMax] = updateSum(layer,m,media,fieldName{1},indices,hasCnvrgdTmp2,hasDvrgdTmp2,relTermMax,tiny,Eps,prec,n);
+                    [layer,hasCnvrgdTmp2,hasDvrgdTmp2,relTermMax] = updateSum(layer,m,media,fieldName{1},indices,hasCnvrgdTmp2,hasDvrgdTmp2,relTermMax,tiny,Eps,prec);
                 end
             end
         end
@@ -1296,7 +1332,7 @@ elseif strcmp(options.applyLoad,'pointCharge')
 end
 besselFlag = or(besselFlag, calcForP_inc);
 
-function [layer,hasCnvrgd,hasDvrgd,relTermMax] = updateSum(layer,m,media,fieldName,indices,hasCnvrgd,hasDvrgd,relTermMax,tiny,Eps,prec,n)
+function [layer,hasCnvrgd,hasDvrgd,relTermMax] = updateSum(layer,m,media,fieldName,indices,hasCnvrgd,hasDvrgd,relTermMax,tiny,Eps,prec)
 % Track any Inf/NaN in next term
 hasDvrgdSub = or(hasDvrgd,or(any(isinf(media.(fieldName)),2),any(isnan(media.(fieldName)),2)));
 

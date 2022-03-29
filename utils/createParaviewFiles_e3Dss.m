@@ -7,9 +7,6 @@ plotTimeOscillation = options.plotTimeOscillation;
 plotInTimeDomain = options.plotInTimeDomain;
 plotDisplacementVectors = options.plotDisplacementVectors;
 compDisplacementDers = options.compDisplacementDers;
-if ~plotInTimeDomain
-    omega = options.omega;
-end
 plotP_inc = ~(strcmp(applyLoad,'mechExcitation') || strcmp(applyLoad,'surfExcitation'));
 
 if isfield(options, 'computeForSolidDomain')
@@ -31,7 +28,7 @@ for m = 1:M
             layer{m}.calc_p = true;
             layer{m}.calc_dp = plotDisplacementVectors*[1,1,1];
             layer{m}.calc_p_inc = plotP_inc;
-            layer{m}.calc_dp_inc = or(plotDisplacementVectors*[1,1,1],plotP_inc);
+            layer{m}.calc_dp_inc = and(plotDisplacementVectors*[1,1,1],plotP_inc);
             if m == 1
                 [visElements{m}, nodes{m}] = meshRectangleWcircHole([-s*R_a, -R_a],[s*R_a, R_a],R,h);
                 nodes{m} = [nodes{m}, zeros(size(nodes{m},1),1)];
@@ -87,11 +84,11 @@ P_inc = options.P_inc;
 if plotTimeOscillation
     N = 30;
     N_fine = 30;
-    type = 1;
     startIdx = 1;
     options.P_inc = 1;
 elseif plotInTimeDomain
     f_c = options.f_c;
+    T = options.T;
     N = options.N; % 200
     N_fine = 2*N;
     if N > 2000
@@ -104,26 +101,15 @@ elseif plotInTimeDomain
     else
         startIdx = 1;
     end
-    T = options.T; %N/M;
-    B = N/T; % bandwidth
-    
-    f_R = B/2;
-    df = 1/T;
-    f = linspace(0,f_R-df,N/2);
-    omega = 2*pi*f;
-    options.omega = omega(2:end);
-    type = 1;
     if ~strcmp(options.Display,'none')
         totnpts = npts*N*4
         npts
     end
     omega_c = 2*pi*f_c;
-    options.P_inc = @(omega) P_inc_(omega,omega_c,P_inc,type);
-%     keyboard
+    options.P_inc = @(omega) P_inc_(omega,omega_c,P_inc,options.type);
 else
     N = 1;
     N_fine = 1;
-    type = 1;
     startIdx = 1;
     options.P_inc = 1;
 end
@@ -143,6 +129,10 @@ switch applyLoad
                 break
             end
         end
+end
+omega = options.omega;
+if plotInTimeDomain
+    options.omega = omega(2:end);
 end
 tic
 layer = e3Dss(layer, options);

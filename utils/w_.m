@@ -1,11 +1,11 @@
 function w = w_(n,i,x,y,nu_a,exponentShift)
 
 if isempty(x)
-    w = [];
+    w = zeros(size(y));
     return
 end
 if isempty(y)
-    w = [];
+    w = zeros(size(y));
     return
 end
 nu = n + 1/2;

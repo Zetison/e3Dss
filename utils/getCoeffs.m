@@ -294,8 +294,17 @@ for j = 1:length(omega)
     H2 = Pinv2*H2;
     CC(j,:) = diag(Pinv).*(H2\(Pinv2*D));
     if any(isinf(CC(j,:))) || any(isnan(CC(j,:)))
+        CC(j,:) = H\D;
+    end
+    if any(isinf(CC(j,:))) || any(isnan(CC(j,:)))
         warning('e3Dss:singularK','The modal matrix, K, was singular.')
     end
+%     if n == 79
+%         keyboard
+%     end
+%     if n == 18
+%         keyboard
+%     end
     
 %     % Uncomment the following to get the spy matrix in the paper
 %     if n == 300

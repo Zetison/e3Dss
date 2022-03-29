@@ -11,25 +11,30 @@ end
 %% Test benchmark models
 npts = 1000;
 % npts = 10;
-plotType = 'angular';
-% plotType = 'radial';
+% plotType = 'angular';
+plotType = 'radial';
 polarPlot = false;
 generateVideo = 0;
 plotTimeOscillations = 0;
+plotInTimeDomain = 1;
 noSteps = 30;
 P_inc = 1;
-model = 'Skelton1997tao';
-% model = 'S15';
+type = 1;
+% model = 'Skelton1997tao';
+model = 'S15';
 % model = 'S1';
-applyLoad = 'planeWave';
+% applyLoad = 'planeWave';
+applyLoad = 'surfExcitation';
 % applyLoad = 'radialPulsation';
 switch model
     case 'S1'
         layer = setS1Parameters();
         f_arr = 1e3; % frequencies in Hertz
+        BC = 'SSBC';
     case 'S15'
         layer = setS15Parameters();
         f_arr = 1e3; % frequencies in Hertz
+        BC = 'SHBC';
     case 'Skelton1997tao'
         layer = setSkelton1997taoParameters();
         withCoating = false;
@@ -54,26 +59,58 @@ switch model
         f_arr = [f_arr, linspace(f_arr(end)+(f_max-f_arr(end))/npts_f,f_max,npts_f)];
         f_arr = sort(unique([f_arr, specialValues(specialValues <= f_max).']));
         
-        layer{2}.calc_u_r = true;
-        layer{2}.calc_u_t = true;
-        layer{2}.calc_sigma_s = [1,0,0,0,0,0];
 end
-if strcmp(model,'S1') || strcmp(model,'S15')
-    layer{2}.calc_sigma_s = [1,0,0,0,0,0];
-    layer{1}.calc_p = true;
-    layer{1}.calc_p_inc = true;
-    layer{3}.calc_p = true;
-    BC = 'SSBC';
-    layer = defineBCstring(layer,BC);
-    for i = 1:numel(layer)
-        layer{i}.X = X{i};
+
+R = layer{1}.R;
+R_a = 1.5*R;
+P_inc = 1;
+theta_s = NaN(1,2);
+r_s = 2*R; 
+if strcmp(applyLoad,'pointCharge')
+    if intermediatePointCharge
+        r_s = layer{2}.R*1/3 + layer{3}.R*2/3;
     end
+    P_inc = P_inc*r_s;
+elseif strcmp(applyLoad,'surfExcitation')
+    r_s = layer{1}.R;
+    theta_s = [40,60]*pi/180;
+elseif strcmp(applyLoad,'mechExcitation')
+    r_s = layer{1}.R; 
 end
+if plotInTimeDomain
+    f_c = 1500;
+    omega_c = 2*pi*f_c;
+    T = 120/f_c;
+    % T = 1;
+    N = 2^10;
+%     N = 2^5;
+    B = N/T; % bandwidth
+    dt = T/N;
+    f_L = -B/2;
+    f_R = B/2;
+    df = 1/T;
+    f_arr = linspace(0,f_R-df,N/2);
+end
+    
+layer{1}.calc_p = true;
+layer{1}.calc_p_0 = true;
+layer{1}.calc_p_inc = true;
+layer{2}.calc_u_r = true;
+layer{2}.calc_u_t = true;
+layer{2}.calc_sigma_s = [1,0,0,0,0,0];
+layer{3}.calc_p = true;
+layer{3}.calc_p_inc = true;
+if strcmp(model,'S1') || strcmp(model,'S15')
+    layer = defineBCstring(layer,BC);
+end
+theta_s = [40,60]*pi/180;
 omega = 2*pi*f_arr;
 k = omega./layer{1}.c_f;
 options = struct('BC', BC, ...
                  'd_vec', [0,0,1].', ...
-                 'omega', omega, ...
+                 'r_s', layer{1}.R, ...
+                 'theta_s', theta_s, ...
+                 'omega', omega(2:end), ...
                  'Display','iter', ...
                  'P_inc', P_inc, ...
                  'applyLoad',applyLoad);
@@ -83,16 +120,16 @@ switch plotType
     case 'radial'
         beta_f = pi/2;
         alpha_f = 0;
-        r_arr{1} = linspace(layer{1}.R,2*layer{1}.R,npts).';
-        r_arr{2} = linspace(layer{2}.R,layer{1}.R,npts).';
-        r_arr{3} = linspace(layer{3}.R,layer{2}.R,npts).';
+        r_arr{1} = linspace(-layer{1}.R,-2*layer{1}.R,npts).';
+        r_arr{2} = linspace(-layer{2}.R,-layer{1}.R,npts).';
+        r_arr{3} = linspace(-layer{3}.R,-layer{2}.R,npts).';
         X = cell(1,3);
         for i = 1:numel(layer)
             X{i} = r_arr{i}*[cos(beta_f)*cos(alpha_f), cos(beta_f)*sin(alpha_f), sin(beta_f)*ones(size(alpha_f))];
         end
     case 'angular'
         beta_f = linspace(pi/2,-pi/2,npts).';
-        beta_f = linspace(-pi/4,-pi/2,npts).';
+%         beta_f = linspace(-pi/4,-pi/2,npts).';
 %             beta_f = beta_f(1:end-10);
         theta = pi/2-beta_f;
         alpha_f = 0;
@@ -111,11 +148,14 @@ end
 for i = 1:numel(layer)
     layer{i}.X = X{i};
 end
-if 0
+if plotInTimeDomain
+    options.P_inc = @(omega) P_inc_(omega,omega_c,P_inc,type);
+end
+if 1
     layer = e3Dss(layer, options);
-    save([resultsFolder, '/layer'])
+    save([resultsFolder, '/layer_' model '_' BC])
 else
-    load([resultsFolder, '/layer'],'layer')
+    load([resultsFolder, '/layer' model '_' BC],'layer')
 end
     
 if polarPlot
@@ -187,6 +227,82 @@ if plotTimeOscillations
     end
     if generateVideo
         close(vObj);
+    end
+    return
+end
+if plotInTimeDomain
+    totField = cell(1,3);
+    totField{1} = zeros(npts,N/2);
+    totField{2} = zeros(npts,N/2);
+    totField{3} = zeros(npts,N/2);
+    PincField = zeros(npts,N/2);
+
+    for n = 0:N-1
+        f = f_L + (f_R-f_L)/N*n;
+        omega = 2*pi*f;
+        if n >= N/2+1
+            for m = 1:numel(layer)
+                if strcmp(layer{m}.media,'fluid')
+                    totField{m}(:,n-N/2+1) = layer{m}.p(:,n-N/2) + layer{m}.p_inc(:,n-N/2);
+                    if any(layer{m}.p_inc ~= 0)
+                        PincField(:,n-N/2+1) = layer{m}.p_inc(:,n-N/2);
+                    end
+                else
+                    totField{m}(:,n-N/2+1) = layer{m}.sigma_s{1}(:,n-N/2);
+                end
+            end
+        end
+    end
+    totFieldTime = cell(1,3);
+    for m = 1:numel(layer)
+        totFieldTime{m} = 2/T*fft(totField{m},N,2);
+    end
+    PincFieldTime = 2/T*fft(PincField,N,2);
+
+    startIdx = 2*round(1900/2);
+    startIdx = round(N*0.9);
+    if N < 100
+        startIdx = 1;
+    end
+    for i = 1:3
+        temp = totFieldTime{i};
+        totFieldTime{i}(:,1:N-startIdx+1) = temp(:,startIdx:end);
+        totFieldTime{i}(:,N-startIdx+2:end) = temp(:,1:startIdx-1);
+    end
+    temp = PincFieldTime;
+    PincFieldTime(:,1:N-startIdx+1) = temp(:,startIdx:end);
+    PincFieldTime(:,N-startIdx+2:end) = temp(:,1:startIdx-1);
+
+    figure(3)
+    m_arr = 0:N-1;
+    for m = m_arr
+        t = dt*m;
+        switch plotType
+            case 'radial'
+                plot(r_arr{3},real(totFieldTime{3}(:,m+1)),'blue','DisplayName','p_{tot}');
+                hold on
+                plot(r_arr{2},-real(totFieldTime{2}(:,m+1)),'blue','DisplayName','-\sigma_{rr}');
+                plot(r_arr{1},real(totFieldTime{1}(:,m+1)),'blue','DisplayName','p_{tot}');
+                if strcmp(applyLoad,'pointCharge')
+                    plot(r_arr{3},real(PincFieldTime(:,m+1)),'red','DisplayName','p_{inc}');
+                elseif strcmp(applyLoad,'radialPulsation') || strcmp(applyLoad,'planeWave')
+                    plot(r_arr{1},real(PincFieldTime(:,m+1)),'red','DisplayName','p_{inc}');
+                end
+                ylim([-2,2])
+                xlim([r_arr{1}(end),r_arr{3}(1)])
+                plot(-layer{1}.R*[1,1],ylim,'--','color','black')
+                plot(-layer{2}.R*[1,1],ylim,'--','color','black')
+                plot(-layer{3}.R*[1,1],ylim,'--','color','black')
+                hold off
+            %     legend show % This is really slow...
+                drawnow
+            case 'angular'
+                plot(theta*180/pi,real(totFieldTime{1}(:,m+1)),'blue','DisplayName','p_{tot}');
+                ylim([-2,2])
+                xlim([0,180])
+        end
+        titleStr = sprintf('Time step %4d, t = %5.3fs. T = %5.3fs.',m,t,T);
+        title(titleStr)
     end
     return
 end

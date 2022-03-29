@@ -150,7 +150,7 @@ options.nu_a = -1;
 TS2 = 20*log10(abs(layerSSBC2{1}.p_0));
 
 tasks(3).TS = TS;
-tasks(3).TS2 = TS2;
+tasks(3).TS2 = TS2(~flag);
 if plotResults
     hold on
     plot(TS_SSBC(:,1),TS_SSBC(:,2),'DisplayName','Ref')
