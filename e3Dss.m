@@ -1084,8 +1084,9 @@ if options.saveRelTermMax
 else
     relTermMaxArr = NaN(1,prec);
 end
+PI = getC(prec,'pi');
 singleModeSolution = (strcmp(options.applyLoad,'pointCharge') && options.r_s == 0) || strcmp(options.applyLoad,'radialPulsation') ...
-                     || (strcmp(options.applyLoad,'surfExcitation') && options.theta_s(1) == 0 && abs(options.theta_s(2) - pi) < Eps);
+                     || (strcmp(options.applyLoad,'surfExcitation') && options.theta_s(1) == 0 && abs(options.theta_s(2) - PI) < Eps);
 
 while n <= N_max && ~(singleModeSolution && n > 0)
     if displayIter
@@ -1343,7 +1344,7 @@ layer{m}.(fieldName)(indices(~hasDvrgdSub),:) = layer{m}.(fieldName)(indices(~ha
 relTerm = abs(media.(fieldName))./(abs(layer{m}.(fieldName)(indices,:))+tiny);
 
 % Update converged/diverged tracking arrays
-hasCnvrgd = hasCnvrgd.*prod(relTerm < Eps, 2);
+hasCnvrgd = hasCnvrgd.*prod(double(relTerm < Eps), 2);
 hasDvrgd = hasDvrgd + hasDvrgdSub;
 
 % Only track frequencies that have not converged
@@ -1351,7 +1352,7 @@ nonConvergedIdx = false(size(relTermMax,1),1);
 nonConvergedIdx(indices) = true;
 maxRelTerm = -Inf(size(relTermMax,1),1,prec);
 maxRelTerm(nonConvergedIdx) = max(relTerm,[],2);
-indices2 = maxRelTerm > relTermMax;
+indices2 = logical(double(maxRelTerm > relTermMax));
 relTermMax(indices2) = maxRelTerm(indices2);
 
 function Rt_m = getIntermediateRadius(layer,m,isSphere,isOuterDomain)

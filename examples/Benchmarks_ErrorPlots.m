@@ -12,15 +12,18 @@ calcResiduals = 1;
 % startMatlabPool
 % mp = NaN;
 %% Calculate errors
-for nu_a = -1 %[-1, 100]
+for nu_a = [-1, 100]
     for useSymbolicPrecision = 1 %[0,1]
         if useSymbolicPrecision
-            prec = 'mp';
-    %         prec = 'sym';
-            mpstartup
+            %prec = 'mp';
+            prec = 'sym';
+
         else
             prec = 'double';
         end
+	if strcmp(prec,'mp')
+            mpstartup
+	end
         models = {'S1','S3','S5','S13','S15','S35','S135'};
     %     models = {'S13','S15','S35','S135'};
 %         models = {'Skelton1997tao'};
@@ -47,7 +50,6 @@ for nu_a = -1 %[-1, 100]
         end
         for i = 1:length(tasks)
     %     parfor i = 1:length(tasks)
-            nosymdigits = 40;
             switch prec
                 case 'single'
                     Eps = 1e-7;
@@ -56,11 +58,11 @@ for nu_a = -1 %[-1, 100]
                     Eps = eps;
                     O = 0;
                 case 'sym'
-                    Eps = vpa('1e-40');
-    %                 digits(2000);
-                    digits(nosymdigits);
+                    digits(32);
+                    Eps = vpa('1e-32');
                     O = vpa('0');
                 case 'mp'
+                    nosymdigits = 34;
                     Eps = 10^(-mp(nosymdigits));
     %                 Eps = 1e-30;
                     mp.Digits(nosymdigits);
