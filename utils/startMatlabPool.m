@@ -13,3 +13,4 @@ elseif poolobj.NumWorkers ~= min(feature('numCores'),noCoresToUse)
     noCoresToUse = min(feature('numCores'),noCoresToUse);
     parpool(noCoresToUse, 'IdleTimeout', Inf)
 end
+maxNumCompThreads(noCoresToUse);
