@@ -1,7 +1,7 @@
 waringMessageId = 'MATLAB:mir_warning_maybe_uninitialized_temporary';
 warning('off',waringMessageId)
 
-if ~exist('noCoresToUse','var')
+if ~exist('noCoresToUse','var') || isinf(noCoresToUse)
     noCoresToUse = feature('numCores');
 end
 poolobj = gcp('nocreate');
