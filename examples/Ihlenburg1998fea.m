@@ -15,7 +15,8 @@ end
 
 %% Ihlenburg (1998) example
 BCarr = {'SHBC','SSBC','NNBC'};
-for i = 1:3
+for i = 1:numel(BCarr)
+    BC = BCarr{i};
     if i == 1
         nFreqs = 2000;
         color = [0,70,147]/255;
