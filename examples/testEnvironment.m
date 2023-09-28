@@ -2,7 +2,31 @@ close all
 clear all %#ok
 
 startup
-if 1
+rho_f = 1000; % Density of outer fluid
+c_f = 1500;   % Speed of sound in outer (exterior) fluid domain
+rho_s = 7850; % Density of solid
+t = 0.05; % The thickness of the sphere
+R_o = 1; % Outer radius of shell
+E = 2.0e11; % Youngs modulus of elastic material
+nu = 0.3; % Poisson ratio of elastic material
+
+convertToLayerFormat
+k = 10;
+omega = c_f*k;
+layer = layer(1:2);
+options = struct('d_vec', [0,0,1], ...
+             'BC', 'SSBC', ...
+             'omega', omega, ...
+             'P_inc', 1);
+theta_arr = 0;
+r = 2;
+X = r*[sin(theta_arr), zeros(size(theta_arr)), cos(theta_arr)]; % Evaluate physical location of plotting points;
+layer{1}.X = X;
+layer{1}.calc_p = 1;
+[layer,~,~,relTermMaxArr] = e3Dss(layer, options);
+layer{1}.p
+return
+if 0
     pathToResults = '../../results/e3Dss/';
     % pathToResults = '../results';
 
