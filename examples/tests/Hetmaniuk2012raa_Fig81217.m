@@ -14,9 +14,8 @@ if ~exist(resultsFolder, 'dir')
     mkdir(resultsFolder);
 end
 
-layer = setHetmaniukParameters();
+layer = setHetmaniukParameters(1);
 BC = 'SHBC';
-layer = layer(1:end-1);
 
 k = (9:0.05:36)';
 omega = k*layer{1}.c_f;
@@ -50,7 +49,7 @@ tasks(1).real_p_Hetmaniuk = real_p_Hetmaniuk;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-layer = setHetmaniukParameters();
+layer = setHetmaniukParameters(2);
 BC = 'SSBC';
 
 if false
@@ -105,7 +104,7 @@ tasks(2).real_p_Hetmaniuk = real_p_Hetmaniuk;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-layer = setHetmaniukParameters();
+layer = setHetmaniukParameters(2);
 BC = 'SSBC';
 
 options = struct('applyLoad', 'planeWave', ...
