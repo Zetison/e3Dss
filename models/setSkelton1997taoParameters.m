@@ -26,7 +26,7 @@ else
     layer{2}.nu = nu;
 end
 
-rho = 7700;    % density of coating
+rho = 7700;    % density of steel
 layer{3}.media = 'solid';
 layer{3}.lossFactor = 0.01;
 layer{3}.R = R-t_steel;

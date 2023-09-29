@@ -1,7 +1,11 @@
 function Z = bessel_s(n,z,i,nu_a,U_pol,u_k,v_k,Eps)
 %Returns the n'th spherical bessel function of kind "i" evaluated at
 %every element in z
-
+if nargin < 4
+    nu_a = 100;
+    load('miscellaneous/U_pol_double.mat','U_pol','u_k','v_k')
+    Eps = eps;
+end
 if isa(z,'sym')
     tiny = realmin('double');
 elseif isa(z,'mp')

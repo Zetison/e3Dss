@@ -9,7 +9,7 @@ end
 tic
 npts = 41;
 % npts = 200;
-useHP = 1;
+useHP = 0;
 if useHP
     prec = 'mp';
     npts = mp(npts);
@@ -17,7 +17,25 @@ if useHP
 else
     prec = 'double';
 end
-
+if true
+    z = 10;
+    n = linspace(1,1000,1000).';
+    nu = n+1/2;
+    J = besselj(nu,z);
+    Y = bessely(nu,z);
+    T = (n - bessely(nu+1,z)./bessely(nu,z)*z).^2;
+    T = bessely(nu+1,z)./bessely(nu,z);
+    H = J + 1i*Y;
+    semilogy(nu,abs(T),'DisplayName','|T|')
+    hold on
+%     semilogy(nu,abs(J),'DisplayName','|J|')
+%     semilogy(nu,abs(Y),'DisplayName','|Y|')
+    semilogy(nu,abs(n/z),'DisplayName','n/z')
+    legend show
+    yLim = ylim;
+    semilogy(1.6*z*[1,1],yLim)
+    return
+end
 
 if false % This is too time consuming :(
     noKappa = mp('3');

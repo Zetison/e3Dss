@@ -38,6 +38,7 @@ f = linspace(0,f_R-df,N/2);
 modelCellArr = {'S5', 'S35', 'S135'};
 modelCellArr = {'S135'};
 modelCellArr = {'S15'};
+modelCellArr = {'S45'};
 % modelCellArr = {'S5'};
 % modelCellArr = {'S1'};
 % modelCellArr = {'Skelton1997tao'};
@@ -61,11 +62,15 @@ for modelCell = modelCellArr
             BCarr = {'NNBC'};
         case 'S15'
             BCarr = {'ESBC'};
+            BCarr = {'NNBC'};
         case 'IL'
             BCarr = {'NNBC'};
         case 'Skelton1997tao'
             BCarr = {'SSBC'};
+        otherwise
+            BCarr = {'NNBC'};
     end
+    theta_s = NaN(1,2);
     for BC = BCarr
         switch model
             case 'S1'
@@ -85,6 +90,7 @@ for modelCell = modelCellArr
                 plotInTimeDomain = true;
 %                 applyLoad = 'pointCharge';
                 applyLoad = 'surfExcitation';
+                theta_s = [40,60]*pi/180;
             case 'S5' % Figure 16a,b,c,d
                 layer = setS5Parameters();
                 layer = defineBCstring(layer,BC);
@@ -111,6 +117,16 @@ for modelCell = modelCellArr
                 omega_arr = k_arr*layer{1}.c_f;
                 f_arr = omega_arr/(2*pi);
                 applyLoad = 'planeWave';
+            case 'S45'
+                layer = setS45Parameters();
+                layer = defineBCstring(layer,BC);
+                plotInTimeDomain = 1;
+                extraPts = 10;
+                k_arr = 6;
+                omega_arr = k_arr*layer{1}.c_f;
+                f_arr = omega_arr/(2*pi);
+                applyLoad = 'surfExcitation';
+                theta_s = [0,10]*pi/180;
             case 'IL'
                 plotTimeOscillation = 0;
                 layer = setIhlenburgParameters();
@@ -158,10 +174,9 @@ for modelCell = modelCellArr
                 f_arr = linspace(f_max/npts, f_max, npts).';
                 f_arr = 140e3;
         end
-        R = layer{1}.R;
+        R = 5;
         R_a = 1.5*R;
         P_inc = 1;
-        theta_s = NaN(1,2);
         r_s = 2*R; 
         if strcmp(applyLoad,'pointCharge')
             if intermediatePointCharge
@@ -173,8 +188,11 @@ for modelCell = modelCellArr
             P_inc = P_inc*r_s;
         elseif strcmp(applyLoad,'surfExcitation')
             d_vec = -[-sqrt(r_s^2-R_a^2), R_a, 0].';  
-            r_s = layer{1}.R;
-            theta_s = [40,60]*pi/180;
+            if strcmp(model,'S45')
+                r_s = layer{end-2}.R;
+            else
+                r_s = layer{1}.R;
+            end
         elseif strcmp(applyLoad,'mechExcitation')
             d_vec = -[-sqrt(r_s^2-R_a^2), R_a, 0].';  
             r_s = layer{1}.R;

@@ -8,8 +8,10 @@ switch prec
         C = str2num(constant); %#ok: see comment above
     case 'sym'
         if strcmp(constant,'pi')
-	    C = vpa(pi);
-	end
+            C = vpa(pi);
+        else
+            C = vpa(constant);
+        end
     case 'mp'
         C = mp(constant);
 end

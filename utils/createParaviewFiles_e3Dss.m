@@ -116,6 +116,7 @@ end
 switch applyLoad
     case {'planeWave','radialPulsation'}
         m_s = 1;
+        volumetricP_inc = true;
     case {'pointCharge','mechExcitation','surfExcitation'}
         if ~isfield(options,'r_s')
             options.r_s = 2*layer{1}.R;
@@ -129,7 +130,9 @@ switch applyLoad
                 break
             end
         end
+        volumetricP_inc = false;
 end
+
 omega = options.omega;
 if plotInTimeDomain
     options.omega = omega(2:end);
@@ -170,8 +173,10 @@ for m = 1:length(nodes)
             VTKdata.stress = transferFields(layer{m},{'sigma{1}','sigma{2}','sigma{3}','sigma{4}','sigma{5}','sigma{6}'});
         end
     elseif strcmp(layer{m}.media,'fluid')
+        plotScalarField = volumetricP_inc && m == m_s;
         VTKoptions = struct('name',[pathstr '/fluid' num2str(m) filename], 'celltype', 'VTK_TRIANGLE', 'plotTimeOscillation', plotTimeOscillation, ...
-                            'plotDisplacementVectors', plotDisplacementVectors, 'plotSphericalRadialDisplacement',0, 'plotTotField', 1, 'plotScalarField', 1, 'plotSPL', ~plotTimeOscillation);
+                            'plotDisplacementVectors', plotDisplacementVectors, 'plotSphericalRadialDisplacement',0, 'plotTotField', 1, ...
+                            'plotScalarField', plotScalarField, 'plotSPL', ~plotTimeOscillation);
         if ~(plotInTimeDomain || plotTimeOscillation)
             VTKoptions.plotTotFieldAbs = 1;
         end
@@ -184,7 +189,7 @@ for m = 1:length(nodes)
             if plotP_inc
                 VTKdata.P_inc = transferFields(layer{m},{'p_inc'});
             end
-            if ~(strcmp(applyLoad,'pointExcitation') || strcmp(applyLoad,'surfExcitation') || strcmp(applyLoad,'mechExcitation'))
+            if volumetricP_inc
                 if VTKoptions.plotDisplacementVectors && plotP_inc
                     VTKdata.displacement = VTKdata.displacement + transferFields(layer{m},{'dp_inc{1}','dp_inc{2}','dp_inc{3}'},rho*omega.^2);
                 end

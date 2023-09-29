@@ -1,6 +1,9 @@
-function [Error,relTermMaxArr] = createConvergencePlot(type,layer,options,noRuns,fileName,plotResults)
+function [Error,relTermMaxArr] = createConvergencePlot(type,layer,options,noRuns,fileName,plotResults,useRelativeError)
 if nargin < 6
     plotResults = true;
+end
+if nargin < 7
+    useRelativeError = true;
 end
 plotFarField = layer{1}.calc_p_0;
 warning('off', 'e3Dss:N_max_reached')
@@ -25,7 +28,11 @@ switch type
             else
                 p_N = layer{1}.p;
             end
-            Error(count,:) = norm2((p - p_N).')./norm2(p.');
+            if useRelativeError
+                Error(count,:) = norm2((p - p_N).')./norm2(p.');
+            else
+                Error(count,:) = norm2((p - p_N).');
+            end
             count = count + 1;
         end
         relTermMaxArr = [relTermMaxArr, zeros(size(relTermMaxArr,1),noRuns-size(relTermMaxArr,2),1)];
@@ -63,7 +70,11 @@ switch type
             else
                 p_N = layer{1}.p;
             end
-            Error(N+1,:) = norm2((p - p_N).')./norm2(p.');
+            if useRelativeError
+                Error(N+1,:) = norm2((p - p_N).')./norm2(p.');
+            else
+                Error(N+1,:) = norm2((p - p_N).');
+            end
         end
         N_max = min(find(max(Error,[],2) == 0));
         N_arr = 0:N_max;

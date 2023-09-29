@@ -11,12 +11,12 @@ end
 %% Test benchmark models
 npts = 1000;
 % npts = 10;
-% plotType = 'angular';
-plotType = 'radial';
+plotType = 'angular';
+% plotType = 'radial';
 polarPlot = false;
 generateVideo = 0;
 plotTimeOscillations = 0;
-plotInTimeDomain = 1;
+plotInTimeDomain = 0;
 noSteps = 30;
 P_inc = 1;
 type = 1;
@@ -110,10 +110,13 @@ options = struct('BC', BC, ...
                  'd_vec', [0,0,1].', ...
                  'r_s', layer{1}.R, ...
                  'theta_s', theta_s, ...
-                 'omega', omega(2:end), ...
+                 'omega', omega, ...
                  'Display','iter', ...
                  'P_inc', P_inc, ...
                  'applyLoad',applyLoad);
+if plotInTimeDomain
+    options.omega = omega(2:end);
+end
 
 
 switch plotType
@@ -350,7 +353,7 @@ for i_f = 1:numel(f_arr)
 %     legend show
     switch plotType
         case 'radial'
-            xlim([-90,90])
+            xlim([r_arr{1}(end),r_arr{end}(1)])
         case 'angular'
             if polarPlot
                 for i = 1:numel(axpolar)
