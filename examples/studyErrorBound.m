@@ -1,8 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% This study correspond to Figure 7a, Figure 7b and Figure 8 in Venas2019e3s
-% Venas2019e3s is available at https://doi.org/10.1016/j.cma.2018.02.015 (open access version at http://hdl.handle.net/11250/2493754)
-% It is based on the example in Chang1994soa Figure 16 and Figure 17
-% Chang1994soa is available at https://www.oden.utexas.edu/media/reports/1994/9412.pdf
+% Investigate error bounds for the truncation error
 
 close all
 clear all %#ok
