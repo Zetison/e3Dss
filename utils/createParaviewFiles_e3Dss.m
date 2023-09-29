@@ -116,7 +116,6 @@ end
 switch applyLoad
     case {'planeWave','radialPulsation'}
         m_s = 1;
-        volumetricP_inc = true;
     case {'pointCharge','mechExcitation','surfExcitation'}
         if ~isfield(options,'r_s')
             options.r_s = 2*layer{1}.R;
@@ -130,8 +129,8 @@ switch applyLoad
                 break
             end
         end
-        volumetricP_inc = false;
 end
+volumetricP_inc = ~(strcmp(applyLoad,'surfExcitation') || strcmp(applyLoad,'mechExcitation'));
 
 omega = options.omega;
 if plotInTimeDomain
