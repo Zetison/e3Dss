@@ -7,7 +7,7 @@ if 1
     Eps = 1e-10;
     testFolder = 'examples/tests/';
     studyName = {'Chang1994soa_Fig1617','Fender1972sfa_Fig23','Ayres1987ars_Fig1','Ihlenburg1998fea_Fig52','Skelton1997tao_Fig10567','Hetmaniuk2012raa_Fig81217','Sage1979mri_Fig14','Venas2019e3s_Fig161819'};
-%     studyName = {'Venas2019e3s_Fig161819'};
+    studyName = {'Venas2019e3s_Fig161819'};
     stringShift = 60;
     noFailedTests = 0;
     for i_study = 1:numel(studyName)
