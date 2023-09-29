@@ -8,6 +8,7 @@ close all
 clear all %#ok
 
 startup
+addpath ../ASIGA/integration % Get the ASIGA toolbox here: https://github.com/Zetison/ASIGA
 
 %% Chang and Demkowiz (1994) example
 P_inc = 1; % Amplitude of incident wave
@@ -129,7 +130,9 @@ for n = N_arr(1:end-1) % sum from n=0 to N-1
     end
 end
 errorBound = double(sqrt(4/3*P_inc^2*PI*abs(third - sbesselsquared)));
-if false
+close all
+if 0
+    figure
     err_diff2 = zeros(noRuns-1,size(k,2),class(PI));
     err_diff3 = zeros(noRuns-1,size(k,2),class(PI));
     for N = N_arr(2:end)
@@ -145,9 +148,6 @@ if false
             y_spherical_r = sqrt(PI./(2*xr)).*bessely(n+1/2,xr);
             hn = j_spherical_r + 1i*y_spherical_r;
             err_diff2(N,:) = err_diff2(N,:) + (2*n+1)*abs(dj_spherical.*hn./dhn).^2;
-            if double(abs(hn(1))./abs(dhn(1))) > 1/2 && N > double(x(1))
-                keyboard
-            end
             err_diff3(N,:) = err_diff3(N,:) + (2*n+1)*abs(dj_spherical).^2;
         end
         fprintf('Completed %d out of %d runs\n',N,noRuns-1)
@@ -156,8 +156,9 @@ if false
     errorBound3 = double(sqrt(P_inc^2*PI*err_diff2));
     semilogy(N_arr(2:end), errorBound2(:,1))
     semilogy(N_arr(2:end), errorBound3(:,1))
+    return
 end
-close all
+figure
 % semilogy(N_arr, Error(:,1),N_arr, Error(:,2))
 semilogy(N_arr, Error(:,1),'color','blue')
 hold on
